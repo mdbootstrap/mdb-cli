@@ -108,7 +108,7 @@ class PublishHandler {
 
                     this.result = [{ 'Status': 'published', 'Message': `Sent ${this.sent} Mb` }];
 
-                    console.log(`\n Your application will be available under ${this.endMsg} address in about 3-5 mins.\n`);
+                    console.log(`\n Your application will be available under ${this.endMsg.endsWith('/') ? this.endMsg : this.endMsg + '/'} address in about 3-5 mins.\n`);
 
                     resolve();
                 });
@@ -162,7 +162,9 @@ class PublishHandler {
 
             process.stdin.setRawMode(false);
 
-            const npmInit = spawn('npm', ['init'], { stdio: 'inherit' });
+            const isWindows = process.platform === 'win32';
+
+            const npmInit = spawn('npm', ['init'], { stdio: 'inherit', ...(isWindows && { shell: true }) });
 
             npmInit.on('error', console.log);
             npmInit.on('exit', (code) => {

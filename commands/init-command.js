@@ -20,6 +20,7 @@ class InitCommand extends Command {
 
     execute() {
 
+        this.handler.parseArgs(this.args);
         this.handler.getAvailableOptions()
             .then(() => this.handler.showUserPrompt())
             .then(() => this.handler.initProject());

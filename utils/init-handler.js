@@ -4,10 +4,15 @@ const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const prompt = require('inquirer').createPromptModule();
 const { spawn } = require('child_process');
+const fs = require('fs');
 
 const config = require('../config');
 
 const getSorted = require('../helpers/get-sorted-products');
+
+const INIT_ARGS_MAP = {
+    '-n': 'projectName'
+};
 
 class InitHandler {
 
@@ -15,7 +20,19 @@ class InitHandler {
 
         this.result = [];
         this.cwd = process.cwd();
-        this.projectSlug = [];
+        this.projectSlug = '';
+        this.packageName = '';
+        this.archiveEntries = [];
+        this.progressBarOptions = {
+            complete: '=',
+            incomplete: ' ',
+            width: 100,
+            total: 0
+        };
+        this.args = {
+            projectName: null
+        };
+
         this.options = {
             port: config.port,
             hostname: config.host,
@@ -29,11 +46,46 @@ class InitHandler {
 
         this.setAuthHeader();
     }
-    
+
     setAuthHeader() {
 
         this.result = this.authHandler.result;
         this.options.headers = this.authHandler.headers;
+    }
+
+    setProjectPath() {
+
+        this.cwd += `/${this.getProjectName()}`;
+
+        this.setEntriesProjectDir();
+    }
+
+    setEntriesProjectDir() {
+
+        const [{path: entryPath}] = this.archiveEntries;
+        const [dirname] = entryPath.split('/');
+        this.archiveEntries = this.archiveEntries.map(e => {
+            e.path = e.path.replace(`${dirname}/`, '');
+            return e;
+        });
+    }
+
+    _setPackageName(technology) {
+
+        switch (technology) {
+            case 'jquery':
+                this.packageName = 'MDB-Pro';
+                break;
+            case 'angular':
+                this.packageName = 'ng-uikit-pro-standard';
+                break;
+            case 'react':
+                this.packageName = 'MDB-React-Pro-npm';
+                break;
+            case 'vue':
+                this.packageName = 'MDB-Vue-Pro';
+                break;
+        }
     }
 
     getAvailableOptions() {
@@ -47,6 +99,21 @@ class InitHandler {
                 this.result = getSorted(orders, 'product_title');
             })
             .catch(console.error)
+    }
+
+    getProjectName() {
+
+        return this.args.projectName || this.packageName;
+    }
+
+    parseArgs(args) {
+
+        for (let i = 0; i <= args.length - 2; i += 2) {
+
+            const arg = args[i];
+            const argVal = args[i+1];
+            this.args[INIT_ARGS_MAP[arg]] = argVal;
+        }
     }
 
     showUserPrompt() {
@@ -109,7 +176,8 @@ class InitHandler {
 
     _gitClone(repoUrl) {
 
-        const gitClone = spawn('git', ['clone', repoUrl]);
+        const gitArgs = !!this.args.projectName ? ['clone', repoUrl, this.args.projectName] : ['clone', repoUrl];
+        const gitClone = spawn('git', gitArgs);
 
         gitClone.stdout.on('data', (data) => {
 
@@ -136,27 +204,12 @@ class InitHandler {
 
     _downloadProStarter(technology) {
 
-        let projectName = '';
-
-        switch (technology) {
-            case 'jquery':
-                projectName = 'MDB-Pro';
-                break;
-            case 'angular':
-                projectName = 'ng-uikit-pro-standard';
-                break;
-            case 'react':
-                projectName = 'MDB-React-Pro-npm';
-                break;
-            case 'vue':
-                projectName = 'MDB-Vue-Pro';
-                break;
-        }
+        this._setPackageName(technology);
 
         const http = new HttpWrapper({
             port: config.port,
             hostname: config.host,
-            path: `/packages/download/${projectName}`,
+            path: `/packages/download/${this.packageName}`,
             method: 'GET',
             data: '',
             headers: this.options.headers
@@ -164,7 +217,6 @@ class InitHandler {
 
         const request = http.createRequest((response) => {
 
-            const unzip = require('unzipper');
             const ProgressBar = require('progress');
 
             const { Readable } = require('stream');
@@ -175,7 +227,8 @@ class InitHandler {
 
             try {
 
-                readStream.pipe(unzip.Extract({ path: `${this.cwd}` }));
+                this._processProjectArchive(readStream);
+
             } catch (e) {
 
                 console.log(e);
@@ -187,24 +240,17 @@ class InitHandler {
                 process.exit(1);
             }
 
-            let len = Number(response.headers['content-length']);
-
-            const bar = new ProgressBar('[:bar] :eta s', {
-
-                complete: '=',
-                incomplete: ' ',
-                width: 100,
-                total: len
-            });
+            this.progressBarOptions.total = Number(response.headers['content-length']);
+            const bar = new ProgressBar('[:bar] :eta s', this.progressBarOptions);
 
             response.on('data', (chunk) => {
-                
+
                 readStream.push(chunk);
                 bar.tick(chunk.length);
             });
 
             response.on('end', () => {
-                
+
                 readStream.push(null);
 
                 console.log('\n');
@@ -218,6 +264,59 @@ class InitHandler {
         request.on('error', console.log);
         request.write('');
         request.end();
+    }
+
+    _processProjectArchive(readStream) {
+
+        const unzip = require('unzipper');
+
+        let commonDirname = null;
+        let shouldCreateDir = false;
+
+        readStream
+            .pipe(unzip.Parse())
+            .on('entry', async entry => {
+
+                const [currentDirname] = entry.path.split('/');
+                if (commonDirname === null) {
+                    commonDirname = currentDirname;
+                } else if (commonDirname !== currentDirname) {
+                    shouldCreateDir = true;
+                }
+
+                this.archiveEntries.push(entry);
+
+                entry.autodrain();
+            })
+            .on('finish', async () => {
+
+                this.setProjectPath();
+
+                if (shouldCreateDir) {
+
+                    fs.mkdir(this.cwd, 0o755, () => {
+
+                        this._writeExtractedFiles();
+                    });
+                } else {
+
+                    this._writeExtractedFiles();
+                }
+            });
+    }
+
+    _writeExtractedFiles() {
+
+        this.archiveEntries.forEach((entry) => {
+
+            if (entry.type === 'Directory') {
+
+                fs.mkdirSync(this.cwd + '/' + entry.path);
+            } else if (entry.type === 'File') {
+
+                entry.pipe(fs.createWriteStream(this.cwd + '/' + entry.path));
+            }
+        });
     }
 }
 
