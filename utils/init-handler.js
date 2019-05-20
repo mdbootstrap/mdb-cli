@@ -4,7 +4,6 @@ const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const prompt = require('inquirer').createPromptModule();
 const { spawn } = require('child_process');
-const fs = require('fs');
 
 const config = require('../config');
 
@@ -217,6 +216,7 @@ class InitHandler {
 
         const request = http.createRequest((response) => {
 
+            const unzip = require('unzipper');
             const ProgressBar = require('progress');
 
             const { Readable } = require('stream');
@@ -227,8 +227,7 @@ class InitHandler {
 
             try {
 
-                this._processProjectArchive(readStream);
-
+                readStream.pipe(unzip.Extract({ path: `${this.cwd}` }));
             } catch (e) {
 
                 console.log(e);
@@ -240,17 +239,24 @@ class InitHandler {
                 process.exit(1);
             }
 
-            this.progressBarOptions.total = Number(response.headers['content-length']);
-            const bar = new ProgressBar('[:bar] :eta s', this.progressBarOptions);
+            let len = Number(response.headers['content-length']);
+
+            const bar = new ProgressBar('[:bar] :eta s', {
+
+                complete: '=',
+                incomplete: ' ',
+                width: 100,
+                total: len
+            });
 
             response.on('data', (chunk) => {
-
+                
                 readStream.push(chunk);
                 bar.tick(chunk.length);
             });
 
             response.on('end', () => {
-
+                
                 readStream.push(null);
 
                 console.log('\n');
@@ -264,59 +270,6 @@ class InitHandler {
         request.on('error', console.log);
         request.write('');
         request.end();
-    }
-
-    _processProjectArchive(readStream) {
-
-        const unzip = require('unzipper');
-
-        let commonDirname = null;
-        let shouldCreateDir = false;
-
-        readStream
-            .pipe(unzip.Parse())
-            .on('entry', async entry => {
-
-                const [currentDirname] = entry.path.split('/');
-                if (commonDirname === null) {
-                    commonDirname = currentDirname;
-                } else if (commonDirname !== currentDirname) {
-                    shouldCreateDir = true;
-                }
-
-                this.archiveEntries.push(entry);
-
-                entry.autodrain();
-            })
-            .on('finish', async () => {
-
-                this.setProjectPath();
-
-                if (shouldCreateDir) {
-
-                    fs.mkdir(this.cwd, 0o755, () => {
-
-                        this._writeExtractedFiles();
-                    });
-                } else {
-
-                    this._writeExtractedFiles();
-                }
-            });
-    }
-
-    _writeExtractedFiles() {
-
-        this.archiveEntries.forEach((entry) => {
-
-            if (entry.type === 'Directory') {
-
-                fs.mkdirSync(this.cwd + '/' + entry.path);
-            } else if (entry.type === 'File') {
-
-                entry.pipe(fs.createWriteStream(this.cwd + '/' + entry.path));
-            }
-        });
     }
 }
 

@@ -97,7 +97,7 @@ class PublishHandler {
             const request = http.createRequest(response => {
 
                 response.on('data', (data) => {
-                    this.endMsg = data;
+                    this.endMsg = Buffer.from(data).toString('utf8');
                 });
 
                 response.on('end', () => {
