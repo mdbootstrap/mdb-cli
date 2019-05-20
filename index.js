@@ -1,6 +1,8 @@
 #! /usr/bin/env node
 'use strict';
 
+require("@babel/polyfill");
+
 if (!process.version.match(/v[1-9][0-9]/)) {
     
     require('console.table');
