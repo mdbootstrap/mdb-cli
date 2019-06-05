@@ -22,8 +22,9 @@ class InitCommand extends Command {
 
         this.handler.parseArgs(this.args);
         this.handler.getAvailableOptions()
-            .then(() => this.handler.showUserPrompt())
-            .then(() => this.handler.initProject());
+            .then(() => this.handler.showUserPrompt()
+                .then(() => this.handler.initProject()))
+            .catch(error => console.log(error));
     }
 }
 

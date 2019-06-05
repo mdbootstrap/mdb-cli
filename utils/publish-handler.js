@@ -59,7 +59,7 @@ class PublishHandler {
 
         } catch (e) {
 
-            return this._askCreatePackageJson()
+            return PublishHandler._askCreatePackageJson()
                 .then((confirmed) => {
 
                     if (confirmed) {
@@ -140,7 +140,7 @@ class PublishHandler {
         this.sent = num.toFixed(3);
     }
 
-    _askCreatePackageJson() {
+    static _askCreatePackageJson() {
 
         return prompt([
             {

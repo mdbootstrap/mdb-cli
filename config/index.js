@@ -1,6 +1,6 @@
 'use strict';
 
-const env = 'prd';
+const env = 'dev';
 module.exports = {
     env,
     ... require(`./config.${env}`)

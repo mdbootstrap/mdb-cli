@@ -1,13 +1,13 @@
 'use strict';
+const path = require('path');
+const { spawn } = require('child_process');
 
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const prompt = require('inquirer').createPromptModule();
-const { spawn } = require('child_process');
-
 const config = require('../config');
-
 const getSorted = require('../helpers/get-sorted-products');
+const removeFolder = require('./../helpers/remove-folder');
 
 const INIT_ARGS_MAP = {
     '-n': 'projectName'
@@ -94,10 +94,12 @@ class InitHandler {
             .then((orders) => {
 
                 orders = typeof orders === 'string' ? JSON.parse(orders) : orders;
-
                 this.result = getSorted(orders, 'product_title');
+
+            }, (error) => {
+
+                throw error;
             })
-            .catch(console.error)
     }
 
     getProjectName() {
@@ -161,116 +163,180 @@ class InitHandler {
         const project = this.result.find((row) => row.product_slug === this.projectSlug);
 
         const isFreePackage = project.product_id === null;
+        let initProject;
+
         if (isFreePackage) {
 
-            this._gitClone(`https://github.com/mdbootstrap/${this.projectSlug}.git`);
+            initProject = this._gitClone(`https://github.com/mdbootstrap/${this.projectSlug}.git`);
         } else {
 
             const longName = this.projectSlug.slice(0, this.projectSlug.indexOf('-'));
-            this._downloadProStarter(longName);
+            initProject = this._downloadProStarter(longName);
         }
 
         console.log('Initializing...');
+
+        initProject.then(
+            result => {
+
+                const gitPath = path.join(this.cwd, this.projectSlug, '.git');
+                removeFolder(gitPath);
+                this._handleProjectInitialized(result)
+            },
+            error => Array.isArray(error) ? console.table(error) : console.log(error));
+    }
+
+    _handleProjectInitialized(result) {
+
+        this.result = result;
+        const fs = require('fs');
+        const path = require('path');
+        const projectRoot = path.join(this.cwd, this.projectSlug);
+        const packageJsonPath = path.join(projectRoot, 'package.json');
+
+        if (!fs.existsSync(packageJsonPath)) {
+
+            this._createPackageJson(projectRoot);
+        } else {
+
+            console.table(this.result);
+        }
+
+    }
+
+    _createPackageJson(directoryPath) {
+
+        const { _askCreatePackageJson } = require('./publish-handler');
+
+        _askCreatePackageJson().then(confirmed => {
+
+            if (confirmed) {
+
+                const isWindows = process.platform === 'win32';
+                const npmInit = spawn('npm', ['init', '--yes'], { cwd: directoryPath, ...(isWindows && { shell: true }) });
+
+                npmInit.on('error', console.log);
+
+                npmInit.on('exit', (code) => {
+
+                    if (code === 0) {
+
+                        this.result.push({'Status': code, 'Message': 'package.json created.'});
+                    } else {
+
+                        this.result.push({'Status': code, 'Message': 'There were some errors with package.json initializing. Please try again or create it with \'npm init\' command in project root folder.'});
+                    }
+
+                    console.table(this.result);
+                });
+            }
+        });
     }
 
     _gitClone(repoUrl) {
 
-        const gitArgs = !!this.args.projectName ? ['clone', repoUrl, this.args.projectName] : ['clone', repoUrl];
-        const gitClone = spawn('git', gitArgs);
+        return new Promise((resolve, reject) => {
+            
+            const gitArgs = !!this.args.projectName ? ['clone', repoUrl, this.args.projectName] : ['clone', repoUrl];
+            const isWindows = process.platform === 'win32';
+            const gitClone = spawn('git', gitArgs, { ...(isWindows && { shell: true }) });
 
-        gitClone.stdout.on('data', (data) => {
+            gitClone.stdout.on('data', (data) => {
 
-            console.log(Buffer.from(data).toString());
-        });
-        gitClone.stderr.on('data', (error) => {
+                console.log(Buffer.from(data).toString());
+            });
+            gitClone.stderr.on('data', (error) => {
 
-            console.log(Buffer.from(error).toString());
-        });
-        gitClone.on('error', console.log);
-        gitClone.on('exit', (code) => {
+                console.log(Buffer.from(error).toString());
+            });
+            gitClone.on('error', console.log);
+            gitClone.on('exit', (code) => {
 
-            if (code === 0) {
+                if (code === 0) {
 
-                this.result = [{ 'Status': code, 'Message': 'Initialization completed.' }];
-            } else {
+                    this.result = [{ 'Status': code, 'Message': 'Initialization completed.' }];
+                    resolve(this.result);
+                } else {
 
-                this.result = [{ 'Status': code, 'Message': 'There were some errors. Please try again.' }];
-            }
-
-            console.table(this.result);
+                    this.result = [{ 'Status': code, 'Message': 'There were some errors. Please try again.' }];
+                    reject(this.result);
+                }
+            });
         });
     }
 
     _downloadProStarter(technology) {
 
-        this._setPackageName(technology);
+        return new Promise((resolve, reject) => {
 
-        const http = new HttpWrapper({
-            port: config.port,
-            hostname: config.host,
-            path: `/packages/download/${this.packageName}`,
-            method: 'GET',
-            data: '',
-            headers: this.options.headers
-        });
+            this._setPackageName(technology);
 
-        const request = http.createRequest((response) => {
-
-            const unzip = require('unzipper');
-            const ProgressBar = require('progress');
-
-            const { Readable } = require('stream');
-
-            const readStream = new Readable();
-
-            readStream._read = () => { };
-
-            try {
-
-                readStream.pipe(unzip.Extract({ path: `${this.cwd}` }));
-            } catch (e) {
-
-                console.log(e);
-
-                this.result = [{ 'Status': 'error', 'Message': 'Error initializing your project' }];
-
-                console.table(this.result);
-
-                process.exit(1);
-            }
-
-            let len = Number(response.headers['content-length']);
-
-            const bar = new ProgressBar('[:bar] :eta s', {
-
-                complete: '=',
-                incomplete: ' ',
-                width: 100,
-                total: len
+            const http = new HttpWrapper({
+                port: config.port,
+                hostname: config.host,
+                path: `/packages/download/${this.packageName}`,
+                method: 'GET',
+                data: '',
+                headers: this.options.headers
             });
 
-            response.on('data', (chunk) => {
-                
-                readStream.push(chunk);
-                bar.tick(chunk.length);
+            const request = http.createRequest((response) => {
+
+                const unzip = require('unzipper');
+                const ProgressBar = require('progress');
+
+                const { Readable } = require('stream');
+
+                const readStream = new Readable();
+
+                readStream._read = () => { };
+
+                try {
+
+                    readStream.pipe(unzip.Extract({ path: `${this.cwd}` }));
+                } catch (e) {
+
+                    console.log(e);
+
+                    this.result = [{ 'Status': 'error', 'Message': 'Error initializing your project' }];
+
+                    reject(this.result);
+                }
+
+                let len = Number(response.headers['content-length']);
+
+                const bar = new ProgressBar('[:bar] :eta s', {
+
+                    complete: '=',
+                    incomplete: ' ',
+                    width: 100,
+                    total: len
+                });
+
+                response.on('data', (chunk) => {
+
+                    readStream.push(chunk);
+                    bar.tick(chunk.length);
+                });
+
+                response.on('end', () => {
+
+                    readStream.push(null);
+
+                    console.log('\n');
+
+                    this.result = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
+
+                    resolve(this.result);
+                })
             });
 
-            response.on('end', () => {
-                
-                readStream.push(null);
-
-                console.log('\n');
-
-                this.result = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
-
-                console.table(this.result);
-            })
+            request.on('error', reject);
+            request.write('');
+            request.end();
         });
-
-        request.on('error', console.log);
-        request.write('');
-        request.end();
     }
+    
 }
 
 module.exports = InitHandler;

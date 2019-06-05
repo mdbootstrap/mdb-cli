@@ -35,10 +35,21 @@ class HttpWrapper {
                     result += Buffer.from(chunk).toString('utf8');
                 });
 
-                response.on('end', () => resolve(result));
+                response.on('end', () => {
+
+                    const { statusCode } = response;
+
+                    if (statusCode >= 200 && statusCode < 400) {
+
+                        resolve(result)
+                    } else {
+
+                        reject(statusCode);
+                    }
+                });
             });
 
-            request.on('error', reject);
+            request.on('error', error => reject(error));
 
             this._requestData = typeof this._requestData !== 'string' ? JSON.stringify(this._requestData) : this._requestData;
 
