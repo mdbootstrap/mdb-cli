@@ -1,10 +1,22 @@
 'use strict';
 
+const AuthHandler = require('../../utils/auth-handler');
+const sinon = require('sinon');
+
 describe('Command: List', () => {
 
-    it('should have assigned handler', (done) => {
+    let authHandler;
+    let command;
 
-        const command = require('../../commands/list-command');
+    beforeEach(() => {
+
+        const commandClass = require('../../commands/list-command');
+        authHandler = new AuthHandler(false);
+
+        command = new commandClass(authHandler);
+    });
+
+    it('should have assigned handler', (done) => {
 
         expect(command).to.have.property('handler');
 
@@ -13,7 +25,6 @@ describe('Command: List', () => {
 
     it('should have ListHandler handler', (done) => {
 
-        const command = require('../../commands/list-command');
         const ListHandler = require('../../utils/list-handler');
 
         expect(command.handler).to.be.an.instanceOf(ListHandler);
@@ -23,22 +34,7 @@ describe('Command: List', () => {
 
     it('should call handler.fetchProducts', (done) => {
 
-        const sinon = require('sinon');
-        const command = require('../../commands/list-command');
-
-        const fakeReturnedPromise = {
-
-            then() {
-
-                return this;
-            },
-            catch() {
-
-                return this;
-            }
-
-        };
-        const handlerStub = sinon.stub(command.handler, 'fetchProducts').returns(fakeReturnedPromise);
+        const handlerStub = sinon.stub(command.handler, 'fetchProducts').resolves({});
 
         command.execute();
 
@@ -51,9 +47,6 @@ describe('Command: List', () => {
     });
 
     it('should call handler.getResult after handler.fetchProducts', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/list-command');
 
         const fetchProductsStub = sinon.stub(command.handler, 'fetchProducts').resolves(undefined);
         const getResultStub = sinon.stub(command.handler, 'getResult').returns();
@@ -69,9 +62,6 @@ describe('Command: List', () => {
     });
 
     it('should call print() after handler.fetchProducts', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/list-command');
 
         const fetchProductsStub = sinon.stub(command.handler, 'fetchProducts').resolves(undefined);
         const getResultStub = sinon.stub(command.handler, 'getResult').returns();

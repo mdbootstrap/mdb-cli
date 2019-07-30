@@ -1,10 +1,22 @@
 'use strict';
 
+const AuthHandler = require('../../utils/auth-handler');
+const sinon = require('sinon');
+
 describe('Command: Logout', () => {
 
-    it('should have assigned handler', (done) => {
+    let authHandler;
+    let command;
 
-        const command = require('../../commands/logout-command');
+    beforeEach(() => {
+
+        const commandClass = require('../../commands/logout-command');
+        authHandler = new AuthHandler(false);
+
+        command = new commandClass(authHandler);
+    });
+
+    it('should have assigned handler', (done) => {
 
         expect(command).to.have.property('handler');
 
@@ -13,7 +25,6 @@ describe('Command: Logout', () => {
 
     it('should have LogoutHandler handler', (done) => {
 
-        const command = require('../../commands/logout-command');
         const LogoutHandler = require('../../utils/logout-handler');
 
         expect(command.handler).to.be.an.instanceOf(LogoutHandler);
@@ -22,9 +33,6 @@ describe('Command: Logout', () => {
     });
 
     it('should call handler.logout', (done) => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/logout-command');
 
         const fakeReturnedPromise = {
 
@@ -52,9 +60,6 @@ describe('Command: Logout', () => {
 
     it('should console.error on handler.logout failure', async () => {
 
-        const sinon = require('sinon');
-        const command = require('../../commands/logout-command');
-
         const handlerStub = sinon.stub(command.handler, 'logout').rejects('Fake error');
         sinon.spy(console, 'error');
 
@@ -70,9 +75,6 @@ describe('Command: Logout', () => {
     });
 
     it('should call handler.getResult after logout', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/logout-command');
 
         const handlerLogoutStub = sinon.stub(command.handler, 'logout').resolves(undefined);
         const handlerGetResultStub = sinon.stub(command.handler, 'getResult').returns([]);
@@ -90,9 +92,6 @@ describe('Command: Logout', () => {
     });
 
     it('should call .print() after logout', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/logout-command');
 
         const handlerLogoutStub = sinon.stub(command.handler, 'logout').resolves(undefined);
         const commandPrintSpy = sinon.spy(command, 'print');

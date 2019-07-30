@@ -1,7 +1,8 @@
 'use strict';
 
 const fs = require('fs');
-const homedir = require('os').homedir();
+const config = require('../config/index');
+const path = require('path');
 
 class AuthHandler {
 
@@ -9,16 +10,13 @@ class AuthHandler {
 
         this.result = [];
         this.headers = {};
-        this._tokenDir = `${homedir}/.mdbcli`;
-        this._tokenFile = `${this._tokenDir}/.auth`;
+        this._tokenDir = config.tokenDir;
+        this._tokenFile = path.join(config.tokenDir, config.tokenFile);
         this.isAuth = false;
+        this.checkAuth = checkAuth;
 
         this.checkForAuth();
-        
-        if (checkAuth) {
-
-            this.setAuthHeader();
-        }
+        this.setAuthHeader();
     }
 
     checkForAuth() {
@@ -31,15 +29,18 @@ class AuthHandler {
 
     setAuthHeader() {
 
+        if (!this.checkAuth) {
+
+            return;
+        }
+
         if (!this.isAuth) {
 
             this.result = [{ 'Status': 'not logged in', 'Message': 'Please login first' }];
 
             console.table(this.result);
 
-            process.exit(1);
-
-            return;
+            process.exit(0);
         }
 
         this.headers = { 'Authorization': `Bearer ${fs.readFileSync(this._tokenFile, { encoding: 'utf8' })}` };

@@ -1,26 +1,14 @@
 'use strict';
 
-const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
-
-const getSorted = require('../helpers/get-sorted-products');
-
-const config = require('../config');
 
 class ListHandler {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
-        this.options = {
-            port: config.port,
-            hostname: config.host,
-            path: '/packages/read',
-            method: 'GET',
-            data: ''
-        };
-
-        this.authHandler = new AuthHandler();
+        this.authHeaders = {};
+        this.authHandler = authHandler;
 
         this.setAuthHeader();
     }
@@ -28,7 +16,7 @@ class ListHandler {
     setAuthHeader() {
 
         this.result = this.authHandler.result;
-        this.options.headers = this.authHandler.headers;
+        this.authHeaders = this.authHandler.headers;
     }
 
     getResult() {
@@ -38,16 +26,20 @@ class ListHandler {
 
     fetchProducts() {
 
-        const http = new HttpWrapper(this.options);
-        return http.get()
+        const { fetchProducts } = require('../helpers/fetch-products');
+
+        return fetchProducts(this.authHeaders)
             .then((products) => {
 
-                products = typeof products === 'string' ? JSON.parse(products) : products;
+                const getSorted = require('../helpers/get-sorted-product');
 
                 const userReadable = this._mapToUserReadable(products);
                 this.result = getSorted(userReadable, 'Product Name');
+                return Promise.resolve();
+            }, (error) => {
+
+                return Promise.reject(error);
             })
-            .catch(console.error)
     }
 
     _mapToUserReadable(products) {

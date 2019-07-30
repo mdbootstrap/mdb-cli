@@ -2,18 +2,19 @@
 
 const ListHandler = require('../utils/list-handler');
 const Command = require('./command');
+const AuthHandler = require('../utils/auth-handler');
 
 class ListCommand extends Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
-        super();
+        super(authHandler);
 
         this.options.path = '/packages/read';
         this.options.method = 'GET';
         this.options.data = '';
 
-        this.handler = new ListHandler();
+        this.handler = new ListHandler(authHandler);
 
         this.setAuthHeader();
     }
@@ -31,4 +32,4 @@ class ListCommand extends Command {
     }
 }
 
-module.exports = new ListCommand();
+module.exports = ListCommand;

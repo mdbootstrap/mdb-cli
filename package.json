@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "archiver": "^3.0.0",
+    "babel-polyfill": "^6.26.0",
     "console.table": "^0.10.0",
     "fs-extra": "^8.0.1",
     "inquirer": "^6.2.1",

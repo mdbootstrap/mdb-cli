@@ -2,18 +2,15 @@
 
 const InitHandler = require('../utils/init-handler');
 const Command = require('./command');
+const AuthHandler = require('../utils/auth-handler');
 
 class InitCommand extends Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
-        super();
+        super(authHandler);
 
-        this.options.path = '/packages/read';
-        this.options.method = 'GET';
-        this.options.data = '';
-
-        this.handler = new InitHandler();
+        this.handler = new InitHandler(authHandler);
 
         this.setAuthHeader();
     }
@@ -21,11 +18,11 @@ class InitCommand extends Command {
     execute() {
 
         this.handler.parseArgs(this.args);
-        this.handler.getAvailableOptions()
-            .then(() => this.handler.showUserPrompt()
-                .then(() => this.handler.initProject()))
+        return this.handler.getAvailableOptions()
+            .then(() => this.handler.showUserPrompt())
+            .then(() => this.handler.initProject())
             .catch(error => console.log(error));
     }
 }
 
-module.exports = new InitCommand();
+module.exports = InitCommand;

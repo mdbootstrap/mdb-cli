@@ -4,12 +4,12 @@ const AuthHandler = require('./auth-handler');
 
 class SetNameHandler {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
         this.name = '';
 
-        this.authHandler = new AuthHandler();
+        this.authHandler = authHandler;
     }
 
     getResult() {
@@ -17,7 +17,7 @@ class SetNameHandler {
         return this.result;
     }
 
-    askNewName() {
+    askForNewProjectName() {
 
         const prompt = require('inquirer').createPromptModule();
 
@@ -35,43 +35,37 @@ class SetNameHandler {
             }
         ])
             .then((answers) => {
+
                 this.name = answers.name;
             });
     }
 
-    async setName() {
+    setName() {
 
+        const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
         const fileName = 'package.json';
-        let fileContent = await this.getObjectFromFile(fileName);
-        const oldName = fileContent.name;
 
-        fileContent.name = this.name;
-        await this.saveObjectToFile(fileContent, fileName);
-        this.result = [{'Status': 'name changed', 'Message': `Package name change from ${oldName} to ${this.name} successful`}];
-        return Promise.resolve();
-    }
+        return deserializeJsonFile(fileName).then(fileContent => {
 
-    getObjectFromFile(fileName) {
+                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
+                const oldName = fileContent.name;
+                fileContent.name = this.name;
 
-        const { deserializeJsonFile } = require('../helpers/deserializer');
+                return serializeJsonFile(fileName, fileContent).then(() => {
 
-        return deserializeJsonFile(fileName).catch(error => {
+                        this.result = [{'Status': 'name changed', 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
+                        return Promise.resolve();
+                    }, error => {
 
-            this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} deserialization`}];
-            return Promise.reject(error);
-        });
-    }
+                        this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} serialization`}];
+                        return Promise.reject(error);
+                    }
+                );
+            },error => {
 
-    saveObjectToFile(fileName, object) {
-
-        const { serializeJsonFile } = require('../helpers/serializer');
-
-        return serializeJsonFile(fileName, object).catch(error => {
-
-                this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} serialization`}];
+                this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} deserialization`}];
                 return Promise.reject(error);
-            }
-        );
+            });
     }
 
 }

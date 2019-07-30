@@ -2,19 +2,20 @@
 
 const Command = require('./command');
 const SetNameHandler = require('../utils/set-name-handler');
+const AuthHandler = require('../utils/auth-handler');
 
 class SetNameCommand extends Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
-        super();
+        super(authHandler);
 
-        this.handler = new SetNameHandler();
+        this.handler = new SetNameHandler(authHandler);
     }
 
     execute() {
 
-        return this.handler.askNewName()
+        return this.handler.askForNewProjectName()
             .then(() => this.handler.setName())
             .then(() => {
 
@@ -35,4 +36,4 @@ class SetNameCommand extends Command {
 
 }
 
-module.exports = new SetNameCommand();
+module.exports = SetNameCommand;
