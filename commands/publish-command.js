@@ -2,21 +2,22 @@
 
 const PublishHandler = require('../utils/publish-handler');
 const Command = require('./command');
+const AuthHandler = require('../utils/auth-handler');
 
 class PublishCommand extends Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
-        super();
+        super(authHandler);
 
-        this.handler = new PublishHandler();
+        this.handler = new PublishHandler(authHandler);
 
         this.setAuthHeader();
     }
 
     execute() {
 
-        this.handler.setProjectName()
+        return this.handler.setProjectName()
             .then(() => this.handler.publish())
             .then(() => {
 
@@ -28,4 +29,4 @@ class PublishCommand extends Command {
     }
 }
 
-module.exports = new PublishCommand();
+module.exports = PublishCommand;

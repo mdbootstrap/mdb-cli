@@ -2,14 +2,15 @@
 
 const Command = require('./command');
 const LoginHandler = require('../utils/login-handler');
+const AuthHandler = require('../utils/auth-handler');
 
 class LoginCommand extends Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler(false)) {
 
-        super();
+        super(authHandler);
 
-        this.handler = new LoginHandler();
+        this.handler = new LoginHandler(null, authHandler);
     }
 
     execute() {
@@ -28,4 +29,4 @@ class LoginCommand extends Command {
     }
 }
 
-module.exports = new LoginCommand();
+module.exports = LoginCommand;

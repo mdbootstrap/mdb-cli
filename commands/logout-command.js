@@ -2,14 +2,15 @@
 
 const Command = require('./command');
 const LogoutHandler = require('../utils/logout-handler');
+const AuthHandler = require('../utils/auth-handler');
 
 class LogoutCommand extends Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
-        super();
+        super(authHandler);
 
-        this.handler = new LogoutHandler();
+        this.handler = new LogoutHandler(authHandler);
 
         this.setAuthHeader();
     }
@@ -27,4 +28,4 @@ class LogoutCommand extends Command {
     }
 }
 
-module.exports = new LogoutCommand();
+module.exports = LogoutCommand;

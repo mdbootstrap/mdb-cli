@@ -1,13 +1,19 @@
 'use strict';
 
+const AuthHandler = require('../../utils/auth-handler');
+const sinon = require('sinon');
+
 describe('Handler: Logout', () => {
 
-    let handler = null;
+    let authHandler;
+    let handler;
 
     beforeEach(() => {
 
-        handler = require('../../utils/logout-handler');
-        handler = new handler();
+        const handlerClass = require('../../utils/logout-handler');
+        authHandler = new AuthHandler(false);
+
+        handler = new handlerClass(authHandler);
     });
 
     it('should have `result` property', (done) => {
@@ -18,8 +24,6 @@ describe('Handler: Logout', () => {
     });
 
     it('should have assigned authHandler', (done) => {
-
-        const AuthHandler = require('../../utils/auth-handler');
 
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
@@ -42,11 +46,8 @@ describe('Handler: Logout', () => {
 
     it('should call fs.unlinkSync on logout()', async () => {
 
-        const sinon = require('sinon');
         const fs = require('fs');
         const fsUnlinkSyncStub = sinon.stub(fs, 'unlinkSync').returns(undefined);
-
-        const handler = new (require('../../utils/logout-handler'));
 
         await handler.logout();
 
@@ -60,12 +61,9 @@ describe('Handler: Logout', () => {
 
     it('should reject on fs.unlinkSync failure', async () => {
 
-        const sinon = require('sinon');
         const fs = require('fs');
         const fakeError = 'Fake error';
         const fsUnlinkSyncStub = sinon.stub(fs, 'unlinkSync').throws(fakeError, fakeError);
-
-        const handler = new (require('../../utils/logout-handler'));
 
         await handler.logout()
             .then(() => expect.fail('logout() should be rejected'))

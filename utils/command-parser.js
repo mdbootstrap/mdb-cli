@@ -25,7 +25,8 @@ class CommandParser {
         }
 
         const path = require('path');
-        const Command = require(path.resolve(__dirname, '../commands', `${this.command}-command`));
+        const CommandClass = require(path.resolve(__dirname, '../commands', `${this.command}-command`));
+        const Command = new CommandClass();
         Command.setArgs(this.args);
         Command.execute();
     }

@@ -2,13 +2,12 @@
 
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
-const fs = require('fs');
 
 const config = require('../config');
 
 class LoginHandler {
 
-    constructor(response) {
+    constructor(response, authHandler = new AuthHandler(false)) {
 
         this.result = response;
         this.options = {
@@ -23,7 +22,7 @@ class LoginHandler {
         };
         this._userToken = '';
 
-        this.authHandler = new AuthHandler(false);
+        this.authHandler = authHandler;
     }
 
     getResult() {
@@ -84,28 +83,25 @@ class LoginHandler {
 
     saveToken() {
 
-        if (!this._userToken) {
-
-            this.result = [{ 'Status': 'not logged in', 'Message': 'Login failed' }];
-
-            return;
-        }
+        const { saveToken } = require('../helpers/save-token');
 
         try {
 
-            if (!fs.existsSync(this.authHandler._tokenDir)) {
+            const saved = saveToken(this._userToken);
 
-                fs.mkdirSync(this.authHandler._tokenDir, {recursive: true, mode: 0o755});
+            if (saved) {
+
+                this.result = [{ 'Status': 'logged in', 'Message': 'Login successful' }];
+            } else {
+
+                this.result = [{ 'Status': 'not logged in', 'Message': 'Login failed' }];
             }
-
-            fs.writeFileSync(this.authHandler._tokenFile, this._userToken, {encoding: 'utf8', mode: 0o644});
-
-            this.result = [{ 'Status': 'logged in', 'Message': 'Login successful' }];
-        } catch (e) {
+        } catch(e) {
 
             this.result = [{ 'Status': 'not logged in', 'Message': `Login failed: ${e.message}` }];
         }
     }
+
 }
 
 module.exports = LoginHandler;

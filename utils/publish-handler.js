@@ -1,11 +1,8 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
-const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
-const { spawn } = require('child_process');
-const prompt = require('inquirer').createPromptModule();
 const Ora = require('ora');
 
 const HttpWrapper = require('../utils/http-wrapper');
@@ -14,7 +11,7 @@ const config = require('../config');
 
 class PublishHandler {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
         this.cwd = process.cwd();
@@ -30,7 +27,7 @@ class PublishHandler {
             method: 'POST'
         };
 
-        this.authHandler = new AuthHandler();
+        this.authHandler = authHandler;
 
         this.setAuthHeader();
     }
@@ -46,34 +43,50 @@ class PublishHandler {
         return this.result;
     };
 
-    setProjectName() {
+    async setProjectName() {
 
         try {
 
-            let packageJson = fs.readFileSync(path.join(this.cwd, 'package.json'), { encoding: 'utf8' });
-            packageJson = typeof packageJson === 'string' ? JSON.parse(packageJson) : packageJson;
+            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
+            const packageJsonPath = path.join(this.cwd, 'package.json');
+            const packageJson = await deserializeJsonFile(packageJsonPath);
 
             this.projectName = packageJson.name;
+
+            if (packageJson.scripts.build) {
+                const { buildProject } = require('./../helpers/build-project');
+                await buildProject();
+                this.cwd = path.join(this.cwd, 'dist');
+            }
 
             return Promise.resolve();
 
         } catch (e) {
 
-            return PublishHandler._askCreatePackageJson()
-                .then((confirmed) => {
+            const { createPackageJson } = require('../helpers/create-package-json');
 
-                    if (confirmed) {
+            return createPackageJson()
+                .then((created) => {
 
-                        return this._npmInit()
-                            .then(() => this.setProjectName())
-                            .catch(console.error);
-                    }
+                        if (created) {
 
-                    this.result = [{ 'Status': 'error', 'Message': 'Missing package.json file' }];
+                            this.result = [{ 'Status': code, 'Message': 'package.json file created. Publishing...' }];
 
-                    console.table(this.result);
+                            console.table(this.result);
+                            this.setProjectName();
+                        } else {
 
-                    process.exit(1);
+                            return Promise.resolve();
+                        }
+                    },
+                    error => {
+
+                        this.result = [{ 'Status': 'error', 'Message': 'Missing package.json file.' }];
+
+                        console.log(error);
+                        console.table(this.result);
+
+                        process.exit(1);
                 })
                 .catch(console.error);
         }
@@ -129,7 +142,7 @@ class PublishHandler {
             archive.pipe(request);
 
             archive.directory(this.cwd, this.projectName);
-
+            
             archive.finalize();
         });
     }
@@ -140,55 +153,6 @@ class PublishHandler {
         this.sent = num.toFixed(3);
     }
 
-    static _askCreatePackageJson() {
-
-        return prompt([
-            {
-                type: 'confirm',
-                name: 'createPackageJson',
-                message: 'Missing package.json file. Create?',
-                default: true
-            }
-        ])
-            .then((answers) => {
-
-                return answers.createPackageJson;
-            });
-    }
-
-    _npmInit() {
-
-        return new Promise((resolve, reject) => {
-
-            process.stdin.setRawMode(false);
-
-            const isWindows = process.platform === 'win32';
-
-            const npmInit = spawn('npm', ['init'], { stdio: 'inherit', ...(isWindows && { shell: true }) });
-
-            npmInit.on('error', console.log);
-            npmInit.on('exit', (code) => {
-
-                process.stdin.setRawMode(true);
-
-                if (code === 0) {
-
-                    this.result = [{ 'Status': code, 'Message': 'package.json file created. Publishing...' }];
-
-                    console.table(this.result);
-
-                    resolve();
-                } else {
-
-                    this.result = [{ 'Status': code, 'Message': 'There were some errors. Please try again.' }];
-
-                    console.table(this.result);
-
-                    reject();
-                }
-            });
-        });
-    }
 }
 
 module.exports = PublishHandler;

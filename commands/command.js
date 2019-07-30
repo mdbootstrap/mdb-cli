@@ -5,7 +5,7 @@ const config = require('../config');
 
 class Command {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler(true)) {
 
         this.options = {
             port: config.port,
@@ -15,7 +15,7 @@ class Command {
         this.result = [];
         this._handler = null;
 
-        this.authHandler = new AuthHandler(false);
+        this.authHandler = authHandler;
     }
 
     get handler() {

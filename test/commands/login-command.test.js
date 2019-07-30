@@ -1,10 +1,22 @@
 'use strict';
 
+const AuthHandler = require('../../utils/auth-handler');
+const sinon = require('sinon');
+
 describe('Command: Login', () => {
 
-    it('should have assigned handler', (done) => {
+    let authHandler;
+    let command;
 
-        const command = require('../../commands/login-command');
+    beforeEach(() => {
+
+        const commandClass = require('../../commands/login-command');
+        authHandler = new AuthHandler(false);
+
+        command = new commandClass(authHandler);
+    });
+
+    it('should have assigned handler', (done) => {
 
         expect(command).to.have.property('handler');
 
@@ -13,7 +25,6 @@ describe('Command: Login', () => {
 
     it('should have LoginHandler handler', (done) => {
 
-        const command = require('../../commands/login-command');
         const LoginHandler = require('../../utils/login-handler');
 
         expect(command.handler).to.be.an.instanceOf(LoginHandler);
@@ -22,9 +33,6 @@ describe('Command: Login', () => {
     });
 
     it('should call handler.askCredentials', (done) => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
 
         const fakeReturnedPromise = {
 
@@ -52,9 +60,6 @@ describe('Command: Login', () => {
 
     it('should console.error on handler.askCredentials failure', async () => {
 
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
-
         const handlerStub = sinon.stub(command.handler, 'askCredentials').rejects('Fake error');
         sinon.spy(console, 'error');
 
@@ -70,9 +75,6 @@ describe('Command: Login', () => {
     });
 
     it('should call handler.login after handler.askCredentials', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
 
         const askCredentialsStub = sinon.stub(command.handler, 'askCredentials').resolves(undefined);
         const loginStub = sinon.stub(command.handler, 'login').resolves(undefined);
@@ -90,9 +92,6 @@ describe('Command: Login', () => {
     });
 
     it('should console.error on handler.login failure', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
 
         const askCredentialsStub = sinon.stub(command.handler, 'askCredentials').resolves(undefined);
         const loginStub = sinon.stub(command.handler, 'login').rejects('Fake error');
@@ -112,9 +111,6 @@ describe('Command: Login', () => {
     });
 
     it('should call handler.parseResponse after handler.login', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
 
         const askCredentialsStub = sinon.stub(command.handler, 'askCredentials').resolves(undefined);
         const loginStub = sinon.stub(command.handler, 'login').resolves(undefined);
@@ -136,9 +132,6 @@ describe('Command: Login', () => {
 
     it('should call handler.saveToken after handler.login', async () => {
 
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
-
         const askCredentialsStub = sinon.stub(command.handler, 'askCredentials').resolves(undefined);
         const loginStub = sinon.stub(command.handler, 'login').resolves([{}]);
         const saveTokenStub = sinon.stub(command.handler, 'saveToken').returns();
@@ -159,9 +152,6 @@ describe('Command: Login', () => {
 
     it('should call handler.getResult after handler.login', async () => {
 
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
-
         const askCredentialsStub = sinon.stub(command.handler, 'askCredentials').resolves(undefined);
         const loginStub = sinon.stub(command.handler, 'login').resolves([{}]);
         const getResultStub = sinon.stub(command.handler, 'getResult').returns();
@@ -181,9 +171,6 @@ describe('Command: Login', () => {
     });
 
     it('should call .print() after login', async () => {
-
-        const sinon = require('sinon');
-        const command = require('../../commands/login-command');
 
         const askCredentialsStub = sinon.stub(command.handler, 'askCredentials').resolves(undefined);
         const loginStub = sinon.stub(command.handler, 'login').resolves([{}]);

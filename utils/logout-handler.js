@@ -5,11 +5,11 @@ const fs = require('fs');
 
 class LogoutHandler {
 
-    constructor() {
+    constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
 
-        this.authHandler = new AuthHandler();
+        this.authHandler = authHandler;
     }
 
     getResult() {
