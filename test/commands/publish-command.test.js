@@ -1,6 +1,7 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
+const helpers = require('../../helpers');
 const sinon = require('sinon');
 const chai = require('chai');
 const { expect } = require('chai');
@@ -58,38 +59,51 @@ describe('Command: publish', () => {
 
     it('should call buildProject before publish if build script exists', async () => {
 
-        const buildProject = require('../../helpers/build-project');
-        const deserializeJsonFile = require('../../helpers/deserialize-object-from-file');
+        const deserializeStub = sinon.stub(helpers, 'deserializeJsonFile').resolves({scripts: {build: 'build'}});
+        const buildStub = sinon.stub(helpers, 'buildProject').resolves();
+        const publishStub = sinon.stub(command.handler, 'publish').resolves();
 
-        const deserializeStub = sinon.stub(deserializeJsonFile, 'deserializeJsonFile').resolves({scripts: {build: 'build'}});
-        const buildStub = sinon.stub(buildProject, 'buildProject').resolves();
-        
         await command.execute();
 
-        expect(buildStub.calledAfter(deserializeStub)).to.equal(true);
+        expect(buildStub.calledBefore(publishStub)).to.equal(true);
 
         buildStub.reset();
         buildStub.restore();
         deserializeStub.reset();
         deserializeStub.restore();
+        publishStub.reset();
+        publishStub.restore();
     });
 
     it('should add dist folder to project path after buildProject', async () => {
 
-        const buildProject = require('../../helpers/build-project');
-        const deserializeJsonFile = require('../../helpers/deserialize-object-from-file');
-
-        const deserializeStub = sinon.stub(deserializeJsonFile, 'deserializeJsonFile').resolves({scripts: {build: 'build'}});
-        const buildStub = sinon.stub(buildProject, 'buildProject').resolves();
+        const fs = require('fs');
+        const readFileStub = sinon.stub(fs, 'readFileSync').returns('');
+        const writeFileStub = sinon.stub(fs, 'writeFileSync').returns();
+        const existsStub = sinon.stub(fs, 'existsSync').returns(true);
+        const readdirStub = sinon.stub(fs, 'readdirSync').returns([]);
+        const deserializeStub = sinon.stub(helpers, 'deserializeJsonFile').resolves({scripts: {build: 'build'}});
+        const buildStub = sinon.stub(helpers, 'buildProject').resolves();
+        const publishStub = sinon.stub(command.handler, 'publish').resolves();
         
         await command.execute();
 
-        expect(command.handler.cwd.endsWith('dist')).to.equal(true);
+        expect(command.handler.cwd.endsWith('dist/angular-bootstrap-md-app')).to.equal(true);
 
         buildStub.reset();
         buildStub.restore();
         deserializeStub.reset();
         deserializeStub.restore();
+        readFileStub.reset();
+        readFileStub.restore();
+        writeFileStub.reset();
+        writeFileStub.restore();
+        existsStub.reset();
+        existsStub.restore();
+        readdirStub.reset();
+        readdirStub.restore();
+        publishStub.reset();
+        publishStub.restore();
     });
 
     it('should console.error on handler.setProjectName rejected', async () => {

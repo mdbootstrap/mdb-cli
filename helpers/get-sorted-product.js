@@ -1,17 +1,23 @@
 'use strict';
 
-module.exports = (array, key) => array.slice().sort((a, b) => {
+module.exports = {
 
-    const aTech = a[key].substr(a[key].indexOf('('), a[key].indexOf(')'));
-    const bTech = b[key].substr(b[key].indexOf('('), b[key].indexOf(')'));
+    getSorted(array, key) {
 
-    if (aTech > bTech) {
+        return array.slice().sort((a, b) => {
 
-        return 1;
-    } else if (aTech < bTech) {
+            const aTech = a[key].substr(a[key].indexOf('('), a[key].indexOf(')'));
+            const bTech = b[key].substr(b[key].indexOf('('), b[key].indexOf(')'));
 
-        return -1;
+            if (aTech > bTech) {
+
+                return 1;
+            } else if (aTech < bTech) {
+
+                return -1;
+            }
+
+            return 0;
+        });
     }
-
-    return 0;
-});
+};

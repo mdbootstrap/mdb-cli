@@ -18,6 +18,7 @@ class PublishCommand extends Command {
     execute() {
 
         return this.handler.setProjectName()
+            .then(() => this.handler.buildProject())
             .then(() => this.handler.publish())
             .then(() => {
 

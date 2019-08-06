@@ -3,6 +3,11 @@
 const InitHandler = require('../utils/init-handler');
 const Command = require('./command');
 const AuthHandler = require('../utils/auth-handler');
+const { parseArgs } = require('../helpers/parse-args');
+
+const INIT_ARGS_MAP = {
+    '-n': 'projectName'
+};
 
 class InitCommand extends Command {
 
@@ -17,7 +22,7 @@ class InitCommand extends Command {
 
     execute() {
 
-        this.handler.parseArgs(this.args);
+        this.handler.setArgs(parseArgs(this.args, INIT_ARGS_MAP));
         return this.handler.getAvailableOptions()
             .then(() => this.handler.showUserPrompt())
             .then(() => this.handler.initProject())

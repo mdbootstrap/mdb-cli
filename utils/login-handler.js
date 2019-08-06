@@ -2,7 +2,7 @@
 
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
-
+const helpers = require('../helpers/');
 const config = require('../config');
 
 class LoginHandler {
@@ -83,11 +83,9 @@ class LoginHandler {
 
     saveToken() {
 
-        const { saveToken } = require('../helpers/save-token');
-
         try {
 
-            const saved = saveToken(this._userToken);
+            const saved = helpers.saveToken(this._userToken);
 
             if (saved) {
 

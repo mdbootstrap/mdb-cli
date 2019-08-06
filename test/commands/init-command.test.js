@@ -40,7 +40,7 @@ describe('Command: init', () => {
         expect(command.handler).to.be.an.instanceOf(InitHandler);
     });
 
-    it('should call handler.parseArgs', () => {
+    it('should call handler.setArgs', () => {
 
         const fakeReturnedPromise = {
 
@@ -55,7 +55,7 @@ describe('Command: init', () => {
 
         };
 
-        const handlerSpy = sinon.spy(command.handler, 'parseArgs');
+        const handlerSpy = sinon.spy(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
         const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
         const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
@@ -76,7 +76,7 @@ describe('Command: init', () => {
 
     it('should call handler.getAvailableOptions', () => {
 
-        const handlerStub = sinon.stub(command.handler, 'parseArgs');
+        const handlerStub = sinon.stub(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
         const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
         const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
@@ -98,7 +98,7 @@ describe('Command: init', () => {
 
     it('should call console.log on handler.getAvailableOptions reject', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'parseArgs');
+        const handlerStub = sinon.stub(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').rejects('Fake error');
         const consoleSpy = sinon.spy(console, 'log');
 
@@ -115,7 +115,7 @@ describe('Command: init', () => {
 
     it('should call handler.showUserPrompt', () => {
 
-        const handlerStub = sinon.stub(command.handler, 'parseArgs');
+        const handlerStub = sinon.stub(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
         const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
         const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
@@ -137,7 +137,7 @@ describe('Command: init', () => {
 
     it('should call console.log on handler.showUserPrompt reject', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'parseArgs');
+        const handlerStub = sinon.stub(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
         const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').rejects('Fake error');
         const consoleSpy = sinon.spy(console, 'log');
@@ -157,7 +157,7 @@ describe('Command: init', () => {
 
     it('should call handler.initProject', () => {
 
-        const handlerStub = sinon.stub(command.handler, 'parseArgs');
+        const handlerStub = sinon.stub(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
         const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
         const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
@@ -179,7 +179,7 @@ describe('Command: init', () => {
 
     it('should call console.log on handler.initProject reject', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'parseArgs');
+        const handlerStub = sinon.stub(command.handler, 'setArgs');
         const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
         const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
         const initProjectStub = sinon.stub(command.handler, 'initProject').rejects('Fake error');

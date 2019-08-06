@@ -4,3 +4,4 @@ package-lock.json
 dist/
 .nyc_output/
 yarn.lock
+.env

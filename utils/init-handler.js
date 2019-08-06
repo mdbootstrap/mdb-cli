@@ -1,16 +1,10 @@
 'use strict';
 
+const AuthHandler = require('./auth-handler');
+const helpers = require('../helpers/');
 const fs = require('fs');
 const path = require('path');
-
-const AuthHandler = require('./auth-handler');
 const prompt = require('inquirer').createPromptModule();
-const removeFolder = require('../helpers/remove-folder');
-const { showConfirmationPrompt } = require('../helpers/show-confirmation-prompt');
-
-const INIT_ARGS_MAP = {
-    '-n': 'projectName'
-};
 
 class InitHandler {
 
@@ -20,16 +14,18 @@ class InitHandler {
         this.cwd = process.cwd();
         this.projectSlug = '';
         this.projectRoot = '';
-        this.args = {
-            projectName: null
-        };
-
         this.authHeaders = {};
         this._promptShownCount = 0;
-
         this.authHandler = authHandler;
+        this.args = { projectName: '' };
+        this.isFreePackage = true;
 
         this.setAuthHeader();
+    }
+
+    setArgs(args) {
+
+        this.args = { ...this.args, ...args};
     }
 
     setAuthHeader() {
@@ -40,26 +36,12 @@ class InitHandler {
 
     getAvailableOptions() {
 
-        const { fetchProducts } = require('../helpers/fetch-products');
-
-        return fetchProducts(this.authHeaders)
+        return helpers.fetchProducts(this.authHeaders)
             .then((orders) => {
 
-                const getSorted = require('../helpers/get-sorted-product');
-
                 orders = typeof orders === 'string' ? JSON.parse(orders) : orders;
-                this.result = getSorted(orders, 'product_title');
+                this.result = helpers.getSorted(orders, 'product_title');
             })
-    }
-
-    parseArgs(args) {
-
-        for (let i = 0; i <= args.length - 2; i += 2) {
-
-            const arg = args[i];
-            const argVal = args[i + 1];
-            this.args[INIT_ARGS_MAP[arg]] = argVal;
-        }
     }
 
     showUserPrompt() {
@@ -77,111 +59,84 @@ class InitHandler {
                 choices
             }
         ])
-        .then((select) => this.handleUserProjectSelect(select));
+        .then((select) => this._handleUserProjectSelect(select));
     }
 
     initProject() {
 
-        const project = this.result.find((row) => row.product_slug === this.projectSlug);
+        const filePath = path.join(this.cwd, this.projectName, 'package.json');
 
-        const isFreePackage = project.product_id === null;
+        fs.exists(filePath, (err) => {
 
-        const filePath = path.join(this.cwd, 'package.json');
-        let shouldShowConfirmationPrompt;
+            if (err) {
 
-        try {
-
-            fs.accessSync(filePath, fs.F_OK);
-            shouldShowConfirmationPrompt = true;
-        } 
-        catch (err) {
-            
-            shouldShowConfirmationPrompt = false;
-        } 
-        finally {
-
-            if (shouldShowConfirmationPrompt) {
-
-                showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it in this location?')
+                helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it in this location?')
                     .then(answer => {
-				    
-                        if (answer) this.download(isFreePackage);
+
+                        if (answer) this._download();
                     });
             } else {
 
-                this.download(isFreePackage);
+                this._download();
             }
-        }
+        });
     }
 
-    download(isFreePackage) {
+    _setProjectInfo(project) {
 
-        let initProject;
-        if (isFreePackage) {
+        const { product_slug } = project;
+        this.isFreePackage = project.product_id === null;
 
-            const { gitClone } = require('../helpers/git-clone');
-            initProject = gitClone(`https://github.com/mdbootstrap/${this.projectSlug}.git`, this.args.projectName);
-            this.projectRoot = path.join(this.cwd, this.projectSlug);
+        if (this.isFreePackage) {
+
+            this.projectSlug = product_slug.indexOf('React') === -1 ? product_slug : 'React-Template';
         } else {
 
-            const setPackageName = require('../helpers/get-project-name');
-            const { downloadProStarter } = require('../helpers/download-pro-starter');
-            const longName = setPackageName(this.projectSlug.slice(0, this.projectSlug.indexOf('-')));
-
-            initProject = downloadProStarter(longName, this.authHeaders, this.cwd);
-            this.projectRoot = path.join(this.cwd, longName);
+            this.projectSlug = helpers.getPackageName(product_slug.slice(0, product_slug.indexOf('-')));
         }
 
-        console.log('Initializing...');
-        
-        initProject
-            .then(result => {
-            
+        this.projectName = this.args.projectName ? this.args.projectName : this.projectSlug;
+        this.projectRoot = path.join(this.cwd, this.projectName);
+    }
+
+    _download() {
+
+        let initProject;
+
+        return helpers.eraseProjectDirectories(this.projectSlug, this.projectName).then(() => {
+
+            if (this.isFreePackage) {
+
+                initProject = helpers.gitClone(`https://github.com/mdbootstrap/${this.projectSlug}.git`, this.projectName);
+            } else {
+
+                initProject = helpers.downloadProStarter(this.projectSlug, this.authHeaders, this.cwd, this.projectName);
+            }
+
+            initProject.then(result => {
+
                 this.result = result;
-                const gitPath = path.join(this.projectRoot, '.git');
-                removeFolder(gitPath);
-                this._handleProjectInitialized().then(() => console.table(this.result));
+                this.checkIsPackageJsonInitialized()
+                    .then(() => this.saveMetadata())
+                    .then(() => this.notifyServer())
+                    .then(() => console.table(this.result));
             })
-            .catch(error => Array.isArray(error) ? console.table(error) : console.log(error));
+        });
     }
 
-    _handleProjectInitialized() {
+    checkIsPackageJsonInitialized() {
 
-        const fs = require('fs');
-        const path = require('path');
-        const packageJsonPath = path.join(this.projectRoot, 'package.json');
-        if (!fs.existsSync(packageJsonPath)) {
+        const gitPath = path.join(this.projectRoot, '.git');
 
-            const { createPackageJson } = require('../helpers/create-package-json');
-            return createPackageJson(this.projectRoot)
-                .then(confirmed => {
-
-                    if (confirmed) {
-
-                        this.result.push({ 'Status': 0, 'Message': 'package.json created.' })
-                        return Promise.resolve();
-                    }
-                })
-                .catch(error => {
-    
-                    if (error) {
-    
-                        this.result.push({ 'Status': 'project init error', 'Message': 'package.json not created. Try to run npm init in project folder.' })
-                        return Promise.reject(error);
-                    }
-                });
-        }
-
-        return Promise.resolve();
+        helpers.removeFolder(gitPath);
+        return helpers.createPackageJson(this.projectRoot);
     }
 
-    handleUserProjectSelect(select) {
+    _handleUserProjectSelect(select) {
 
         if (this._promptShownCount++ >= 10) {
 
-            this.result = [{ 'Status': 'suggestion', 'Message': 'Please run `mdb list` to see available packages.' }];
-
-            console.table(this.result);
+            console.table([{ 'Status': 'suggestion', 'Message': 'Please run `mdb list` to see available packages.' }]);
 
             process.exit(0);
         }
@@ -196,9 +151,44 @@ class InitHandler {
             return this.showUserPrompt();
         }
 
-        this.projectSlug = projectSlug;
+        this._setProjectInfo(project);
     }
 
+    saveMetadata() {
+
+        const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
+        const metadataPath = path.join(this.projectRoot, '.mdb');
+
+        return new Promise(resolve =>
+
+            serializeJsonFile(metadataPath, { packageName: this.projectSlug }).then(() => {
+
+                this.result.push({'Status': 0, 'Message': 'Project metadata saved.'});
+                resolve();
+            }, () => resolve())
+        );
+    }
+
+    notifyServer() {
+
+        const HttpWrapper = require('../utils/http-wrapper');
+        const config = require('../config');
+        const http = new HttpWrapper({
+            port: config.port,
+            hostname: config.host,
+            path: '/packages/initialized',
+            data: JSON.stringify({
+                'projectName': this.args.projectName || this.projectSlug,
+                'packageName': this.projectSlug
+            }),
+            headers: {
+                ...this.authHeaders,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        return http.post();
+    }
 }
 
 module.exports = InitHandler;

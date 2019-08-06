@@ -1,13 +1,12 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
-const path = require('path');
 const archiver = require('archiver');
-const Ora = require('ora');
-
-const HttpWrapper = require('../utils/http-wrapper');
-
 const config = require('../config');
+const helpers = require('../helpers');
+const HttpWrapper = require('../utils/http-wrapper');
+const Ora = require('ora');
+const path = require('path');
 
 class PublishHandler {
 
@@ -16,6 +15,7 @@ class PublishHandler {
         this.result = [];
         this.cwd = process.cwd();
         this.projectName = '';
+        this.packageName = '';
         this.last = 0;
         this.sent = 0;
         this.endMsg = '';
@@ -47,48 +47,85 @@ class PublishHandler {
 
         try {
 
-            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
+            const packageJsonPath = path.join(this.cwd, 'package.json');
+            const metadataPath = path.join(this.cwd, '.mdb');
+            const packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+            const projectMetadata = await helpers.deserializeJsonFile(metadataPath).catch(error => console.log(`Problem with reading project metadata:\n${error}`));
+
+            this.projectName = packageJson.name;
+            this.packageName = projectMetadata.packageName || '';
+
+
+            return Promise.resolve();
+
+        } catch (e) {
+
+            if (e.code && e.code === 'ENOENT') {
+
+                return this.handleMissingPackageJson();
+            }
+
+            throw e;
+        }
+    }
+
+    async buildProject() {
+
+        try {
+            const fs = require('fs');
+
+            const appVuePath = path.join(process.cwd(), 'src', 'App.vue');
+            const isVue = fs.existsSync(appVuePath);
+
+            const angularJsonPath = path.join(process.cwd(), 'angular.json');
+            const isAngular = fs.existsSync(angularJsonPath);
+
+            const angularFolder = path.join('dist', 'angular-bootstrap-md-app');
+
+            const { deserializeJsonFile } = require('../helpers');
             const packageJsonPath = path.join(this.cwd, 'package.json');
             const packageJson = await deserializeJsonFile(packageJsonPath);
 
-            this.projectName = packageJson.name;
-
             if (packageJson.scripts.build) {
-                const { buildProject } = require('./../helpers/build-project');
+
+                const { buildProject } = require('./../helpers');
                 await buildProject();
-                this.cwd = path.join(this.cwd, 'dist');
+                let buildFolder = isAngular ? angularFolder : isVue ? 'dist' : 'build';
+
+                this.cwd = path.join(this.cwd, buildFolder);
+
+                const indexHtmlPath = path.join(this.cwd, 'index.html');
+                let indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+                indexHtml = indexHtml.replace(/<base href="\/">/g, `<base href="./">`);
+
+                if (isVue) indexHtml = indexHtml.replace(/=\/static/g, `=./static`);
+                else if (!isAngular && !isVue) indexHtml = indexHtml.replace(/="\/static/g, `="./static`);
+
+                fs.writeFileSync(indexHtmlPath, indexHtml, 'utf8');
+
+                if (!isAngular) {
+
+                    const files = fs.readdirSync(path.join(this.cwd, 'static', 'css'), { encoding: 'utf-8' });
+                    files.forEach(file => {
+
+                        if (file.endsWith('.css')) {
+                            const cssFilePath = path.join(this.cwd, 'static', 'css', file);
+                            let cssFile = fs.readFileSync(cssFilePath, 'utf8');
+                            cssFile = cssFile
+                                .replace(/\/static\/fonts/g, '../fonts')
+                                .replace(/\/static\/media/g, '../media');
+
+                            fs.writeFileSync(cssFilePath, cssFile, 'utf8');
+                        }
+                    });
+                }
             }
 
             return Promise.resolve();
 
         } catch (e) {
 
-            const { createPackageJson } = require('../helpers/create-package-json');
-
-            return createPackageJson()
-                .then((created) => {
-
-                        if (created) {
-
-                            this.result = [{ 'Status': code, 'Message': 'package.json file created. Publishing...' }];
-
-                            console.table(this.result);
-                            this.setProjectName();
-                        } else {
-
-                            return Promise.resolve();
-                        }
-                    },
-                    error => {
-
-                        this.result = [{ 'Status': 'error', 'Message': 'Missing package.json file.' }];
-
-                        console.log(error);
-                        console.table(this.result);
-
-                        process.exit(1);
-                })
-                .catch(console.error);
+            throw e;
         }
     }
 
@@ -105,6 +142,7 @@ class PublishHandler {
         return new Promise((resolve, reject) => {
 
             this.options.headers['x-mdb-cli-project-name'] = this.projectName;
+            this.options.headers['x-mdb-cli-package-name'] = this.packageName;
             const http = new HttpWrapper(this.options);
 
             const request = http.createRequest(response => {
@@ -151,6 +189,30 @@ class PublishHandler {
 
         const num = pointer / Math.pow(1024, 2);
         this.sent = num.toFixed(3);
+    }
+
+    handleMissingPackageJson() {
+
+        return helpers.createPackageJson().then((created) => {
+
+            if (created) {
+
+                this.result = [{ 'Status': 0, 'Message': 'package.json file created. Publishing...' }];
+
+                console.table(this.result);
+                this.setProjectName();
+            } else {
+
+                return Promise.resolve();
+            }
+        }, (error) => {
+
+            this.result = [{ 'Status': 'error', 'Message': 'Missing package.json file.' }];
+
+            console.log(error);
+            console.table(this.result);
+            process.exit(1);
+        }).catch(console.error);
     }
 
 }
