@@ -1,10 +1,11 @@
 'use strict';
 
 const homedir = require('os').homedir();
-const env = 'tst';
+const env = 'dev';
 module.exports = {
     tokenDir: `${homedir}/.mdbcli`,
     tokenFile: '/.auth',
     env,
-    ... require(`./config.${env}`)
+    port: process.env.PORT,
+    host: process.env.HOST
 };

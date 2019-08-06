@@ -2,7 +2,10 @@
 
 const fse = require('fs-extra');
 
-module.exports = folderPath => {
+module.exports = {
 
-    fse.remove(folderPath, () => {});
+    removeFolder(folderPath, action = () => {}) {
+
+        return fse.remove(folderPath, action);
+    }
 };

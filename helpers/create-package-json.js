@@ -1,33 +1,47 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+const { showConfirmationPrompt } = require('./show-confirmation-prompt');
+const { spawn } = require('child_process');
+
 module.exports = {
 
-    createPackageJson(directoryPath = process.cwd()) {
+    createPackageJson(directoryPath) {
 
-        const { showConfirmationPrompt } = require('./show-confirmation-prompt');
+        const packageJsonPath = path.join(directoryPath, 'package.json');
+        const successStatus = { 'Status': 0, 'Message': 'package.json created.' };
 
-        return showConfirmationPrompt('Missing package.json file. Create?').then(confirmed => {
+        return new Promise((resolve, reject) => {
 
-            return new Promise((resolve, reject) => {
+            fs.exists(packageJsonPath, (err) => {
 
-                if (confirmed) {
+                if (err) {
 
-                    const { spawn } = require('child_process');
-                    const isWindows = process.platform === 'win32';
-                    const npmInit = spawn('npm', ['init'], { cwd: directoryPath, stdio: 'inherit', ...(isWindows && { shell: true }) });
-
-                    npmInit.on('error', error => reject(error));
-
-                    npmInit.on('exit', (code) => {
-
-                        code === 0 ? resolve(confirmed) : reject({'Status': code, 'Message': 'Problem with npm initialization'});
-                    });
-
+                    resolve(successStatus)
                 } else {
 
-                    resolve(confirmed);
+                    showConfirmationPrompt('Missing package.json file. Create?').then(confirmed => {
+
+                        if (confirmed) {
+
+                            const isWindows = process.platform === 'win32';
+                            const npmInit = spawn('npm', ['init'], { cwd: directoryPath, stdio: 'inherit', ...(isWindows && { shell: true }) });
+
+                            npmInit.on('error', error => reject(error));
+
+                            npmInit.on('exit', (code) => {
+
+                                code === 0 ? resolve(successStatus) : reject({'Status': code, 'Message': 'Problem with npm initialization'});
+                            });
+
+                        } else {
+
+                            resolve({ 'Status': 0, 'Message': 'package.json not created.' });
+                        }
+                    })
                 }
-            })
-        })
+            });
+        });
     }
 };

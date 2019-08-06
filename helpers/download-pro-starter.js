@@ -1,8 +1,12 @@
 'use strict';
 
+const fs = require('fs');
+const Path = require('path');
+const removeFolder = require('./remove-folder');
+
 module.exports = {
 
-    downloadProStarter(packageName, headers, path) {
+    downloadProStarter(packageName, headers, path, projectName) {
 
         return new Promise((resolve, reject) => {
 
@@ -34,7 +38,23 @@ module.exports = {
 
                 try {
 
-                    readStream.pipe(unzip.Extract({ path: `${path}` }));
+                    readStream.pipe(unzip.Extract({ path: path })).on('close', () => {
+
+                        if (packageName !== projectName) {
+
+                            const toRename = Path.join(path, packageName);
+                            const destination = Path.join(path, projectName);
+
+                            fs.rename(toRename, destination, (err) => {
+
+                                if (err) reject(err);
+                                else resolve(result);
+                            });
+                        } else {
+
+                            resolve(result);
+                        }
+                    });
                 } catch (e) {
 
                     console.log(e);
@@ -62,13 +82,10 @@ module.exports = {
 
                 response.on('end', () => {
 
-                    readStream.push(null);
-
-                    console.log('\n');
-
                     result = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
 
-                    resolve(result);
+                    readStream.push(null);
+                    console.log('\n');
                 })
             });
 

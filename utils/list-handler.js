@@ -1,6 +1,7 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
+const helpers = require('../helpers/');
 
 class ListHandler {
 
@@ -26,15 +27,12 @@ class ListHandler {
 
     fetchProducts() {
 
-        const { fetchProducts } = require('../helpers/fetch-products');
-
-        return fetchProducts(this.authHeaders)
+        return helpers.fetchProducts(this.authHeaders)
             .then((products) => {
 
-                const getSorted = require('../helpers/get-sorted-product');
 
                 const userReadable = this._mapToUserReadable(products);
-                this.result = getSorted(userReadable, 'Product Name');
+                this.result = helpers.getSorted(userReadable, 'Product Name');
                 return Promise.resolve();
             }, (error) => {
 
