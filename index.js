@@ -3,7 +3,8 @@
 
 require("babel-polyfill");
 
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 if (!process.version.match(/v[1-9][0-9]/)) {
     
