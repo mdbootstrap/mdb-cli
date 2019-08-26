@@ -1,8 +1,12 @@
 'use strict';
 
+const config = require('../config');
 const fs = require('fs');
+const HttpWrapper = require('../utils/http-wrapper');
+const unzip = require('unzipper');
 const Path = require('path');
-const removeFolder = require('./remove-folder');
+const ProgressBar = require('progress');
+const { Readable } = require('stream');
 
 module.exports = {
 
@@ -10,8 +14,6 @@ module.exports = {
 
         return new Promise((resolve, reject) => {
 
-            const HttpWrapper = require('../utils/http-wrapper');
-            const config = require('../config');
             const http = new HttpWrapper({
                 port: config.port,
                 hostname: config.host,
@@ -26,15 +28,36 @@ module.exports = {
                 if (response.statusCode >= 400 && response.statusCode < 500) {
 
                     return reject(`${response.statusCode} ${response.statusMessage}`);
-                } 
+                }
 
-                const unzip = require('unzipper');
-                const ProgressBar = require('progress');
-                const { Readable } = require('stream');
                 const readStream = new Readable();
                 let result;
 
                 readStream._read = () => { };
+
+                let len = Number(response.headers['content-length']);
+
+                const bar = new ProgressBar('[:bar] :eta s', {
+
+                    complete: '=',
+                    incomplete: ' ',
+                    width: 100,
+                    total: len
+                });
+
+                response.on('data', (chunk) => {
+
+                    readStream.push(chunk);
+                    bar.tick(chunk.length);
+                });
+
+                response.on('end', () => {
+
+                    result = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
+
+                    readStream.push(null);
+                    console.log('\n');
+                });
 
                 try {
 
@@ -63,30 +86,6 @@ module.exports = {
 
                     reject(result);
                 }
-
-                let len = Number(response.headers['content-length']);
-
-                const bar = new ProgressBar('[:bar] :eta s', {
-
-                    complete: '=',
-                    incomplete: ' ',
-                    width: 100,
-                    total: len
-                });
-
-                response.on('data', (chunk) => {
-
-                    readStream.push(chunk);
-                    bar.tick(chunk.length);
-                });
-
-                response.on('end', () => {
-
-                    result = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
-
-                    readStream.push(null);
-                    console.log('\n');
-                })
             });
 
             request.on('error', reject);

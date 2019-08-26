@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "1.1.14",
+  "version": "1.1.15",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -10,7 +10,9 @@
   "scripts": {
     "test": "mocha --exit --recursive",
     "test:coverage": "nyc --reporter=text mocha --exit --recursive",
-    "compile": "./node_modules/pkg/lib-es5/bin.js -c package.json dist/index.js --targets node6"
+    "compile": "./node_modules/pkg/lib-es5/bin.js -c package.json dist/index.js --targets node6",
+    "lint": "./node_modules/.bin/eslint .",
+    "lintfix": "./node_modules/.bin/eslint . --fix"
   },
   "bin": {
     "mdb": "dist/index.js"
@@ -21,6 +23,7 @@
     "@babel/core": "^7.2.2",
     "@babel/preset-env": "^7.3.1",
     "chai": "^4.2.0",
+    "eslint": "^6.1.0",
     "gulp": "^4.0.0",
     "gulp-babel": "^8.0.0",
     "mocha": "^6.1.1",

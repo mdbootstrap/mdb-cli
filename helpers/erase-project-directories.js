@@ -1,11 +1,12 @@
 'use strict';
 
-const helpers = require("./");
 const fs = require('fs');
 
 module.exports = {
 
     eraseProjectDirectories(projectSlug, projectName) {
+
+        const helpers = require('./');
 
         return new Promise(async (resolve, reject) => {
 
@@ -15,11 +16,11 @@ module.exports = {
 
             if (projectName === projectSlug) {
 
-                projectFolder = await fs.existsSync(projectName);
+                projectFolder = fs.existsSync(projectName);
             } else {
 
-                projectFolder = await fs.existsSync(projectName);
-                packageFolder = await fs.existsSync(projectSlug);
+                projectFolder = fs.existsSync(projectName);
+                packageFolder = fs.existsSync(projectSlug);
             }
 
             if (projectFolder && packageFolder) {
@@ -51,7 +52,7 @@ module.exports = {
                         );
                     }
                     else reject();
-                })
+                });
         });
     }
 };

@@ -4,8 +4,16 @@ const fse = require('fs-extra');
 
 module.exports = {
 
-    removeFolder(folderPath, action = () => {}) {
+    removeFolder(folderPath) {
 
-        return fse.remove(folderPath, action);
+        return new Promise((resolve, reject) => {
+
+            fse.remove(folderPath, (err) => {
+
+                if (err) reject(err);
+
+                resolve();
+            });
+        });
     }
 };

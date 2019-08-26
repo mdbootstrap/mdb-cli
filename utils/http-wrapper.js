@@ -41,7 +41,7 @@ class HttpWrapper {
 
                     if (statusCode >= 200 && statusCode < 400) {
 
-                        resolve(result)
+                        resolve(result);
                     } else {
 
                         reject(statusCode);

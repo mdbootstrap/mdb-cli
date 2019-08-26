@@ -1,12 +1,12 @@
 'use strict';
 
-const prompt = require('inquirer').createPromptModule();
-
 module.exports = {
 
     showConfirmationPrompt(message, defaultValue = true) {
 
-        return prompt([
+        const { createPromptModule } = require('inquirer');
+
+        return createPromptModule()([
             {
                 type: 'confirm',
                 name: 'answer',

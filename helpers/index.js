@@ -6,11 +6,11 @@ const { createPackageJson } = require('./create-package-json');
 const { deserializeJsonFile } = require('./deserialize-object-from-file');
 const { downloadProStarter } = require('./download-pro-starter');
 const { fetchProducts } = require('./fetch-products');
-const { getSorted } = require('./get-sorted-product');
+const { getPackageName } = require('./get-project-name');
+const { getSorted } = require('./get-sorted-products');
 const { gitClone } = require('./git-clone');
 const { removeFolder } = require('./remove-folder');
 const { saveToken } = require('./save-token');
-const { getPackageName } = require('./get-project-name');
 const { showConfirmationPrompt } = require('./show-confirmation-prompt');
 
 module.exports = {
@@ -20,10 +20,10 @@ module.exports = {
     deserializeJsonFile,
     downloadProStarter,
     fetchProducts,
+    getPackageName,
     getSorted,
     gitClone,
     removeFolder,
     saveToken,
-    getPackageName,
     showConfirmationPrompt
 };

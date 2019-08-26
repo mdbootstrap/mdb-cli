@@ -37,7 +37,7 @@ class ListHandler {
             }, (error) => {
 
                 return Promise.reject(error);
-            })
+            });
     }
 
     _mapToUserReadable(products) {
@@ -46,7 +46,7 @@ class ListHandler {
             .map((product) => {
 
                 const isPro = product.product_id !== null;
-                const notAvailableMsg = isPro ? `No (https://mdbootstrap.com/products/${product.product_slug}/)` : 'No';
+                const notAvailableMsg = isPro ? `No ( https://mdbootstrap.com/products/${product.product_slug}/ )` : 'No';
 
                 return {
                     'Product Name': product.product_title.replace(/ version| \[standard Bootstrap] /g, ''),

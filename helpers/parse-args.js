@@ -8,7 +8,7 @@ module.exports = {
 
         for (let i = 0; i <= args.length - 2; i += 2) {
 
-            if (initArgsMap.hasOwnProperty(args[i])) {
+            if (Object.prototype.hasOwnProperty.call(initArgsMap, args[i])) {
 
                 result[args[i]] = args[i + 1];
             }

@@ -41,7 +41,7 @@ class PublishHandler {
     getResult() {
 
         return this.result;
-    };
+    }
 
     async setProjectName() {
 
@@ -54,7 +54,6 @@ class PublishHandler {
 
             this.projectName = packageJson.name;
             this.packageName = projectMetadata.packageName || '';
-
 
             return Promise.resolve();
 
@@ -71,62 +70,57 @@ class PublishHandler {
 
     async buildProject() {
 
-        try {
-            const fs = require('fs');
+        const fs = require('fs');
 
-            const appVuePath = path.join(process.cwd(), 'src', 'App.vue');
-            const isVue = fs.existsSync(appVuePath);
+        const appVuePath = path.join(process.cwd(), 'src', 'App.vue');
+        const isVue = fs.existsSync(appVuePath);
 
-            const angularJsonPath = path.join(process.cwd(), 'angular.json');
-            const isAngular = fs.existsSync(angularJsonPath);
+        const angularJsonPath = path.join(process.cwd(), 'angular.json');
+        const isAngular = fs.existsSync(angularJsonPath);
 
-            const angularFolder = path.join('dist', 'angular-bootstrap-md-app');
+        const angularFolder = path.join('dist', 'angular-bootstrap-md-app');
 
-            const { deserializeJsonFile } = require('../helpers');
-            const packageJsonPath = path.join(this.cwd, 'package.json');
-            const packageJson = await deserializeJsonFile(packageJsonPath);
+        const { deserializeJsonFile } = require('../helpers');
+        const packageJsonPath = path.join(this.cwd, 'package.json');
+        const packageJson = await deserializeJsonFile(packageJsonPath);
 
-            if (packageJson.scripts.build) {
+        if (packageJson.scripts.build) {
 
-                const { buildProject } = require('./../helpers');
-                await buildProject();
-                let buildFolder = isAngular ? angularFolder : isVue ? 'dist' : 'build';
+            const { buildProject } = require('./../helpers');
+            await buildProject();
+            let buildFolder = isAngular ? angularFolder : isVue ? 'dist' : 'build';
 
-                this.cwd = path.join(this.cwd, buildFolder);
+            this.cwd = path.join(this.cwd, buildFolder);
 
-                const indexHtmlPath = path.join(this.cwd, 'index.html');
-                let indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
-                indexHtml = indexHtml.replace(/<base href="\/">/g, `<base href="./">`);
+            const indexHtmlPath = path.join(this.cwd, 'index.html');
+            let indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
+            indexHtml = indexHtml.replace(/<base href="\/">/g, '<base href="./">');
 
-                if (isVue) indexHtml = indexHtml.replace(/=\/static/g, `=./static`);
-                else if (!isAngular && !isVue) indexHtml = indexHtml.replace(/="\/static/g, `="./static`);
+            if (isVue) indexHtml = indexHtml.replace(/=\/static/g, '=./static');
+            else if (!isAngular && !isVue) indexHtml = indexHtml.replace(/="\/static/g, '="./static');
 
-                fs.writeFileSync(indexHtmlPath, indexHtml, 'utf8');
+            fs.writeFileSync(indexHtmlPath, indexHtml, 'utf8');
 
-                if (!isAngular) {
+            if (!isAngular) {
 
-                    const files = fs.readdirSync(path.join(this.cwd, 'static', 'css'), { encoding: 'utf-8' });
-                    files.forEach(file => {
+                const files = fs.readdirSync(path.join(this.cwd, 'static', 'css'), { encoding: 'utf-8' });
+                files.forEach(file => {
 
-                        if (file.endsWith('.css')) {
-                            const cssFilePath = path.join(this.cwd, 'static', 'css', file);
-                            let cssFile = fs.readFileSync(cssFilePath, 'utf8');
-                            cssFile = cssFile
-                                .replace(/\/static\/fonts/g, '../fonts')
-                                .replace(/\/static\/media/g, '../media');
+                    if (file.endsWith('.css')) {
+                        const cssFilePath = path.join(this.cwd, 'static', 'css', file);
+                        let cssFile = fs.readFileSync(cssFilePath, 'utf8');
+                        cssFile = cssFile
+                            .replace(/\/static\/fonts/g, '../fonts')
+                            .replace(/\/static\/media/g, '../media');
 
-                            fs.writeFileSync(cssFilePath, cssFile, 'utf8');
-                        }
-                    });
-                }
+                        fs.writeFileSync(cssFilePath, cssFile, 'utf8');
+                    }
+                });
             }
-
-            return Promise.resolve();
-
-        } catch (e) {
-
-            throw e;
         }
+
+        return Promise.resolve();
+    
     }
 
     publish() {
@@ -180,7 +174,7 @@ class PublishHandler {
             archive.pipe(request);
 
             archive.directory(this.cwd, this.projectName);
-            
+
             archive.finalize();
         });
     }
@@ -193,7 +187,7 @@ class PublishHandler {
 
     handleMissingPackageJson() {
 
-        return helpers.createPackageJson().then((created) => {
+        return helpers.createPackageJson(process.cwd()).then((created) => {
 
             if (created) {
 
