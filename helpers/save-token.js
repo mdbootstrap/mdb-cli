@@ -1,17 +1,18 @@
 'use strict';
 
+const fs = require('fs');
+const globals = require('../config/index');
+
 module.exports = {
 
     saveToken(userToken) {
 
         if (userToken) {
 
-            const fs = require('fs');
-            const globals = require('../config/index');
             const tokenDir = globals.tokenDir;
-            const tokenFile = globals.tokenDir + globals.tokenFile;
+            const tokenFile = tokenDir + globals.tokenFile;
 
-            fs.mkdir(tokenDir, {recursive: true, mode: 0o755}, (err => {
+            fs.mkdir(tokenDir, { recursive: true, mode: 0o755 }, (err => {
 
                 if (err && err.code !== 'EEXIST') throw err;
 
@@ -26,5 +27,4 @@ module.exports = {
 
         return false;
     }
-
 };

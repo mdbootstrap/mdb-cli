@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 'use strict';
 
-require("babel-polyfill");
+require('babel-polyfill');
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '.env') });

@@ -6,6 +6,6 @@ module.exports = {
     tokenDir: `${homedir}/.mdbcli`,
     tokenFile: '/.auth',
     env,
-    port: process.env.PORT,
-    host: process.env.HOST
+    port: process.env.PORT || 3030,
+    host: process.env.HOST || 'localhost'
 };

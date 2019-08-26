@@ -2,8 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { showConfirmationPrompt } = require('./show-confirmation-prompt');
-const { spawn } = require('child_process');
 
 module.exports = {
 
@@ -18,28 +16,28 @@ module.exports = {
 
                 if (err) {
 
-                    resolve(successStatus)
+                    resolve(successStatus);
                 } else {
 
-                    showConfirmationPrompt('Missing package.json file. Create?').then(confirmed => {
+                    const { showConfirmationPrompt } = require('./show-confirmation-prompt');
+
+                    showConfirmationPrompt('Missing package.json file. Create?').then((confirmed) => {
 
                         if (confirmed) {
 
+                            const { spawn } = require('child_process');
                             const isWindows = process.platform === 'win32';
                             const npmInit = spawn('npm', ['init'], { cwd: directoryPath, stdio: 'inherit', ...(isWindows && { shell: true }) });
 
-                            npmInit.on('error', error => reject(error));
+                            npmInit.on('error', (error) => reject(error));
 
-                            npmInit.on('exit', (code) => {
-
-                                code === 0 ? resolve(successStatus) : reject({'Status': code, 'Message': 'Problem with npm initialization'});
-                            });
+                            npmInit.on('exit', (code) => code === 0 ? resolve(successStatus) : reject({'Status': code, 'Message': 'Problem with npm initialization'}));
 
                         } else {
 
-                            resolve({ 'Status': 0, 'Message': 'package.json not created.' });
+                            reject({ 'Status': 0, 'Message': 'package.json not created.' });
                         }
-                    })
+                    });
                 }
             });
         });

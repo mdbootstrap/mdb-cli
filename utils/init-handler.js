@@ -41,7 +41,7 @@ class InitHandler {
 
                 orders = typeof orders === 'string' ? JSON.parse(orders) : orders;
                 this.result = helpers.getSorted(orders, 'product_title');
-            })
+            });
     }
 
     showUserPrompt() {
@@ -59,7 +59,7 @@ class InitHandler {
                 choices
             }
         ])
-        .then((select) => this._handleUserProjectSelect(select));
+            .then((select) => this._handleUserProjectSelect(select));
     }
 
     initProject() {
@@ -116,20 +116,21 @@ class InitHandler {
             initProject.then(result => {
 
                 this.result = result;
-                this.checkIsPackageJsonInitialized()
+                this.removeGitFolder()
+                    .then(() => helpers.createPackageJson(this.projectRoot))
                     .then(() => this.saveMetadata())
                     .then(() => this.notifyServer())
-                    .then(() => console.table(this.result));
-            })
+                    .then(() => console.table(this.result))
+                    .catch(console.error);
+            });
         });
     }
 
-    checkIsPackageJsonInitialized() {
+    removeGitFolder() {
 
         const gitPath = path.join(this.projectRoot, '.git');
 
-        helpers.removeFolder(gitPath);
-        return helpers.createPackageJson(this.projectRoot);
+        return helpers.removeFolder(gitPath);
     }
 
     _handleUserProjectSelect(select) {

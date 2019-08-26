@@ -47,25 +47,25 @@ class SetNameHandler {
 
         return deserializeJsonFile(fileName).then(fileContent => {
 
-                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-                const oldName = fileContent.name;
-                fileContent.name = this.name;
+            const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
+            const oldName = fileContent.name;
+            fileContent.name = this.name;
 
-                return serializeJsonFile(fileName, fileContent).then(() => {
+            return serializeJsonFile(fileName, fileContent).then(() => {
 
-                        this.result = [{'Status': 'name changed', 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
-                        return Promise.resolve();
-                    }, error => {
+                this.result = [{'Status': 'name changed', 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
+                return Promise.resolve();
+            }, error => {
 
-                        this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} serialization`}];
-                        return Promise.reject(error);
-                    }
-                );
-            },error => {
-
-                this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} deserialization`}];
+                this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} serialization`}];
                 return Promise.reject(error);
-            });
+            }
+            );
+        },error => {
+
+            this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} deserialization`}];
+            return Promise.reject(error);
+        });
     }
 
 }

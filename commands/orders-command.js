@@ -33,7 +33,7 @@ class OrdersCommand extends Command {
 
                 this.print();
             })
-            .catch(console.error)
+            .catch(console.error);
     }
 }
 

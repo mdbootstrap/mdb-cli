@@ -1,10 +1,10 @@
 'use strict';
 
+const fs = require('fs');
+
 module.exports = {
 
     serializeJsonFile(fileName, object) {
-
-        const fs = require('fs');
 
         return new Promise((resolve, reject) => {
 
@@ -12,9 +12,9 @@ module.exports = {
 
             fs.writeFile(fileName, serializedObject, 'utf-8', (error) => {
 
-                error ? reject(error) : resolve()
+                error ? reject(error) : resolve();
             });
-        })
+        });
     }
 
 };
