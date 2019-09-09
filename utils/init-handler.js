@@ -117,7 +117,6 @@ class InitHandler {
 
                 this.result = result;
                 this.removeGitFolder()
-                    .then(() => helpers.createPackageJson(this.projectRoot))
                     .then(() => this.saveMetadata())
                     .then(() => this.notifyServer())
                     .then(() => console.table(this.result))

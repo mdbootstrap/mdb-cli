@@ -187,28 +187,23 @@ class PublishHandler {
 
     handleMissingPackageJson() {
 
-        return helpers.createPackageJson(process.cwd()).then((created) => {
+        return helpers.createPackageJson(this.cwd)
+            .then((message) => {
 
-            if (created) {
-
-                this.result = [{ 'Status': 0, 'Message': 'package.json file created. Publishing...' }];
+                this.result = [message];
+                this.result.push({ 'Status': 0, 'Message': 'package.json file created. Publishing...' });
 
                 console.table(this.result);
-                this.setProjectName();
-            } else {
+            }).then(() => this.setProjectName())
+            .catch((err) => {
 
-                return Promise.resolve();
-            }
-        }, (error) => {
+                this.result = [err];
+                this.result.push({ 'Status': 'error', 'Message': 'Missing package.json file.' });
 
-            this.result = [{ 'Status': 'error', 'Message': 'Missing package.json file.' }];
-
-            console.log(error);
-            console.table(this.result);
-            process.exit(1);
-        }).catch(console.error);
+                console.table(this.result);
+                process.exit(1);
+            });
     }
-
 }
 
 module.exports = PublishHandler;
