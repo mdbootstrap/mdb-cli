@@ -8,7 +8,7 @@ module.exports = {
 
         const helpers = require('./');
 
-        return new Promise(async (resolve, reject) => {
+        return new Promise((resolve, reject) => {
 
             let msg;
             let projectFolder;
