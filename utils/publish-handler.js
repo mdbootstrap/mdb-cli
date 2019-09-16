@@ -120,7 +120,7 @@ class PublishHandler {
         }
 
         return Promise.resolve();
-    
+
     }
 
     publish() {
@@ -142,6 +142,7 @@ class PublishHandler {
             const request = http.createRequest(response => {
 
                 response.on('data', (data) => {
+
                     this.endMsg = Buffer.from(data).toString('utf8');
                 });
 
@@ -151,9 +152,14 @@ class PublishHandler {
 
                     spinner.succeed(`Uploading files | ${this.sent} Mb`);
 
-                    this.result = [{ 'Status': 'published', 'Message': `Sent ${this.sent} Mb` }];
+                    if (response.statusCode === 200) {
 
-                    console.log(`\n Your application will be available under ${this.endMsg.endsWith('/') ? this.endMsg : this.endMsg + '/'} address in about 3-5 mins.\n`);
+                        this.result = [{ 'Status': 'published', 'Message': `Sent ${this.sent} Mb` }];
+                    } else {
+                        
+                        this.result = [{ 'Status': response.statusCode, 'Message': response.statusMessage }];
+                    }
+                    this.result.push({ 'Status': response.statusCode, 'Message': this.endMsg });
 
                     resolve();
                 });
@@ -162,6 +168,7 @@ class PublishHandler {
             const archive = archiver('zip', { zlib: { level: 9 } });
 
             archive.on('error', reject);
+
             archive.on('warning', console.warn);
 
             archive.on('progress', () => {

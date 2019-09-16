@@ -64,7 +64,7 @@ class InitHandler {
 
     initProject() {
 
-        const filePath = path.join(this.cwd, this.projectName, 'package.json');
+        const filePath = path.join(this.cwd, 'package.json');
 
         fs.exists(filePath, (err) => {
 
