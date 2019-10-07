@@ -1,7 +1,8 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
-const sinon = require('sinon');
+const handlerClass = require('../../utils/logout-handler');
+const sandbox = require('sinon').createSandbox();
 
 describe('Handler: Logout', () => {
 
@@ -10,10 +11,15 @@ describe('Handler: Logout', () => {
 
     beforeEach(() => {
 
-        const handlerClass = require('../../utils/logout-handler');
         authHandler = new AuthHandler(false);
 
         handler = new handlerClass(authHandler);
+    });
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should have `result` property', (done) => {
@@ -24,6 +30,8 @@ describe('Handler: Logout', () => {
     });
 
     it('should have assigned authHandler', (done) => {
+
+        handler = new handlerClass();
 
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
@@ -47,14 +55,11 @@ describe('Handler: Logout', () => {
     it('should call fs.unlinkSync on logout()', async () => {
 
         const fs = require('fs');
-        const fsUnlinkSyncStub = sinon.stub(fs, 'unlinkSync').returns(undefined);
+        const fsUnlinkSyncStub = sandbox.stub(fs, 'unlinkSync').returns(undefined);
 
         await handler.logout();
 
         expect(fsUnlinkSyncStub.called).to.be.true;
-
-        fsUnlinkSyncStub.reset();
-        fsUnlinkSyncStub.restore();
 
         return Promise.resolve();
     });
@@ -63,14 +68,11 @@ describe('Handler: Logout', () => {
 
         const fs = require('fs');
         const fakeError = 'Fake error';
-        const fsUnlinkSyncStub = sinon.stub(fs, 'unlinkSync').throws(fakeError, fakeError);
+        sandbox.stub(fs, 'unlinkSync').throws(fakeError, fakeError);
 
         await handler.logout()
             .then(() => expect.fail('logout() should be rejected'))
             .catch((error) => expect(error.message === fakeError).to.be.true);
-
-        fsUnlinkSyncStub.reset();
-        fsUnlinkSyncStub.restore();
 
         return Promise.resolve();
     });

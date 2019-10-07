@@ -30,7 +30,6 @@ class ListHandler {
         return helpers.fetchProducts(this.authHeaders)
             .then((products) => {
 
-
                 const userReadable = this._mapToUserReadable(products);
                 this.result = helpers.getSorted(userReadable, 'Product Name');
                 return Promise.resolve();

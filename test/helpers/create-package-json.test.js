@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const ShowConfirmationPrompt = require('../../helpers/show-confirmation-prompt');
 const childProcess = require('child_process');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: create package json', () => {
 
@@ -16,22 +17,16 @@ describe('Helper: create package json', () => {
 
     beforeEach(() => {
 
-        joinStub = sinon.stub(path, 'join').returns('fakePath');
-        existsStub = sinon.stub(fs, 'exists');
-        showConfirmationPromptStub = sinon.stub(ShowConfirmationPrompt, 'showConfirmationPrompt');
-        spawnStub = sinon.stub(childProcess, 'spawn');
+        joinStub = sandbox.stub(path, 'join').returns('fakePath');
+        existsStub = sandbox.stub(fs, 'exists');
+        showConfirmationPromptStub = sandbox.stub(ShowConfirmationPrompt, 'showConfirmationPrompt');
+        spawnStub = sandbox.stub(childProcess, 'spawn');
     });
 
     afterEach(() => {
 
-        existsStub.reset();
-        existsStub.restore();
-        joinStub.reset();
-        joinStub.restore();
-        showConfirmationPromptStub.reset();
-        showConfirmationPromptStub.restore();
-        spawnStub.reset();
-        spawnStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     describe('Functions calls', () => {
@@ -80,7 +75,7 @@ describe('Helper: create package json', () => {
 
         it('should call spawn if user want to create package.json', async () => {
 
-            const fakeReturnedStream = { on: sinon.stub() };
+            const fakeReturnedStream = { on: sandbox.stub() };
             fakeReturnedStream.on.withArgs('exit').yields(0);
             existsStub.yields(false);
             showConfirmationPromptStub.resolves(true);
@@ -125,11 +120,12 @@ describe('Helper: create package json', () => {
             done();
         });
 
-        it('should call spawn with expected arguments', async () => {
+        it('should call spawn with expected arguments on windows', async () => {
 
-            const fakeReturnedStream = { on: sinon.stub() };
+            const fakeReturnedStream = { on: sandbox.stub() };
             fakeReturnedStream.on.withArgs('exit').yields(0);
             existsStub.yields(false);
+            sandbox.stub(process, 'platform').value('win32');
             showConfirmationPromptStub.resolves(true);
             spawnStub.returns(fakeReturnedStream);
 
@@ -138,9 +134,30 @@ describe('Helper: create package json', () => {
             const result = spawnStub.getCall(0).args;
 
             expect(result[0]).to.be.equal('npm');
-            expect(result[1]).to.be.deep.equal([ 'init' ]);
+            expect(result[1]).to.be.deep.equal(['init']);
             expect(result[2].cwd).to.be.equal(fakePath);
             expect(result[2].stdio).to.be.equal('inherit');
+            expect(result[2].shell).to.be.equal(true);
+        });
+
+        it('should call spawn with expected arguments on linux', async () => {
+
+            const fakeReturnedStream = { on: sandbox.stub() };
+            fakeReturnedStream.on.withArgs('exit').yields(0);
+            existsStub.yields(false);
+            sandbox.stub(process, 'platform').value('linux');
+            showConfirmationPromptStub.resolves(true);
+            spawnStub.returns(fakeReturnedStream);
+
+            await createPackageJson(fakePath);
+
+            const result = spawnStub.getCall(0).args;
+
+            expect(result[0]).to.be.equal('npm');
+            expect(result[1]).to.be.deep.equal(['init']);
+            expect(result[2].cwd).to.be.equal(fakePath);
+            expect(result[2].stdio).to.be.equal('inherit');
+            expect(result[2].shell).to.be.equal(undefined);
         });
     });
 
@@ -161,7 +178,7 @@ describe('Helper: create package json', () => {
 
             it('should resolve if file does not exist and user agree to create file', async () => {
 
-                const fakeReturnedStream = { on: sinon.stub() };
+                const fakeReturnedStream = { on: sandbox.stub() };
                 fakeReturnedStream.on.withArgs('exit').yields(0);
                 existsStub.yields(false);
                 showConfirmationPromptStub.resolves(true);
@@ -179,7 +196,7 @@ describe('Helper: create package json', () => {
 
                 const fakeCode = 1;
                 const expectedResult = { Status: fakeCode, Message: 'Problem with npm initialization' };
-                const fakeReturnedStream = { on: sinon.stub() };
+                const fakeReturnedStream = { on: sandbox.stub() };
                 fakeReturnedStream.on.withArgs('exit').yields(fakeCode);
                 existsStub.yields(false);
                 showConfirmationPromptStub.resolves(true);
@@ -198,7 +215,7 @@ describe('Helper: create package json', () => {
             it('should reject if error thrown', async () => {
 
                 const fakeError = 'fake error';
-                const fakeReturnedStream = { on: sinon.stub() };
+                const fakeReturnedStream = { on: sandbox.stub() };
                 fakeReturnedStream.on.withArgs('error').yields(fakeError);
                 existsStub.yields(false);
                 showConfirmationPromptStub.resolves(true);

@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const config = require('../config/index');
+const CliStatus = require('../models/cli-status');
 const path = require('path');
 
 class AuthHandler {
@@ -36,7 +37,7 @@ class AuthHandler {
 
         if (!this.isAuth) {
 
-            this.result = [{ 'Status': 'not logged in', 'Message': 'Please login first' }];
+            this.result = [{ 'Status': CliStatus.UNAUTHORIZED, 'Message': 'Please login first' }];
 
             console.table(this.result);
 

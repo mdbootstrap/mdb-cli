@@ -22,7 +22,9 @@ class HelpHandler {
             { 'Command': 'orders', 'Description': 'list all your orders' },
             { 'Command': 'init', 'Description': 'initialize chosen package' },
             { 'Command': 'publish', 'Description': 'publish your project' },
-            { 'Command': 'set-name', 'Description': 'change your project name' }
+            { 'Command': 'unpublish', 'Description': 'remove your project from the public server' },
+            { 'Command': 'set-name', 'Description': 'change your project name' },
+            { 'Command': 'rename', 'Description': 'change your project name and update name on the public server' }
         ];
     }
 

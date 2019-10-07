@@ -2,6 +2,7 @@
 
 const { serializeJsonFile } = require('../../helpers/serialize-object-to-file');
 const fs = require('fs');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: serialize object to file', () => {
 
@@ -11,14 +12,14 @@ describe('Helper: serialize object to file', () => {
 
     beforeEach(() => {
 
-        writeFileStub = sinon.stub(fs, 'writeFile');
+        writeFileStub = sandbox.stub(fs, 'writeFile');
         writeFileStub.yields(undefined);
     });
 
     afterEach(() => {
 
-        writeFileStub.reset();
-        writeFileStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should return promise', async () => {

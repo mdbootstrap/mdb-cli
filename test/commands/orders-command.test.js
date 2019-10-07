@@ -1,19 +1,34 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
-const sinon = require('sinon');
+const sandbox = require('sinon').createSandbox();
 
 describe('Command: orders', () => {
 
     let authHandler;
     let command;
+    let OrdersCommand;
 
     beforeEach(() => {
 
-        const commandClass = require('../../commands/orders-command');
+        OrdersCommand = require('../../commands/orders-command');
         authHandler = new AuthHandler(false);
 
-        command = new commandClass(authHandler);
+        command = new OrdersCommand(authHandler);
+        sandbox.stub(console, 'table');
+    });
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
+    });
+
+    it('should have assigned authHandler even though AuthHandler is undefined', () => {
+
+        command = new OrdersCommand();
+
+        expect(command).to.have.property('authHandler');
     });
 
     it('should have assigned options', () => {
@@ -48,29 +63,21 @@ describe('Command: orders', () => {
 
     it('should execute call HttpWrapper.get', () => {
 
-        const getStub = sinon.stub(command.http, 'get').resolves('[]');
+        const getStub = sandbox.stub(command.http, 'get').resolves('[]');
 
         command.execute();
 
         chai.assert.isTrue(getStub.called, 'HttpWrapper.getStub not called');
-
-        getStub.reset();
-        getStub.restore();
     });
 
     it('should execute call print', async () => {
 
-        const getStub = sinon.stub(command.http, 'get').resolves('[]');
-        const printSpy = sinon.stub(command, 'print');
+        sandbox.stub(command.http, 'get').resolves('[]');
+        const printSpy = sandbox.stub(command, 'print');
 
         await command.execute();
 
         chai.assert.isTrue(printSpy.calledOnce, 'OrderCommand.print not called');
-
-        getStub.reset();
-        getStub.restore();
-        printSpy.reset();
-        printSpy.restore();
     });
 
     it('should execute print expected results', async () => {
@@ -87,30 +94,44 @@ describe('Command: orders', () => {
         "post_id":${orderId},
         "post_date":"${orderDate}",
         "post_status":"${orderStatus}"}]`;
-        const getStub = sinon.stub(command.http, 'get').resolves(receivedObject);
+        sandbox.stub(command.http, 'get').resolves(receivedObject);
 
         command.result = [];
 
         await command.execute();
 
         expect(command.result).to.deep.equal(expectedResults);
-
-        getStub.reset();
-        getStub.restore();
     });
 
     it('should console.error on HttpWrapper.get rejected', async () => {
 
-        const getStub = sinon.stub(command.http, 'get').rejects('Fake error');
-        sinon.spy(console, 'error');
+        sandbox.stub(command.http, 'get').rejects('Fake error');
+        const errorStub = sandbox.stub(console, 'error');
 
         await command.execute();
 
-        chai.assert.isTrue(console.error.calledOnce, 'console.error not called on HttpWrapper.get failure');
-
-        getStub.reset();
-        getStub.restore();
-        console.error.restore();
+        chai.assert.isTrue(errorStub.calledOnce, 'console.error not called on HttpWrapper.get failure');
     });
 
+    it('should parse orders to json format', async () => {
+
+        sandbox.stub(command.http, 'get').resolves('Fake orders string');
+        const parseStub = sandbox.stub(JSON, 'parse');
+
+        await command.execute();
+
+        chai.assert.isTrue(parseStub.calledOnce, 'JSON.parse not called');
+    });
+
+    it('should return expected result', async () => {
+
+        const fakeOrders = [{ post_id: 123, post_date: '2018-09-05', post_status: 'wc-fakeStatus' }];
+        sandbox.stub(command.http, 'get').resolves(fakeOrders);
+        sandbox.stub(JSON, 'parse');
+        const expectedResult = { 'Order ID': 123, 'Order Date': (new Date('9/5/2018, 2:00:00 AM')).toLocaleString(), 'Order Status': 'fakeStatus' };
+
+        await command.execute();
+
+        expect(command.result[0]).to.deep.equal(expectedResult);
+    });
 });

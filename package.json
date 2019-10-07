@@ -8,8 +8,8 @@
     "url": "https://github.com/mdbootstrap/mdb-cli.git"
   },
   "scripts": {
-    "test": "mocha --exit --recursive",
-    "test:coverage": "nyc --reporter=text mocha --exit --recursive",
+    "test": "mocha --exit --recursive --file test/index.js",
+    "test:coverage": "nyc --reporter=text mocha --exit --recursive --file test/index.js",
     "compile": "./node_modules/pkg/lib-es5/bin.js -c package.json dist/index.js --targets node6",
     "lint": "./node_modules/.bin/eslint .",
     "lintfix": "./node_modules/.bin/eslint . --fix"

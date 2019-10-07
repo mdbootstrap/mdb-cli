@@ -41,4 +41,9 @@ gulp.task('copy-readme', async () => {
     }
 });
 
-gulp.task('build', gulp.series('transpile', 'copy-package-json', 'copy-readme'));
+gulp.task('copy-env', async () => {
+
+    fs.copyFileSync('./.env', './dist/.env');
+});
+
+gulp.task('build', gulp.series('transpile', 'copy-package-json', 'copy-readme', 'copy-env'));

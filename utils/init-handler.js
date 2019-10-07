@@ -2,9 +2,12 @@
 
 const AuthHandler = require('./auth-handler');
 const helpers = require('../helpers/');
+const CliStatus = require('../models/cli-status');
 const fs = require('fs');
 const path = require('path');
-const prompt = require('inquirer').createPromptModule();
+const inquirer = require('inquirer');
+const HttpWrapper = require('../utils/http-wrapper');
+const config = require('../config');
 
 class InitHandler {
 
@@ -25,7 +28,7 @@ class InitHandler {
 
     setArgs(args) {
 
-        this.args = { ...this.args, ...args};
+        this.args = { ...this.args, ...args };
     }
 
     setAuthHeader() {
@@ -51,7 +54,8 @@ class InitHandler {
             short: row.product_slug,
             value: row.product_slug
         }));
-        return prompt([
+        
+        return inquirer.createPromptModule()([
             {
                 type: 'list',
                 name: 'projectSlug',
@@ -64,22 +68,19 @@ class InitHandler {
 
     initProject() {
 
-        const filePath = path.join(this.cwd, 'package.json');
+        const packageJsonPath = path.join(this.cwd, 'package.json');
 
-        fs.exists(filePath, (err) => {
+        if (fs.existsSync(packageJsonPath)) {
 
-            if (err) {
+            helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it here?')
+                .then((confirmed) => {
 
-                helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it in this location?')
-                    .then(answer => {
+                    if (confirmed) this._download();
+                });
+        } else {
 
-                        if (answer) this._download();
-                    });
-            } else {
-
-                this._download();
-            }
-        });
+            this._download();
+        }
     }
 
     _setProjectInfo(project) {
@@ -119,8 +120,8 @@ class InitHandler {
                 this.removeGitFolder()
                     .then(() => this.saveMetadata())
                     .then(() => this.notifyServer())
-                    .then(() => console.table(this.result))
-                    .catch(console.error);
+                    .catch(console.error)
+                    .finally(() => console.table(this.result));
             });
         });
     }
@@ -136,7 +137,7 @@ class InitHandler {
 
         if (this._promptShownCount++ >= 10) {
 
-            console.table([{ 'Status': 'suggestion', 'Message': 'Please run `mdb list` to see available packages.' }]);
+            console.table([{ 'Status': CliStatus.SEE_OTHER, 'Message': 'Please run `mdb list` to see available packages.' }]);
 
             process.exit(0);
         }
@@ -159,20 +160,23 @@ class InitHandler {
         const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
         const metadataPath = path.join(this.projectRoot, '.mdb');
 
-        return new Promise(resolve =>
+        return new Promise((resolve) =>
 
-            serializeJsonFile(metadataPath, { packageName: this.projectSlug }).then(() => {
+            serializeJsonFile(metadataPath, { packageName: this.projectSlug })
+                .then(() => {
 
-                this.result.push({'Status': 0, 'Message': 'Project metadata saved.'});
-                resolve();
-            }, () => resolve())
-        );
+                    this.result.push({ 'Status': CliStatus.SUCCESS, 'Message': 'Project metadata saved.' });
+                    resolve();
+                })
+                .catch(() => {
+
+                    this.result.push({ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Project metadata not saved.' });
+                    resolve();
+                }));
     }
 
     notifyServer() {
 
-        const HttpWrapper = require('../utils/http-wrapper');
-        const config = require('../config');
         const http = new HttpWrapper({
             port: config.port,
             hostname: config.host,

@@ -1,12 +1,13 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
-const sinon = require('sinon');
+const sandbox = require('sinon').createSandbox();
 
 describe('Command: init', () => {
 
     let authHandler;
     let command;
+    let InitCommand;
     const fakeReturnedPromise = {
 
         then(cb) {
@@ -17,20 +18,32 @@ describe('Command: init', () => {
 
             return this;
         }
-
     };
 
     beforeEach(() => {
 
-        const commandClass = require('../../commands/init-command');
+        InitCommand = require('../../commands/init-command');
         authHandler = new AuthHandler(false);
 
-        command = new commandClass(authHandler);
+        command = new InitCommand(authHandler);
+    });
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should have assigned handler', () => {
 
         expect(command).to.have.property('handler');
+    });
+
+    it('should have assigned authHandler', () => {
+
+        command = new InitCommand();
+
+        expect(command).to.have.property('authHandler');
     });
 
     it('should have SetNameHandler handler', () => {
@@ -52,34 +65,24 @@ describe('Command: init', () => {
 
                 return this;
             }
-
         };
 
-        const handlerSpy = sinon.spy(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        const handlerSpy = sandbox.spy(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
+        sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
 
         command.execute();
 
         expect(handlerSpy.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        showUserPromptStub.reset();
-        showUserPromptStub.restore();
-        initProjectStub.reset();
-        initProjectStub.restore();
-        handlerSpy.restore();
-
     });
 
     it('should call handler.getAvailableOptions', () => {
 
-        const handlerStub = sinon.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
+        const initProjectStub = sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
 
         command.execute();
 
@@ -93,14 +96,13 @@ describe('Command: init', () => {
         initProjectStub.restore();
         handlerStub.reset();
         handlerStub.restore();
-
     });
 
     it('should call console.log on handler.getAvailableOptions reject', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').rejects('Fake error');
-        const consoleSpy = sinon.spy(console, 'log');
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').rejects('Fake error');
+        const consoleSpy = sandbox.spy(console, 'log');
 
         await command.execute();
 
@@ -115,10 +117,10 @@ describe('Command: init', () => {
 
     it('should call handler.showUserPrompt', () => {
 
-        const handlerStub = sinon.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
+        const initProjectStub = sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
 
         command.execute();
 
@@ -132,15 +134,14 @@ describe('Command: init', () => {
         initProjectStub.restore();
         handlerStub.reset();
         handlerStub.restore();
-
     });
 
     it('should call console.log on handler.showUserPrompt reject', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').rejects('Fake error');
-        const consoleSpy = sinon.spy(console, 'log');
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').rejects('Fake error');
+        const consoleSpy = sandbox.spy(console, 'log');
 
         await command.execute();
 
@@ -157,10 +158,10 @@ describe('Command: init', () => {
 
     it('should call handler.initProject', () => {
 
-        const handlerStub = sinon.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sinon.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
+        const initProjectStub = sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
 
         command.execute();
 
@@ -174,16 +175,15 @@ describe('Command: init', () => {
         initProjectStub.restore();
         handlerStub.reset();
         handlerStub.restore();
-
     });
 
     it('should call console.log on handler.initProject reject', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sinon.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sinon.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sinon.stub(command.handler, 'initProject').rejects('Fake error');
-        const consoleSpy = sinon.spy(console, 'log');
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
+        const initProjectStub = sandbox.stub(command.handler, 'initProject').rejects('Fake error');
+        const consoleSpy = sandbox.spy(console, 'log');
 
         await command.execute();
 
@@ -199,5 +199,4 @@ describe('Command: init', () => {
         handlerStub.restore();
         consoleSpy.restore();
     });
-
 });

@@ -3,6 +3,7 @@
 const { fetchProducts } = require('../../helpers/fetch-products');
 const HttpWrapper = require('../../utils/http-wrapper');
 const config = require('../../config');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: fetch products', () => {
 
@@ -12,16 +13,15 @@ describe('Helper: fetch products', () => {
 
     beforeEach(() => {
 
-        sinon.replace(config, 'port', fakePort);
-        sinon.replace(config, 'host', fakeHost);
-        getStub = sinon.stub(HttpWrapper.prototype, 'get');
+        sandbox.replace(config, 'port', fakePort);
+        sandbox.replace(config, 'host', fakeHost);
+        getStub = sandbox.stub(HttpWrapper.prototype, 'get');
     });
 
     afterEach(() => {
 
-        sinon.restore();
-        getStub.reset();
-        getStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should return promise', () => {

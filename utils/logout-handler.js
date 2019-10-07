@@ -1,6 +1,7 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
+const CliStatus = require('../models/cli-status');
 const fs = require('fs');
 
 class LogoutHandler {
@@ -23,10 +24,10 @@ class LogoutHandler {
 
             fs.unlinkSync(this.authHandler._tokenFile);
 
-            this.result = [{ 'Status': 'logged out', 'Message': 'Logout successful' }];
+            this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Logout successful' }];
         } catch (e) {
 
-            this.result = [{ 'Status': 'not logged out', 'Message': `Logout failed: ${e.message}` }];
+            this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Logout failed: ${e.message}` }];
 
             return Promise.reject(e);
         }

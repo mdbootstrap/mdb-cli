@@ -79,6 +79,13 @@ class HttpWrapper {
 
         return this.request();
     }
+
+    delete() {
+
+        this._options.method = 'DELETE';
+
+        return this.request();
+    }
 }
 
 module.exports = HttpWrapper;

@@ -8,6 +8,8 @@ const path = require('path');
 const progress = require('progress');
 const unzip = require('unzipper');
 const { Readable } = require('stream');
+const CliStatus = require('../../models/cli-status');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: download pro starter', () => {
 
@@ -24,40 +26,28 @@ describe('Helper: download pro starter', () => {
     let extractStub;
     let joinStub;
     let renameStub;
-    let tickStub;
 
     beforeEach(() => {
 
-        fakeRequest = { on: sinon.stub(), write: sinon.stub(), end: sinon.stub() };
-        fakeResponse = { on: sinon.stub(), headers: fakeHeader };
-        fakePipe = { on: sinon.stub().withArgs('close').yields('') };
-        fakeExtract = { on: sinon.stub() };
-        sinon.replace(config, 'port', fakePort);
-        sinon.replace(config, 'host', fakeHost);
-        createRequestStub = sinon.stub(HttpWrapper.prototype, 'createRequest').returns(fakeRequest).yields(fakeResponse);
-        readablePipeStub = sinon.stub(Readable.prototype, 'pipe').returns(fakePipe);
-        extractStub = sinon.stub(unzip, 'Extract').returns(fakeExtract);
-        joinStub = sinon.stub(path, 'join').returns(fakePath);
-        renameStub = sinon.stub(fs, 'rename').yields(false);
-        tickStub = sinon.stub(progress.prototype, 'tick').returns();
+        fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
+        fakeResponse = { on: sandbox.stub(), headers: fakeHeader };
+        fakePipe = { on: sandbox.stub().withArgs('close').yields('') };
+        fakeExtract = { on: sandbox.stub() };
+        sandbox.replace(config, 'port', fakePort);
+        sandbox.replace(config, 'host', fakeHost);
+        createRequestStub = sandbox.stub(HttpWrapper.prototype, 'createRequest').returns(fakeRequest).yields(fakeResponse);
+        readablePipeStub = sandbox.stub(Readable.prototype, 'pipe').returns(fakePipe);
+        extractStub = sandbox.stub(unzip, 'Extract').returns(fakeExtract);
+        joinStub = sandbox.stub(path, 'join').returns(fakePath);
+        renameStub = sandbox.stub(fs, 'rename').yields(false);
+        sandbox.stub(progress.prototype, 'tick').returns();
+        sandbox.spy(console, 'log');
     });
 
     afterEach(() => {
 
-        sinon.reset();
-        sinon.restore();
-        createRequestStub.reset();
-        createRequestStub.restore();
-        readablePipeStub.reset();
-        readablePipeStub.restore();
-        extractStub.reset();
-        extractStub.restore();
-        joinStub.reset();
-        joinStub.restore();
-        renameStub.reset();
-        renameStub.restore();
-        tickStub.reset();
-        tickStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should return promise', () => {
@@ -103,7 +93,7 @@ describe('Helper: download pro starter', () => {
 
             it('should call request response.on data', async () => {
 
-                fakeResponse = { on: sinon.stub().withArgs('data'), headers: fakeHeader };
+                fakeResponse = { on: sandbox.stub().withArgs('data'), headers: fakeHeader };
                 createRequestStub.returns(fakeRequest).yields(fakeResponse);
 
                 await downloadProStarter();
@@ -113,7 +103,7 @@ describe('Helper: download pro starter', () => {
 
             it('should call request response.on end', async () => {
 
-                fakeResponse = { on: sinon.stub().withArgs('end').yields(''), headers: fakeHeader };
+                fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader };
                 createRequestStub.returns(fakeRequest).yields(fakeResponse);
 
                 await downloadProStarter();
@@ -169,11 +159,6 @@ describe('Helper: download pro starter', () => {
 
         describe('Log', () => {
 
-            beforeEach(() => {
-
-                sinon.spy(console, 'log');
-            });
-
             it('on pipe error', async () => {
 
                 extractStub.throws('fakeError');
@@ -191,7 +176,7 @@ describe('Helper: download pro starter', () => {
 
             it('on end', async () => {
 
-                fakeResponse = { on: sinon.stub().withArgs('end').yields(''), headers: fakeHeader };
+                fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader };
                 createRequestStub.returns(fakeRequest).yields(fakeResponse);
 
                 await downloadProStarter();
@@ -250,7 +235,7 @@ describe('Helper: download pro starter', () => {
 
             it('should call request response.on data', async () => {
 
-                fakeResponse = { on: sinon.stub().withArgs('data').yields(''), headers: fakeHeader };
+                fakeResponse = { on: sandbox.stub().withArgs('data').yields(''), headers: fakeHeader };
                 createRequestStub.returns(fakeRequest).yields(fakeResponse);
 
                 await downloadProStarter();
@@ -260,7 +245,7 @@ describe('Helper: download pro starter', () => {
 
             it('should call request response.on end', async () => {
 
-                fakeResponse = { on: sinon.stub().withArgs('end').yields(''), headers: fakeHeader };
+                fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader };
                 createRequestStub.returns(fakeRequest).yields(fakeResponse);
 
                 await downloadProStarter();
@@ -280,7 +265,7 @@ describe('Helper: download pro starter', () => {
 
             it('should call pipe.on close', async () => {
 
-                fakePipe = { on: sinon.stub().withArgs('close').yields('') };
+                fakePipe = { on: sandbox.stub().withArgs('close').yields('') };
                 readablePipeStub.returns(fakePipe);
 
                 await downloadProStarter();
@@ -304,7 +289,7 @@ describe('Helper: download pro starter', () => {
 
             beforeEach(async () => {
 
-                fakePipe = { on: sinon.stub().withArgs('close').yields('') };
+                fakePipe = { on: sandbox.stub().withArgs('close').yields('') };
                 readablePipeStub.returns(fakePipe);
 
                 await downloadProStarter(fakePackageName, undefined, fakePath, fakeProjectName);
@@ -333,12 +318,12 @@ describe('Helper: download pro starter', () => {
 
     describe('Resolve with expected result', () => {
 
-        const expectedResult = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
+        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Initialization completed.' }];
 
         beforeEach(() => {
 
-            fakeResponse = { on: sinon.stub().withArgs('end').yields(''), headers: fakeHeader };
-            fakePipe = { on: sinon.stub().withArgs('close').yields('') };
+            fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader };
+            fakePipe = { on: sandbox.stub().withArgs('close').yields('') };
             createRequestStub.returns(fakeRequest).yields(fakeResponse);
             readablePipeStub.returns(fakePipe);
         });
@@ -404,8 +389,8 @@ describe('Helper: download pro starter', () => {
 
             it('on request error', async () => {
 
-                fakeRequest = { on: sinon.stub().withArgs('error').yields(fakeError), write: sinon.stub(), end: sinon.stub() };
-                fakePipe = { on: sinon.stub().withArgs('close').returns() };
+                fakeRequest = { on: sandbox.stub().withArgs('error').yields(fakeError), write: sandbox.stub(), end: sandbox.stub() };
+                fakePipe = { on: sandbox.stub().withArgs('close').returns() };
                 createRequestStub.returns(fakeRequest);
                 readablePipeStub.returns(fakePipe);
 
@@ -429,7 +414,7 @@ describe('Helper: download pro starter', () => {
                     throw new Error('should throw error');
                 } catch (e) {
 
-                    expect(e).to.be.deep.equal([{ 'Status': 'error', 'Message': 'Error initializing your project' }]);
+                    expect(e).to.be.deep.equal([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' }]);
                 }
             });
 

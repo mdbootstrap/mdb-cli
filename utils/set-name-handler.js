@@ -1,6 +1,7 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
+const CliStatus = require('../models/cli-status');
 
 class SetNameHandler {
 
@@ -53,17 +54,16 @@ class SetNameHandler {
 
             return serializeJsonFile(fileName, fileContent).then(() => {
 
-                this.result = [{'Status': 'name changed', 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
+                this.result = [{'Status': CliStatus.SUCCESS, 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
                 return Promise.resolve();
             }, error => {
 
-                this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} serialization`}];
+                this.result = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with ${fileName} serialization`}];
                 return Promise.reject(error);
-            }
-            );
+            });
         },error => {
 
-            this.result = [{'Status': 'name not changed', 'Message': `Problem with ${fileName} deserialization`}];
+            this.result = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with ${fileName} deserialization`}];
             return Promise.reject(error);
         });
     }

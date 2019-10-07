@@ -2,6 +2,7 @@
 
 const { showConfirmationPrompt } = require('../../helpers/show-confirmation-prompt');
 const inquirer = require('inquirer');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: show confirmation prompt', () => {
 
@@ -9,15 +10,14 @@ describe('Helper: show confirmation prompt', () => {
 
     beforeEach(() => {
 
-        createPromptModuleStub = sinon.stub(inquirer, 'createPromptModule');
+        createPromptModuleStub = sandbox.stub(inquirer, 'createPromptModule');
     });
 
     afterEach(() => {
 
-        createPromptModuleStub.reset();
-        createPromptModuleStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
-
 
     it('should return promise', (done) => {
 
@@ -35,8 +35,6 @@ describe('Helper: show confirmation prompt', () => {
         let result = await showConfirmationPrompt('');
 
         chai.assert(result === true, `returned ${result} should return true`);
-
-        createPromptModuleStub.reset();
     });
 
     it('should return false', async () => {
@@ -46,8 +44,5 @@ describe('Helper: show confirmation prompt', () => {
         let result = await showConfirmationPrompt('');
 
         chai.assert(result === false, `returned ${result} should return false`);
-
-        createPromptModuleStub.reset();
     });
-
 });

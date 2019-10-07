@@ -2,13 +2,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const CliStatus = require('../models/cli-status');
 
 module.exports = {
 
     createPackageJson(directoryPath) {
 
         const packageJsonPath = path.join(directoryPath, 'package.json');
-        const successStatus = { 'Status': 0, 'Message': 'package.json created.' };
+        const successStatus = { 'Status': CliStatus.SUCCESS, 'Message': 'package.json created.' };
 
         return new Promise((resolve, reject) => {
 
@@ -31,11 +32,11 @@ module.exports = {
 
                             npmInit.on('error', (error) => reject(error));
 
-                            npmInit.on('exit', (code) => code === 0 ? resolve(successStatus) : reject({'Status': code, 'Message': 'Problem with npm initialization'}));
+                            npmInit.on('exit', (code) => code === CliStatus.SUCCESS ? resolve(successStatus) : reject({'Status': code, 'Message': 'Problem with npm initialization'}));
 
                         } else {
 
-                            reject({ 'Status': 0, 'Message': 'package.json not created.' });
+                            reject({ 'Status': CliStatus.SUCCESS, 'Message': 'package.json not created.' });
                         }
                     });
                 }

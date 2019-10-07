@@ -1,7 +1,8 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
-const sinon = require('sinon');
+const CliStatus = require('../../models/cli-status');
+const sandbox = require('sinon').createSandbox();
 
 describe('Handler: Login', () => {
 
@@ -14,6 +15,12 @@ describe('Handler: Login', () => {
         authHandler = new AuthHandler(false);
 
         handler = new handlerClass(authHandler);
+    });
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should have `result` property', (done) => {
@@ -55,15 +62,12 @@ describe('Handler: Login', () => {
 
         const inquirer = require('inquirer');
 
-        const promptStub = sinon.stub().resolves({ username: '', password: '' });
-        const createPromptModuleStub = sinon.stub(inquirer, 'createPromptModule').returns(promptStub);
+        const promptStub = sandbox.stub().resolves({ username: '', password: '' });
+        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
 
         await handler.askCredentials();
 
         expect(promptStub.called).to.be.true;
-
-        createPromptModuleStub.reset();
-        createPromptModuleStub.restore();
 
         return Promise.resolve();
     });
@@ -73,17 +77,14 @@ describe('Handler: Login', () => {
         const inquirer = require('inquirer');
 
         const expectedOptionsData = { username: '', password: '' };
-        const promptStub = sinon.stub().resolves(expectedOptionsData);
-        const createPromptModuleStub = sinon.stub(inquirer, 'createPromptModule').returns(promptStub);
+        const promptStub = sandbox.stub().resolves(expectedOptionsData);
+        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
 
         await handler.askCredentials();
 
         const actualOptionsData = handler.options.data;
 
         chai.assert.deepEqual(actualOptionsData, expectedOptionsData, 'options has not been set after askCredentials()');
-
-        createPromptModuleStub.reset();
-        createPromptModuleStub.restore();
 
         return Promise.resolve();
     });
@@ -92,7 +93,7 @@ describe('Handler: Login', () => {
 
         const HttpWrapper = require('../../utils/http-wrapper');
 
-        const httpMock = sinon.mock(HttpWrapper.prototype);
+        const httpMock = sandbox.mock(HttpWrapper.prototype);
         httpMock.expects('post').once().resolves([{ token: '' }]);
 
         await handler.login();
@@ -128,7 +129,7 @@ describe('Handler: Login', () => {
 
     it('should not saveToken() if _userToken is empty', (done) => {
 
-        const expectedResult = [{ 'Status': 'not logged in', 'Message': 'Login failed' }];
+        const expectedResult = [{ 'Status': CliStatus.ERROR, 'Message': 'Login failed' }];
 
         handler._userToken = '';
 
@@ -145,10 +146,10 @@ describe('Handler: Login', () => {
 
         const fs = require('fs');
 
-        const mkdirStub = sinon.stub(fs, 'mkdir').callsArgWith(2);
-        const writeFileStub = sinon.stub(fs, 'writeFile').returns(undefined);
+        const mkdirStub = sandbox.stub(fs, 'mkdir').callsArgWith(2);
+        const writeFileStub = sandbox.stub(fs, 'writeFile').returns(undefined);
 
-        const expectedResult = [{ 'Status': 'logged in', 'Message': 'Login successful' }];
+        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Login successful' }];
 
         handler._userToken = 'fake-token';
 
@@ -160,11 +161,6 @@ describe('Handler: Login', () => {
         expect(writeFileStub.called).to.be.true;
         chai.assert.deepEqual(actualResult[0], expectedResult[0], 'saveToken() did not set expected result');
 
-        mkdirStub.reset();
-        writeFileStub.reset();
-        mkdirStub.restore();
-        writeFileStub.restore();
-
         done();
     });
 
@@ -173,10 +169,10 @@ describe('Handler: Login', () => {
         const fs = require('fs');
 
         const fakeError = new Error('Fake error');
-        const mkdirStub = sinon.stub(fs, 'mkdir').callsArgWith(2);
-        const writeFileStub = sinon.stub(fs, 'writeFile').throws(fakeError);
+        sandbox.stub(fs, 'mkdir').callsArgWith(2);
+        const writeFileStub = sandbox.stub(fs, 'writeFile').throws(fakeError);
 
-        const expectedResult = [{ 'Status': 'not logged in', 'Message': `Login failed: ${fakeError.message}` }];
+        const expectedResult = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Login failed: ${fakeError.message}` }];
 
         handler._userToken = 'fake-token';
 
@@ -187,12 +183,6 @@ describe('Handler: Login', () => {
         expect(writeFileStub.called).to.be.true;
         chai.assert.deepEqual(actualResult[0], expectedResult[0], 'saveToken() did not set expected result');
 
-        mkdirStub.reset();
-        writeFileStub.reset();
-        mkdirStub.restore();
-        writeFileStub.restore();
-
         done();
     });
-    
 });
