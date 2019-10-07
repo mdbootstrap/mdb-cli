@@ -33,7 +33,9 @@
   },
   "dependencies": {
     "archiver": "^3.0.0",
+    "atob": "^2.1.2",
     "babel-polyfill": "^6.26.0",
+    "btoa": "^1.2.1",
     "console.table": "^0.10.0",
     "dotenv": "^8.0.0",
     "fs-extra": "^8.0.1",
