@@ -7,6 +7,7 @@ const unzip = require('unzipper');
 const Path = require('path');
 const ProgressBar = require('progress');
 const { Readable } = require('stream');
+const CliStatus = require('../models/cli-status');
 
 module.exports = {
 
@@ -53,7 +54,7 @@ module.exports = {
 
                 response.on('end', () => {
 
-                    result = [{ 'Status': 'initialized', 'Message': 'Initialization completed.' }];
+                    result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Initialization completed.' }];
 
                     readStream.push(null);
                     console.log('\n');
@@ -82,7 +83,7 @@ module.exports = {
 
                     console.log(e);
 
-                    result = [{ 'Status': 'error', 'Message': 'Error initializing your project' }];
+                    result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' }];
 
                     reject(result);
                 }

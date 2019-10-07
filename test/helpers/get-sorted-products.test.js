@@ -1,11 +1,18 @@
 'use strict';
 
 const { getSorted } = require('../../helpers/get-sorted-products');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: get sorted products', () => {
 
     let array;
     let key;
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
+    });
 
     it('should throw TypeError', () => {
 
@@ -16,13 +23,11 @@ describe('Helper: get sorted products', () => {
 
         array = [];
         key = '';
-        const sortSpy = sinon.spy(array, 'slice');
+        const sortSpy = sandbox.spy(array, 'slice');
 
         getSorted(array, '');
 
         expect(sortSpy.calledOnce).to.be.true;
-
-        sortSpy.restore();
     });
 
     it('should call sort on array', () => {
@@ -30,16 +35,12 @@ describe('Helper: get sorted products', () => {
         array = [];
         key = '';
         const fakeArray = [];
-        const sliceStub = sinon.stub(array, 'slice').returns(fakeArray);
-        const sortSpy = sinon.spy(fakeArray, 'sort');
+        sandbox.stub(array, 'slice').returns(fakeArray);
+        const sortSpy = sandbox.spy(fakeArray, 'sort');
 
         getSorted(array, '');
 
         expect(sortSpy.calledOnce).to.be.true;
-
-        sortSpy.restore();
-        sliceStub.reset();
-        sliceStub.restore();
     });
 
     describe('should return empty array', () => {
@@ -67,6 +68,7 @@ describe('Helper: get sorted products', () => {
 
             key = '';
         });
+
         afterEach(() => expect(getSorted(array, key)).to.deep.equal(expectedResult));
 
         it('if only array given', () => {

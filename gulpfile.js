@@ -3,7 +3,7 @@ const babel = require('gulp-babel');
 const fs = require('fs');
 
 gulp.task('transpile', () =>
-    gulp.src(['./index.js', './commands/*', './config/*', './helpers/*', './utils/*'], { base: '.' })
+    gulp.src(['./index.js', './commands/*', './config/*', './helpers/*', './models/*', './utils/*'], { base: '.' })
         .pipe(babel({
             presets: ['@babel/env']
         }))
@@ -41,4 +41,9 @@ gulp.task('copy-readme', async () => {
     }
 });
 
-gulp.task('build', gulp.series('transpile', 'copy-package-json', 'copy-readme'));
+gulp.task('copy-env', async () => {
+
+    fs.copyFileSync('./.env', './dist/.env');
+});
+
+gulp.task('build', gulp.series('transpile', 'copy-package-json', 'copy-readme', 'copy-env'));

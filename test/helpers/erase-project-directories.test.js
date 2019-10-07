@@ -3,6 +3,7 @@
 const { eraseProjectDirectories } = require('../../helpers/erase-project-directories');
 const helpers = require('../../helpers/');
 const fs = require('fs');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: erase project directories', () => {
 
@@ -14,19 +15,15 @@ describe('Helper: erase project directories', () => {
 
     beforeEach(() => {
 
-        existsSyncStub = sinon.stub(fs, 'existsSync');
-        showConfirmationPromptStub = sinon.stub(helpers, 'showConfirmationPrompt');
-        removeFolderStub = sinon.stub(helpers, 'removeFolder');
+        existsSyncStub = sandbox.stub(fs, 'existsSync');
+        showConfirmationPromptStub = sandbox.stub(helpers, 'showConfirmationPrompt');
+        removeFolderStub = sandbox.stub(helpers, 'removeFolder');
     });
 
     afterEach(() => {
 
-        existsSyncStub.reset();
-        existsSyncStub.restore();
-        showConfirmationPromptStub.reset();
-        showConfirmationPromptStub.restore();
-        removeFolderStub.reset();
-        removeFolderStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should return promise', () => {

@@ -3,6 +3,7 @@
 const { saveToken } = require('../../helpers/save-token');
 const fs = require('fs');
 const config = require('../../config/index');
+const sandbox = require('sinon').createSandbox();
 
 describe('Helper: save token', () => {
 
@@ -14,19 +15,16 @@ describe('Helper: save token', () => {
 
     beforeEach(() => {
 
-        mkdirStub = sinon.stub(fs, 'mkdir');
-        writeFileStub = sinon.stub(fs, 'writeFile');
-        sinon.replace(config, 'tokenDir', fakeTokenDir);
-        sinon.replace(config, 'tokenFile', fakeTokenFile);
+        mkdirStub = sandbox.stub(fs, 'mkdir');
+        writeFileStub = sandbox.stub(fs, 'writeFile');
+        sandbox.replace(config, 'tokenDir', fakeTokenDir);
+        sandbox.replace(config, 'tokenFile', fakeTokenFile);
     });
 
     afterEach(() => {
 
-        mkdirStub.reset();
-        mkdirStub.restore();
-        writeFileStub.reset();
-        writeFileStub.restore();
-        sinon.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     describe('Functions calls', () => {

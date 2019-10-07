@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "1.1.18",
+  "version": "1.1.20",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -8,8 +8,8 @@
     "url": "https://github.com/mdbootstrap/mdb-cli.git"
   },
   "scripts": {
-    "test": "mocha --exit --recursive",
-    "test:coverage": "nyc --reporter=text mocha --exit --recursive",
+    "test": "mocha --exit --recursive --file test/index.js",
+    "test:coverage": "nyc --reporter=text mocha --exit --recursive --file test/index.js",
     "compile": "./node_modules/pkg/lib-es5/bin.js -c package.json dist/index.js --targets node6",
     "lint": "./node_modules/.bin/eslint .",
     "lintfix": "./node_modules/.bin/eslint . --fix"
@@ -33,7 +33,9 @@
   },
   "dependencies": {
     "archiver": "^3.0.0",
+    "atob": "^2.1.2",
     "babel-polyfill": "^6.26.0",
+    "btoa": "^1.2.1",
     "console.table": "^0.10.0",
     "dotenv": "^8.0.0",
     "fs-extra": "^8.0.1",
@@ -47,6 +49,7 @@
       "dist/commands/*.js",
       "dist/config/*.js",
       "dist/helpers/*.js",
+      "dist/models/*.js",
       "dist/utils/*.js"
     ]
   },

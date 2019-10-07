@@ -1,8 +1,8 @@
 'use strict';
 
 const { gitClone } = require('../../helpers/git-clone');
+const CliStatus = require('../../models/cli-status');
 const childProcess = require('child_process');
-const sinon = require('sinon');
 
 describe('Helper: git clone', () => {
 
@@ -37,7 +37,7 @@ describe('Helper: git clone', () => {
 
         it('should resolve on code equal 0', async () => {
 
-            const code = 0;
+            const code = CliStatus.SUCCESS;
             const expectedResult = [{ 'Status': code, 'Message': 'Initialization completed.' }];
             fakeReturnedStream.on.withArgs('exit').yields(code);
             spawnStub.returns(fakeReturnedStream);
@@ -49,7 +49,7 @@ describe('Helper: git clone', () => {
 
         it('should reject on code not equal 0', async () => {
 
-            const code = 1;
+            const code = CliStatus.INTERNAL_SERVER_ERROR;
             const expectedResult = [{ 'Status': code, 'Message': 'There were some errors. Please try again.' }];
             fakeReturnedStream.on.withArgs('exit').yields(code);
             spawnStub.returns(fakeReturnedStream);
@@ -115,6 +115,18 @@ describe('Helper: git clone', () => {
             await gitClone(fakeUrl, fakeProjectName);
 
             expect(spawnStub.calledWith('git', [ 'clone', fakeUrl, fakeProjectName ])).to.be.true;
+        });
+
+        it('should have option { shell: true } on windows', async () => {
+
+            const isWinStub = sinon.stub(process, 'platform').value('win32');
+
+            await gitClone(fakeUrl, fakeProjectName);
+
+            expect(spawnStub.calledWith('git', [ 'clone', fakeUrl, fakeProjectName ], { shell: true })).to.be.true;
+
+            isWinStub.reset();
+            isWinStub.restore();
         });
     });
 

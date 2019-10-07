@@ -1,5 +1,7 @@
 'use strict';
 
+const CliStatus = require('../models/cli-status');
+
 module.exports = {
 
     gitClone(repoUrl, projectName = null) {
@@ -10,7 +12,6 @@ module.exports = {
             const isWindows = process.platform === 'win32';
             const { spawn } = require('child_process');
             const gitClone = spawn('git', gitArgs, { ...(isWindows && { shell: true }) });
-
             gitClone.stdout.on('data', (data) => {
 
                 console.log(Buffer.from(data).toString());
@@ -21,13 +22,16 @@ module.exports = {
             });
             gitClone.on('error', reject);
             gitClone.on('exit', (code) => {
+                const result = [{ 'Status': code }];
 
-                if (code === 0) {
+                if (code === CliStatus.SUCCESS) {
 
-                    resolve([{ 'Status': code, 'Message': 'Initialization completed.' }]);
+                    result[0].Message = 'Initialization completed.';
+                    resolve(result);
                 } else {
 
-                    reject([{ 'Status': code, 'Message': 'There were some errors. Please try again.' }]);
+                    result[0].Message = 'There were some errors. Please try again.';
+                    reject(result);
                 }
             });
         });

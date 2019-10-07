@@ -1,6 +1,7 @@
 'use strict';
 
 const { deserializeJsonFile } = require('../../helpers/deserialize-object-from-file');
+const sandbox = require('sinon').createSandbox();
 const fs = require('fs');
 
 describe('Helper: deserialize object from file', () => {
@@ -9,13 +10,13 @@ describe('Helper: deserialize object from file', () => {
 
     beforeEach(() => {
 
-        readFileStub = sinon.stub(fs, 'readFile');
+        readFileStub = sandbox.stub(fs, 'readFile');
     });
 
     afterEach(() => {
 
-        readFileStub.reset();
-        readFileStub.restore();
+        sandbox.reset();
+        sandbox.restore();
     });
 
     it('should call fs.readFile', async () => {

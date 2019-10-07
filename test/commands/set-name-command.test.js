@@ -1,19 +1,34 @@
 'use strict';
 
+const commandClass = require('../../commands/set-name-command');
 const AuthHandler = require('../../utils/auth-handler');
-const sinon = require('sinon');
+const CliStatus = require('../../models/cli-status');
+const sandbox = require('sinon').createSandbox();
 
 describe('Command: set-name', () => {
 
     let authHandler;
     let command;
+    let consTabStub;
 
     beforeEach(() => {
 
-        const commandClass = require('../../commands/set-name-command');
         authHandler = new AuthHandler(false);
-
         command = new commandClass(authHandler);
+        consTabStub = sandbox.stub(console, 'table');
+    });
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
+    });
+
+    it('should have assigned authHandler', () => {
+
+        command = new commandClass();
+
+        expect(command).to.have.property('handler');
     });
 
     it('should have assigned handler', () => {
@@ -42,142 +57,92 @@ describe('Command: set-name', () => {
             }
 
         };
-        const handlerStub = sinon.stub(command.handler, 'askForNewProjectName').returns(fakeReturnedPromise);
+        const handlerStub = sandbox.stub(command.handler, 'askForNewProjectName').returns(fakeReturnedPromise);
 
         command.execute();
 
         chai.assert.isTrue(handlerStub.called, 'handler.askForNewProjectName not called');
-
-        handlerStub.reset();
-        handlerStub.restore();
     });
 
     it('should console.log on handler.askForNewProjectName rejected string', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'askForNewProjectName').rejects('Fake error');
-        sinon.spy(console, 'log');
+        sandbox.stub(command.handler, 'askForNewProjectName').rejects('Fake error');
+        sandbox.spy(console, 'log');
 
         await command.execute();
 
         chai.assert.isTrue(console.log.called, 'console.error not called on handler.askForNewProjectName failure');
-
-        handlerStub.reset();
-        handlerStub.restore();
-        console.log.restore();
     });
 
     it('should console.table on handler.askForNewProjectName rejected array', async () => {
 
-        const handlerStub = sinon.stub(command.handler, 'askForNewProjectName').rejects([{ 'Status': 'fake error', 'Message': ''}]);
-        sinon.spy(console, 'table');
+        sandbox.stub(command.handler, 'askForNewProjectName').rejects([{ 'Status': CliStatus.ERROR, 'Message': 'fake error'}]);
 
         await command.execute();
 
-        chai.assert.isTrue(console.table.called, 'console.table not called on handler.askForNewProjectName reject');
-
-        handlerStub.reset();
-        handlerStub.restore();
-        console.table.restore();
+        chai.assert.isTrue(consTabStub.called, 'console.table not called on handler.askForNewProjectName reject');
     });
 
     it('should call handler.setName after handler.askForNewProjectName', async () => {
 
-        const askCredentialsStub = sinon.stub(command.handler, 'askForNewProjectName').resolves(undefined);
-        const setNameStub = sinon.stub(command.handler, 'setName').resolves(undefined);
+        sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
+        const setNameStub = sandbox.stub(command.handler, 'setName').resolves(undefined);
 
         await command.execute();
 
         chai.assert.isTrue(setNameStub.called, 'handler.setName not called');
-
-        askCredentialsStub.reset();
-        setNameStub.reset();
-        askCredentialsStub.restore();
-        setNameStub.restore();
     });
 
     it('should console.log on handler.setName rejected string', async () => {
 
-        const askForNewProjectNameStub = sinon.stub(command.handler, 'askForNewProjectName').resolves(undefined);
-        const setNameStub = sinon.stub(command.handler, 'setName').rejects('fake error');
-        sinon.spy(console, 'log');
+        sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
+        sandbox.stub(command.handler, 'setName').rejects('fake error');
+        sandbox.spy(console, 'log');
 
         await command.execute();
 
         chai.assert.isTrue(console.log.called, 'console.error not called on handler.setName failure');
-
-        askForNewProjectNameStub.reset();
-        askForNewProjectNameStub.restore();
-        setNameStub.reset();
-        setNameStub.restore();
-        console.log.restore();
     });
 
     it('should console.table on handler.setName rejected array', async () => {
 
-        const askForNewProjectNameStub = sinon.stub(command.handler, 'askForNewProjectName').resolves(undefined);
-        const setNameStub = sinon.stub(command.handler, 'setName').rejects([{ 'Status': 'fake error', 'Message': ''}]);
-        sinon.spy(console, 'table');
+        sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
+        sandbox.stub(command.handler, 'setName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': ''}]);
 
         await command.execute();
 
-        chai.assert.isTrue(console.table.called, 'console.table not called on handler.askForNewProjectName reject');
-
-        askForNewProjectNameStub.reset();
-        askForNewProjectNameStub.restore();
-        setNameStub.reset();
-        setNameStub.restore();
-        console.table.restore();
+        chai.assert.isTrue(consTabStub.called, 'console.table not called on handler.askForNewProjectName reject');
     });
 
     it('should call printHandlerResult() after handler.setName', async () => {
 
-        const askForNewProjectNameStub = sinon.stub(command.handler, 'askForNewProjectName').resolves(undefined);
-        const setNameStub = sinon.stub(command.handler, 'setName').resolves(undefined);
-        const printStub = sinon.stub(command, 'printHandlerResult').returns();
+        sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
+        sandbox.stub(command.handler, 'setName').resolves(undefined);
+        const printStub = sandbox.stub(command, 'printHandlerResult').returns();
 
         await command.execute();
 
         chai.assert.isTrue(printStub.called, 'printHandlerResult not called');
-
-        askForNewProjectNameStub.reset();
-        askForNewProjectNameStub.restore();
-        setNameStub.reset();
-        setNameStub.restore();
-        printStub.reset();
-        printStub.restore();
     });
 
     it('should call print() in printHandlerResult()', () => {
 
-        const printStub = sinon.stub(command, 'print').returns();
+        const printStub = sandbox.stub(command, 'print').returns();
 
         command.printHandlerResult();
 
         chai.assert.isTrue(printStub.called, 'handler.print not called');
-
-        printStub.reset();
-        printStub.restore();
     });
 
     it('should call printHandlerResult() should print expected results', async () => {
 
-        const expectedResult = [{ 'Status': 'passed', 'Message': 'OK!'}];
-        const askForNewProjectNameStub = sinon.stub(command.handler, 'askForNewProjectName').resolves(undefined);
-        const setNameStub = sinon.stub(command.handler, 'setName').resolves(undefined);
-        const getResultStub = sinon.stub(command.handler, 'getResult').returns(expectedResult);
-        const consoleSpy = sinon.spy(console, 'table');
+        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!'}];
+        sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
+        sandbox.stub(command.handler, 'setName').resolves(undefined);
+        sandbox.stub(command.handler, 'getResult').returns(expectedResult);
 
         await command.execute();
 
-        chai.assert.isTrue(consoleSpy.calledWith(expectedResult), `printHandlerResult should print ${JSON.stringify(expectedResult)}`);
-
-        askForNewProjectNameStub.reset();
-        askForNewProjectNameStub.restore();
-        setNameStub.reset();
-        setNameStub.restore();
-        getResultStub.reset();
-        getResultStub.restore();
-        console.table.restore();
+        chai.assert.isTrue(consTabStub.calledWith(expectedResult), `printHandlerResult should print ${JSON.stringify(expectedResult)}`);
     });
-
 });

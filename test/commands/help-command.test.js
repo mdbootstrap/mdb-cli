@@ -2,19 +2,34 @@
 
 const AuthHandler = require('../../utils/auth-handler');
 const { assert, expect } = require('chai');
-const sinon = require('sinon');
+const sandbox = require('sinon').createSandbox();
 
 describe('Command: Help', () => {
 
     let command;
     let HelpCommand;
     let authHandler;
+    let consoleTableStub;
 
     beforeEach(() => {
 
         HelpCommand = require('../../commands/help-command.js');
         authHandler = new AuthHandler(false);
         command = new HelpCommand(authHandler);
+        consoleTableStub = sandbox.stub(console, 'table');
+    });
+
+    afterEach(() => {
+
+        sandbox.reset();
+        sandbox.restore();
+    });
+
+    it('should have assigned authHandler', () => {
+
+        command = new HelpCommand();
+
+        expect(command).to.have.property('authHandler');
     });
 
     it('should have assigned handler', () => {
@@ -62,15 +77,11 @@ describe('Command: Help', () => {
 
     it('should print all availiable commands', () => {
 
-        const printSpy = sinon.spy(command, 'print');
-        const consoleSpy = sinon.spy(console, 'table');
+        const printSpy = sandbox.spy(command, 'print');
 
         command.execute();
 
-        assert.isTrue(consoleSpy.calledImmediatelyAfter(printSpy), 'print not called'); 
-        expect(consoleSpy.calledOnce).to.equal(true);      
-
-        printSpy.restore();
-        consoleSpy.restore();
+        assert.isTrue(consoleTableStub.calledImmediatelyAfter(printSpy), 'print not called'); 
+        expect(consoleTableStub.calledOnce).to.equal(true);
     });
 });

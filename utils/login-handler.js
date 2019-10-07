@@ -2,6 +2,7 @@
 
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
+const CliStatus = require('../models/cli-status');
 const helpers = require('../helpers/');
 const config = require('../config');
 
@@ -89,14 +90,14 @@ class LoginHandler {
 
             if (saved) {
 
-                this.result = [{ 'Status': 'logged in', 'Message': 'Login successful' }];
+                this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Login successful' }];
             } else {
 
-                this.result = [{ 'Status': 'not logged in', 'Message': 'Login failed' }];
+                this.result = [{ 'Status': CliStatus.ERROR, 'Message': 'Login failed' }];
             }
         } catch(e) {
 
-            this.result = [{ 'Status': 'not logged in', 'Message': `Login failed: ${e.message}` }];
+            this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Login failed: ${e.message}` }];
         }
     }
 
