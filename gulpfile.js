@@ -3,7 +3,7 @@ const babel = require('gulp-babel');
 const fs = require('fs');
 
 gulp.task('transpile', () =>
-    gulp.src(['./index.js', './commands/*', './config/*', './helpers/*', './utils/*'], { base: '.' })
+    gulp.src(['./index.js', './commands/*', './config/*', './helpers/*', './models/*', './utils/*'], { base: '.' })
         .pipe(babel({
             presets: ['@babel/env']
         }))

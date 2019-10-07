@@ -47,6 +47,7 @@
       "dist/commands/*.js",
       "dist/config/*.js",
       "dist/helpers/*.js",
+      "dist/models/*.js",
       "dist/utils/*.js"
     ]
   },
