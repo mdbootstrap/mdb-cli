@@ -137,18 +137,7 @@ describe('Handler: Init', () => {
     it('should handle user project selection if project is not available', () => {
 
         const fakeSelect = { projectSlug: 'angular-ui-kit' };
-        const fakeResult = [{
-            product_id: 16867,
-            product_title: 'Material Design for Bootstrap Pro (Angular version)',
-            product_slug: 'angular-ui-kit',
-            available: false
-        },
-        {
-            product_id: null,
-            product_title: 'Material Design for Bootstrap 4 (Angular)',
-            product_slug: 'Angular-Bootstrap-with-Material-Design',
-            available: true
-        }];
+        const fakeResult = [{ productId: 16867, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: false }];
 
         initHandler = new InitHandler(authHandler);
 
@@ -165,12 +154,7 @@ describe('Handler: Init', () => {
     it('should handle user project selection if project is available', () => {
 
         const fakeSelect = { projectSlug: 'angular-ui-kit' };
-        const fakeResult = [{
-            product_id: 16867,
-            product_title: 'Material Design for Bootstrap Pro (Angular version)',
-            product_slug: 'angular-ui-kit',
-            available: true
-        }];
+        const fakeResult = [{ productId: 16867, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true }];
 
         initHandler = new InitHandler(authHandler);
         const infoStub = sandbox.stub(initHandler, '_setProjectInfo');
@@ -183,12 +167,7 @@ describe('Handler: Init', () => {
 
     it('should _setProjectInfo method set free project data', () => {
 
-        const fakeProject = {
-            product_id: null,
-            product_title: 'Material Design for Bootstrap Pro (Angular version)',
-            product_slug: 'angular-ui-kit',
-            available: true
-        };
+        const fakeProject = { productId: null, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
         initHandler.cwd = 'fake/path';
 
         initHandler._setProjectInfo(fakeProject);
@@ -198,27 +177,17 @@ describe('Handler: Init', () => {
 
     it('should _setProjectInfo method set pro project data', () => {
 
-        const fakeProject = {
-            product_id: 345,
-            product_title: 'Material Design for Bootstrap Pro (Angular version)',
-            product_slug: 'angular-ui-kit',
-            available: true
-        };
+        const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
         initHandler.cwd = 'fake/path';
 
         initHandler._setProjectInfo(fakeProject);
-        
+
         expect(initHandler.projectRoot).to.equal('fake/path/ng-uikit-pro-standard');
     });
 
     it('should _setProjectInfo method set project name if specyfied', () => {
 
-        const fakeProject = {
-            product_id: 345,
-            product_title: 'Material Design for Bootstrap Pro (Angular version)',
-            product_slug: 'angular-ui-kit',
-            available: true
-        };
+        const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
         initHandler.cwd = 'fake/path';
         initHandler.args.projectName = 'fakeProjectName';
 
@@ -229,12 +198,7 @@ describe('Handler: Init', () => {
 
     it('should _setProjectInfo method set React free project data', () => {
 
-        const fakeProject = {
-            product_id: null,
-            product_title: 'React',
-            product_slug: 'React',
-            available: true
-        };
+        const fakeProject = { productId: null, productTitle: 'React', productSlug: 'React', available: true };
         initHandler.cwd = 'fake/path';
 
         initHandler._setProjectInfo(fakeProject);

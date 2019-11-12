@@ -43,18 +43,18 @@ class InitHandler {
             .then((orders) => {
 
                 orders = typeof orders === 'string' ? JSON.parse(orders) : orders;
-                this.result = helpers.getSorted(orders, 'product_title');
+                this.result = helpers.getSorted(orders, 'productTitle');
             });
     }
 
     showUserPrompt() {
 
         const choices = this.result.map((row) => ({
-            name: row.product_title,
-            short: row.product_slug,
-            value: row.product_slug
+            name: row.productTitle,
+            short: row.productSlug,
+            value: row.productSlug
         }));
-        
+
         return inquirer.createPromptModule()([
             {
                 type: 'list',
@@ -85,15 +85,15 @@ class InitHandler {
 
     _setProjectInfo(project) {
 
-        const { product_slug } = project;
-        this.isFreePackage = project.product_id === null;
+        const { productSlug } = project;
+        this.isFreePackage = project.productId === null;
 
         if (this.isFreePackage) {
 
-            this.projectSlug = product_slug.indexOf('React') === -1 ? product_slug : 'React-Template';
+            this.projectSlug = productSlug.indexOf('React') === -1 ? productSlug : 'React-Template';
         } else {
 
-            this.projectSlug = helpers.getPackageName(product_slug.slice(0, product_slug.indexOf('-')));
+            this.projectSlug = helpers.getPackageName(productSlug.slice(0, productSlug.indexOf('-')));
         }
 
         this.projectName = this.args.projectName ? this.args.projectName : this.projectSlug;
@@ -139,15 +139,15 @@ class InitHandler {
 
             console.table([{ 'Status': CliStatus.SEE_OTHER, 'Message': 'Please run `mdb list` to see available packages.' }]);
 
-            process.exit(0);
+            return process.exit(0);
         }
 
         const { projectSlug } = select;
-        const project = this.result.find((row) => row.product_slug === projectSlug);
+        const project = this.result.find((row) => row.productSlug === projectSlug);
 
         if (!project.available) {
 
-            console.log(`You cannot create this project. Please visit https://mdbootstrap.com/products/${project.product_slug}/ and make sure it is available for you.`);
+            console.log(`You cannot create this project. Please visit https://mdbootstrap.com/products/${project.productSlug}/ and make sure it is available for you.`);
 
             return this.showUserPrompt();
         }

@@ -14,7 +14,7 @@ class UnpublishHandler {
         this.options = {
             port: config.port,
             hostname: config.host,
-            path: '/project/unpublish',
+            path: '',
             method: 'DELETE'
         };
         this.authHandler = authHandler;
@@ -57,9 +57,7 @@ class UnpublishHandler {
 
         console.log(`Unpublishing project ${this.projectName}...`);
 
-        this.options.data = {
-            projectName: this.projectName
-        };
+        this.options.path = `/project/unpublish/${this.projectName}`;
         const http = new HttpWrapper(this.options);
         return http.delete()
             .then((result) => {

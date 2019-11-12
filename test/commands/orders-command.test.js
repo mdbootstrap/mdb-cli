@@ -91,9 +91,9 @@ describe('Command: orders', () => {
             'Order Status': orderStatus.replace('wc-', '')
         }];
         const receivedObject = `[{
-        "post_id":${orderId},
-        "post_date":"${orderDate}",
-        "post_status":"${orderStatus}"}]`;
+        "postId":${orderId},
+        "postDate":"${orderDate}",
+        "postStatus":"${orderStatus}"}]`;
         sandbox.stub(command.http, 'get').resolves(receivedObject);
 
         command.result = [];
@@ -115,8 +115,8 @@ describe('Command: orders', () => {
 
     it('should parse orders to json format', async () => {
 
-        sandbox.stub(command.http, 'get').resolves('Fake orders string');
-        const parseStub = sandbox.stub(JSON, 'parse');
+        sandbox.stub(command.http, 'get').resolves('[{ "postId":123, "postDate":"2018-09-05", "postStatus":"wc-fakeStatus"}]');
+        const parseStub = sandbox.spy(JSON, 'parse');
 
         await command.execute();
 
@@ -125,7 +125,8 @@ describe('Command: orders', () => {
 
     it('should return expected result', async () => {
 
-        const fakeOrders = [{ post_id: 123, post_date: '2018-09-05', post_status: 'wc-fakeStatus' }];
+        command = new OrdersCommand(authHandler);
+        const fakeOrders = [{ postId: 123, postDate: '2018-09-05', postStatus: 'wc-fakeStatus' }];
         sandbox.stub(command.http, 'get').resolves(fakeOrders);
         sandbox.stub(JSON, 'parse');
         const expectedResult = { 'Order ID': 123, 'Order Date': (new Date('9/5/2018, 2:00:00 AM')).toLocaleString(), 'Order Status': 'fakeStatus' };

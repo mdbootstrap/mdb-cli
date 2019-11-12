@@ -26,9 +26,9 @@ class OrdersCommand extends Command {
                 orders = typeof orders === 'string' ? JSON.parse(orders) : orders;
 
                 this.result = orders.map((order) => ({
-                    'Order ID': order.post_id,
-                    'Order Date': new Date(order.post_date).toLocaleString(),
-                    'Order Status': order.post_status.replace('wc-', '')
+                    'Order ID': order.postId,
+                    'Order Date': new Date(order.postDate).toLocaleString(),
+                    'Order Status': order.postStatus.replace('wc-', '')
                 }));
 
                 this.print();
