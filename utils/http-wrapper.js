@@ -53,7 +53,7 @@ class HttpWrapper {
 
             this._requestData = typeof this._requestData !== 'string' ? JSON.stringify(this._requestData) : this._requestData;
 
-            request.write(this._requestData);
+            request.write(this._requestData || '');
             request.end();
         });
 

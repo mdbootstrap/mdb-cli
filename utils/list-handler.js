@@ -44,11 +44,11 @@ class ListHandler {
         return products
             .map((product) => {
 
-                const isPro = product.product_id !== null;
-                const notAvailableMsg = isPro ? `No ( https://mdbootstrap.com/products/${product.product_slug}/ )` : 'No';
+                const isPro = product.productId !== null;
+                const notAvailableMsg = isPro ? `No ( https://mdbootstrap.com/products/${product.productSlug}/ )` : 'No';
 
                 return {
-                    'Product Name': product.product_title.replace(/ version| \[standard Bootstrap] /g, ''),
+                    'Product Name': product.productTitle.replace(/ version| \[standard Bootstrap] /g, ''),
                     'Available': product.available ? 'Yes' : notAvailableMsg
                 };
             });

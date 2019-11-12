@@ -39,8 +39,8 @@ describe('Handler: List', () => {
     it('should _mapToUserReadable() method return expected result', () => {
 
         const fakeProducts = [
-            { product_id: null, product_title: 'MDB VUE 4', product_slug: 'Vue-MDB', available: true },
-            { product_id: 55506, product_title: 'MDB Vue Pro', product_slug: 'vue-ui-kit', available: false }
+            { productId: null, productTitle: 'MDB VUE 4', productSlug: 'Vue-MDB', available: true },
+            { productId: 55506, productTitle: 'MDB Vue Pro', productSlug: 'vue-ui-kit', available: false }
         ];
         const expectedResult = [
             { 'Product Name': 'MDB VUE 4', 'Available': 'Yes' },
@@ -54,8 +54,8 @@ describe('Handler: List', () => {
     it('should fetchProducts() method return a promise', () => {
 
         const fakeProducts = [
-            { product_id: null, product_title: 'MDB VUE 4', product_slug: 'Vue-MDB', available: true },
-            { product_id: 55506, product_title: 'MDB Vue Pro', product_slug: 'vue-ui-kit', available: false }
+            { productId: null, productTitle: 'MDB VUE 4', productSlug: 'Vue-MDB', available: true },
+            { productId: 55506, productTitle: 'MDB Vue Pro', productSlug: 'vue-ui-kit', available: false }
         ];
 
         const helpers = require('../../helpers');
@@ -68,8 +68,8 @@ describe('Handler: List', () => {
     it('should resolve if no error', () => {
 
         const fakeProducts = [
-            { product_id: null, product_title: 'MDB VUE 4', product_slug: 'Vue-MDB', available: true },
-            { product_id: 55506, product_title: 'MDB Vue Pro', product_slug: 'vue-ui-kit', available: false }
+            { productId: null, productTitle: 'MDB VUE 4', productSlug: 'Vue-MDB', available: true },
+            { productId: 55506, productTitle: 'MDB Vue Pro', productSlug: 'vue-ui-kit', available: false }
         ];
         const expectedResult = [
             { 'Product Name': 'MDB VUE 4', 'Available': 'Yes' },
