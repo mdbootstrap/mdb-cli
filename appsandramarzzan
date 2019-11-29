@@ -1,0 +1,301 @@
+
+<!-- INICIO -  share WhatsApp / -->
+<meta property="og:type" content="website"/><meta property="og:title" content="Sandra Marzzan - Juntos"/><meta property="og:description" content="sandra marzzan juntos. siempre conectados. siempre con vos."/><meta property="og:url" content="index.html"/><meta property="og:image" content="share-juntos-300x200.png"/><meta property="og:image:secure_url" content="share-integra-300x200.png"/><meta name="description" content="sandra marzzan juntos. siempre conectados. siempre con vos."/><!-- FIN -  share WhatsApp / -->
+
+<!-- Tell the browser to be responsive to screen width -->
+<meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+<!-- Bootstrap 3.3.6 -->
+<link rel="stylesheet" href="css/bootstrap.min.css"/><!-- Selectize  -->
+<link rel="stylesheet" href="css/selectize/selectize.bootstrap3.css"/><!-- Font Awesome -->
+<link rel="stylesheet" href="css/font-awesome.min.css"/><!-- Theme style -->
+<link rel="stylesheet" href="css/AdminLTE.min.css"/><!-- AdminLTE Skin // DEBE CAMBIARSE TAMBIEN EL CLASS EN BODY DE LOS LAYOUTS -->
+<link rel="stylesheet" href="css/skins/skin-blue-light.min.css"/><!-- iCheck -->
+<link rel="stylesheet" href="css/iCheck/flat/blue.css"/><link rel="stylesheet" href="css/iCheck/square/blue.css"/><!-- Date Picker -->
+
+	<link rel="stylesheet" href="css/bootstrap-datepicker/bootstrap-datepicker.min.css"/>
+	<link rel="stylesheet" href="css/daterangepicker/daterangepicker.min.css"/>
+<!-- Foo DataTables -->
+
+	<link rel="stylesheet" href="css/footable-bootstrap/footable.bootstrap.min.css"/>
+<!-- waitMe -->
+<link rel="stylesheet" href="css/waitMe/waitMe.min.css"/><!-- animate.css -->
+<link rel="stylesheet" href="css/animate/animate.min.css"/><!-- fab -->
+<link rel="stylesheet" href="css/fab/kc.fab.css"/><!-- UI-Search -->
+<link rel="stylesheet" href="css/ui-search/search.min.css"/><!-- TouchSpin -->
+<link rel="stylesheet" href="css/touchspin/jquery.bootstrap-touchspin.min.css"/><!-- Custom sandra marzzan -->
+<link rel="stylesheet" href="css/sandramarzzanffab.css?v=1_23_1"/>
+<!-- jQuery 2.2.3, jQuery UI 1.11.4 jquery.mobile.custom (touch)-->
+
+	<script src="js/jquery-2.2.3.min.js"></script>
+	<script src="js/jquery-ui.min.js"></script>
+	<script src="js/jquery.mobile.custom.min.js"></script>
+
+<!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
+<script>
+    $.widget.bridge('uibutton', $.ui.button);
+</script>
+
+
+                      <script>
+    function currency_format(value) {
+        if (value != '')
+            return '$ ' + value;
+        return value;
+    }
+    /* ------------------
+     * - configuracion por defecto para waitMe.js plugin
+     * ------------------
+     */
+    var waitMeDefaultConfig = {effect: 'win8', text: 'Cargando...', maxSize: 40, fontSize: '14px'};
+    /* ------------------
+     * - CONFIGURACION POR DEFECTO FOOTABLE
+     * ------------------
+     */
+    var DefaultFootableParams = {
+        "paging": {
+            "enabled": true,
+            "countFormat": "{CP} de {TP}",
+            "size": 25
+        },
+        "state": {"enabled": true,"filtering": false},
+        "filtering": {"enabled": true, "placeholder": "Buscar"}
+        , "sorting": {"enabled": true}
+        , "empty": "Sin resultados."}
+    ;
+    var DefaultFootableParams10 = {"state": {"enabled": true,"filtering": false},"paging": {"enabled": true, "countFormat": "{CP} de {TP}", "size": 10}, "filtering": {"enabled": true, "placeholder": "Buscar"}, "sorting": {"enabled": true}, "empty": "Sin resultados."};
+    var DefaultFootableParams50 = {"state": {"enabled": true,"filtering": false},"paging": {"enabled": true, "countFormat": "{CP} de {TP}", "size": 50}, "filtering": {"enabled": true, "placeholder": "Buscar"}, "sorting": {"enabled": true}, "empty": "Sin resultados."};
+    var DefaultFootableParams100 = {"state": {"enabled": true,"filtering": false},"paging": {"enabled": true, "countFormat": "{CP} de {TP}", "size": 100}, "filtering": {"enabled": true, "placeholder": "Buscar", "connectors": false}, "sorting": {"enabled": true}, "empty": "Sin resultados."};
+    var DefaultFootableParamsNoFilter = {"state": {"enabled": true,"filtering": false},"paging": {"enabled": true, "countFormat": "{CP} de {TP}", "size": 25}, "sorting": {"enabled": true}, "empty": "Sin resultados."};
+
+    /* ------------------
+     * - CONFIGURACION POR DEFECTO DATE PICKER Y  DATE RANGE 
+     * ------------------
+     */
+    var DefaultDateRangePickerLocaleParams = {"format": 'DD/MM/YYYY', "separator": ' al ', "applyLabel": '<i class="fa fa-fw fa-check"></i>', "cancelLabel": '<i class="fa fa-fw fa-close"></i>', "toLAbel": 'Al', "weekLabel": 'S', "customRangeLabel": 'Personalizado', "daysOfWeek": ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"],
+        "monthNames": ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]};
+
+    var DefaultDatePickerLocaleParams = {"autoclose": true, "language": 'es', "format": 'dd/mm/yyyy'};
+
+    /* ------------------
+     * - CONFIGURACION POR DEFECTO DE NOTIFY
+     * ------------------
+     */
+    var DefaultNotifyParams = {icon: 'glyphicon glyphicon-warning-sign', placement: {from: "top", align: "center"}, newest_on_top: true, z_index: 10000, delay: 1000};
+    /* ------------------
+     * - CONFIGURACION Animate.css
+     * ------------------
+     */
+    var animationEnd = 'webKitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend';
+    /* ------------------
+     * - Var global con csrfToken para llamados ajax
+     * ------------------
+     */
+    var csrfToken = "f134b452be25f1f2fbb4e4fb7d098e9a5a29d1945d0a1cc73f9a5ddc44925d084bfdb7c095729e5cd4e3ee5958725127fae3244c63f0353fc952a69a0e1d9e6d";
+    /* ------------------
+     * - EVITA DOBLE SUBMIT EN LOS FORMULARIOS DEL SITIO
+     * ------------------
+     */
+    $(function () {
+
+        // Evita la doble sumbiteada de un formulario al hacer dos veces click
+        var isSubmit = false;
+        if ($("form[data-toggle='validator']").length !== 0) {
+            $("form[data-toggle='validator']").validator().on('submit', function (e) {
+                if (!e.isDefaultPrevented()) {
+                    if (isSubmit)
+                        return false;
+                    isSubmit = true;
+                }
+            });
+        } else if ($("form").length !== 0)
+        {
+            $('form').submit(function () {
+                if (isSubmit)
+                    return false;
+                isSubmit = true;
+            });
+        }
+
+
+        // deshabilita la rueda del mouse sobre los campos number
+        $(':input[type=number]').on('mousewheel', function (e) {
+            $(this).blur();
+        });
+
+    });
+</script><script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','../www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-103508765-1', 'auto');
+  ga('send', 'pageview');
+
+</script>    </head>
+
+   <body class="hold-transition register-page">
+
+        <!-- Contenido Principal -->
+        <div class="box-body">
+    <div class="alert alert-danger alert-dismissible">
+        <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+        La sesión ha expirado, y debes estar logueado para ver esta página. Inicie sesión nuevamente.    </div>
+</div>        <!-- http://bootsnipp.com/snippets/featured/login-form-in-modal -->
+<!-- Fuente mensaje integra -->
+<link href="https://fonts.googleapis.com/css?family=Shadows+Into+Light" rel="stylesheet">
+<!-- Custom styling -->
+<style>
+    .page-signin-modal {
+        position: relative;
+        top: auto;
+        right: auto;
+        bottom: auto;
+        left: auto;
+        z-index: 1;
+        display: block;
+    }
+
+    .page-signin-form-group { position: relative; }
+
+    .page-signin-icon {
+        position: absolute;
+        line-height: 21px;
+        width: 36px;
+        border-color: rgba(0, 0, 0, .14);
+        border-right-width: 1px;
+        border-right-style: solid;
+        left: 1px;
+        top: 9px;
+        text-align: center;
+        font-size: 15px;
+    }
+
+    .modal {
+        background:none;
+    }
+
+    /* Margins */
+    .page-signin-modal > .modal-dialog { margin: 30px 10px; }
+
+    @media (min-width: 768px) {
+        .page-signin-modal > .modal-dialog { margin: 60px auto; }
+    }
+    @media screen and (max-width: 768px) {
+        .logo-comments {
+            visibility: hidden;
+            display: none;
+        }
+    }
+
+</style>
+<!-- / Custom styling -->
+<div class="page-signin-modal modal" >
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 10px;" >
+            <div class="box-row" >
+                <div class="box-cell col-md-5 bg-primary box-login-logo">
+                    <div class="logo_ext" style="margin-top:30px; text-align: center; font-size: 16px;">
+                        <img src="img/integralogobco.png" alt="Integra"/>                        <div class="logo-comments">
+                            <p>&nbsp;</p>
+                            <p class="lead" style="font-size: 24px;font-family: 'Shadows Into Light', cursive;">sandra marzzan juntos. <br> siempre conectados. <br> siempre con vos.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="box-cell col-xs-12 col-sm-6 col-md-7 box-body">
+                    <div class="login-box-body" >
+                        <p class="login-box-msg lead">Ingrese sus datos para iniciar sesión</p>
+                        <form method="post" accept-charset="utf-8" action="https://app.sandranarzzan.com.ar/?redirect=%2Fcuentas%2Fnews"><div style="display:none;"><input type="hidden" name="_method" value="POST"/><input type="hidden" name="_csrfToken" autocomplete="off" value="f134b452be25f1f2fbb4e4fb7d098e9a5a29d1945d0a1cc73f9a5ddc44925d084bfdb7c095729e5cd4e3ee5958725127fae3244c63f0353fc952a69a0e1d9e6d"/></div>                        <div class="col-xs-12 no-margin no-padding">
+                            <div class="form-group input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-envelope"></i></span>
+                                <input type="email" name="email" class="form-control" placeholder="Correo electrónico" required="required"/>                            </div>
+                            <div class=" form-group input-group">
+                                <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
+                                <input type="password" name="password" id="password_input" class="form-control" placeholder="Contraseña" required="required"/>                                <span class="input-group-btn">
+                                    <button id="password_image_btn" type="button" class="btn btn-default"><i id="password_image_id" class="fa fa-eye"></i></button>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-xs-12">
+                                <button class="btn btn-primary btn-block" type="submit"><i class="fa fa-fw fa-sign-in"></i>Ingresar</button>                            </div>             
+                            <!-- /.col -->
+                        </div>
+                        </form>
+                        <div class="box-footer text-center no-padding">
+                            <div class="row">
+                                <p>- ¿No tiene una cuenta? -</p>
+                                <div class="form-group col-xs-12">
+                                    <a href="cuentas/registro.html" class="btn btn-info btn-block">¡Registrarse ahora!</a>                                </div>
+                            </div>
+                            <a href="cuentas/recordar.html">¿Olvidó su contraseña?</a> | <a href="#" onclick="modal_ayuda(6);">Ayuda</a>                        </div>
+                    </div>
+                </div>
+            </div> 
+        </div>
+
+    </div>
+    <div class="text-sm text-center text-white">v 1.23.1</div>
+    <div class="text-sm text-center text-white">SISTEMAS SANDRA MARZZAN </div>
+</div>
+
+<!-- Modal Banners -->       
+<div id="modal_ayuda_div"></div>
+
+<script>
+    $(function () {
+        $("#password_image_btn").on('mouseup touchend mouseout', function () {
+            var button_image = $(this).children('i');
+            button_image.removeClass().addClass('fa fa-eye');
+            $("#password_input").attr("type", "password");
+
+        });
+        $("#password_image_btn").on('mousedown touchstart', function () {
+            var button_image = $(this).children('i');
+            button_image.removeClass().addClass('fa fa-eye-slash');
+            $("#password_input").attr("type", "text");
+        });
+    });
+
+    function modal_ayuda(id) {
+        event.preventDefault();
+        $.ajax({
+            type: "POST",
+            datatype: 'text',
+            cache: false,
+            headers: {
+                'X-CSRF-Token': csrfToken
+            },
+            beforeSend: function () {
+                $('#modal_ayuda_div').html('');
+            },
+            data: {
+                id: id
+            },
+            url: "/cuentas/ayuda-modal",
+            success: function (data) {
+                $('#modal_ayuda_div').html(data);
+                $('#modal_ayuda').modal("show");
+            },
+            complete: function () {
+
+            }
+        });
+    }
+
+    function modal_ayuda_dismiss() {
+        $('#modal_ayuda').modal("hide");
+        $('#modal_ayuda').html('');
+    }
+</script>
+        <!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
+<script>
+    $.widget.bridge('uibutton', $.ui.button);
+</script>
+<!-- Bootstrap 3.3.6, AdminLTE App  -->
+
+	<script src="js/bootstrap.min.js"></script>
+	<script src="js/app.js"></script>
+	<script src="js/app/app.general.js"></script>
+        
+    </body>
