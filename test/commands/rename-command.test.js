@@ -173,16 +173,6 @@ describe('Command: rename', () => {
             buildProjectStub.resolves();
             publishStub.rejects('fake error');
         });
-
-        it('should call log on printHandlerResultStub', () => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.resolves();
-            setProjectNameStub.resolves();
-            buildProjectStub.resolves();
-            publishStub.resolves();
-            printHandlerResultStub.rejects('fake error');
-        });
     });
 
     describe('Should log table on reject', () => {
@@ -229,16 +219,6 @@ describe('Command: rename', () => {
             setProjectNameStub.resolves();
             buildProjectStub.resolves();
             publishStub.rejects(['fake error']);
-        });
-
-        it('should call log on printHandlerResultStub', () => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.resolves();
-            setProjectNameStub.resolves();
-            buildProjectStub.resolves();
-            publishStub.resolves();
-            printHandlerResultStub.rejects(['fake error']);
         });
     });
 

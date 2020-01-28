@@ -45,17 +45,23 @@ describe('Utils: Http Wrapper', () => {
         done();
     });
 
-    it('should reject if response status code is not between 200 and 400', () => {
+    it('should reject if response status code is not between 200 and 400', (done) => {
 
         const http = require('http');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
-        const fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader, statusCode: 404 };
+        const fakeResponse = { on: sandbox.stub().withArgs('end').yields('fakeMessage'), headers: fakeHeader, statusCode: 404 };
         sandbox.stub(http, 'request').returns(fakeRequest).yields(fakeResponse);
         const fakeOptions = { data: 'fake data' };
         const httpWrapper = new HttpWrapper(fakeOptions);
 
-        httpWrapper.request().catch(err => expect(err).to.equal(404));
+        httpWrapper.request().catch((err) => {
+
+            expect(err.statusCode).to.equal(404);
+            expect(err.message).to.equal('fakeMessage');
+
+            done();
+        });
     });
 
     it('should resolve if response status code is between 200 and 400', () => {

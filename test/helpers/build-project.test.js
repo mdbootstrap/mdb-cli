@@ -71,37 +71,46 @@ describe('Helper: buildProject', () => {
         };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath)
-            .catch(err => assert.isDefined(err))
-            .finally(() => done());
+        buildProject(directoryPath).catch(err => {
+
+            assert.isDefined(err);
+
+            done();
+        });
     });
 
     it('should reject if status code is 1', (done) => {
 
         const fakeReturnedStream = {
             on(event = 'exit', cb) {
-                if (event === 'exit') cb(1);
+                if (event === 'exit') cb(CliStatus.ERROR);
             }
         };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath)
-            .catch(err => expect(err).to.include({ 'Status': CliStatus.ERROR, 'Message': 'Problem with project building' }))
-            .finally(() => done());
+        buildProject(directoryPath).catch((err) => {
+
+            expect(err).to.include({ 'Status': CliStatus.ERROR, 'Message': 'Problem with project building' })
+
+            done();
+        });
     });
 
     it('should resolve if status code is 0', (done) => {
 
         const fakeReturnedStream = {
             on(event = 'exit', cb) {
-                if (event === 'exit') cb(0);
+                if (event === 'exit') cb(CliStatus.SUCCESS);
             }
         };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath)
-            .then(res => expect(res).to.include({ 'Status': CliStatus.SUCCESS, 'Message': 'Success' }))
-            .finally(() => done());
+        buildProject(directoryPath).then((res) => {
+
+            expect(res).to.include({ 'Status': CliStatus.SUCCESS, 'Message': 'Success' })
+
+            done();
+        });
     });
 
     it('should assign directoryPath to process.cwd() if not specyfied', (done) => {
@@ -110,10 +119,11 @@ describe('Helper: buildProject', () => {
         const fakeReturnedStream = { on: (event, cb) => cb() };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject();
+        buildProject().catch(() => {
 
-        expect(processCwdSpy.calledOnce).to.equal(true);
+            expect(processCwdSpy.calledOnce).to.equal(true);
 
-        done();
+            done();
+        });
     });
 });
