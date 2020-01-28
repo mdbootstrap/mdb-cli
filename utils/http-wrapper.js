@@ -44,7 +44,7 @@ class HttpWrapper {
                         resolve(result);
                     } else {
 
-                        reject(statusCode);
+                        reject({ message: result, statusCode });
                     }
                 });
             });
@@ -56,7 +56,6 @@ class HttpWrapper {
             request.write(this._requestData || '');
             request.end();
         });
-
     }
 
     get() {

@@ -20,7 +20,7 @@ describe('Helper: create package json', () => {
         joinStub = sandbox.stub(path, 'join').returns('fakePath');
         existsStub = sandbox.stub(fs, 'exists');
         showConfirmationPromptStub = sandbox.stub(ShowConfirmationPrompt, 'showConfirmationPrompt');
-        spawnStub = sandbox.stub(childProcess, 'spawn');
+        spawnStub = sandbox.stub(childProcess, 'spawn').returns({ on: sandbox.stub() });
     });
 
     afterEach(() => {
@@ -53,6 +53,7 @@ describe('Helper: create package json', () => {
 
             existsStub.yields(false);
             showConfirmationPromptStub.resolves(true);
+            spawnStub.on = sandbox.stub();
 
             createPackageJson(fakePath);
 
@@ -66,11 +67,16 @@ describe('Helper: create package json', () => {
             existsStub.yields(false);
             showConfirmationPromptStub.resolves(false);
 
-            createPackageJson(fakePath);
+            createPackageJson(fakePath).catch((err) => {
 
-            expect(spawnStub.calledAfter(showConfirmationPromptStub)).to.be.false;
+                expect(spawnStub.calledAfter(showConfirmationPromptStub)).to.be.false;
+                expect(err).to.have.property('Status');
+                expect(err.Status).to.be.equal(0);
+                expect(err).to.have.property('Message');
+                expect(err.Message).to.be.equal('package.json not created.');
 
-            done();
+                done();
+            });
         });
 
         it('should call spawn if user want to create package.json', async () => {

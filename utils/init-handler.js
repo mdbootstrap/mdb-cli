@@ -123,7 +123,7 @@ class InitHandler {
                     .catch(console.error)
                     .finally(() => console.table(this.result));
             });
-        });
+        }).catch(() => console.table([{ Status: 'ok', Message: 'OK, will not delete existing project.' }]));
     }
 
     removeGitFolder() {

@@ -64,7 +64,10 @@ class UnpublishHandler {
 
                 this.result = [{ 'Status': CliStatus.HTTP_SUCCESS, 'Message': result }];
             })
-            .catch(console.error);
+            .catch((err) => {
+
+                this.result = [{ 'Status': err.statusCode, 'Message': err.message }];
+            });
     }
 }
 
