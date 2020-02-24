@@ -3,7 +3,7 @@
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
 
-class SetNameHandler {
+class SetDomainNameHandler {
 
     constructor(authHandler = new AuthHandler()) {
 
@@ -18,20 +18,20 @@ class SetNameHandler {
         return this.result;
     }
 
-    askForNewProjectName() {
+    askForDomainName() {
 
         const prompt = require('inquirer').createPromptModule();
 
         return prompt([
             {
                 type: 'text',
-                message: 'Set new project name',
+                message: 'Set domain name',
                 name: 'name',
                 validate: (value) => {
                     /* istanbul ignore next */
                     const valid = Boolean(value);
                     /* istanbul ignore next */
-                    return valid || 'Project name must not be empty.';
+                    return valid || 'Domain name must not be empty.';
                 }
             }
         ])
@@ -41,7 +41,7 @@ class SetNameHandler {
             });
     }
 
-    setName() {
+    setDomainName() {
 
         const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
         const fileName = 'package.json';
@@ -49,12 +49,11 @@ class SetNameHandler {
         return deserializeJsonFile(fileName).then(fileContent => {
 
             const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-            const oldName = fileContent.name;
-            fileContent.name = this.name;
+            fileContent.domainName = this.name;
 
             return serializeJsonFile(fileName, fileContent).then(() => {
 
-                this.result = [{'Status': CliStatus.SUCCESS, 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
+                this.result = [{'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${this.name} successfully`}];
                 return Promise.resolve();
             }, error => {
 
@@ -70,4 +69,4 @@ class SetNameHandler {
 
 }
 
-module.exports = SetNameHandler;
+module.exports = SetDomainNameHandler;

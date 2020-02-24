@@ -18,6 +18,7 @@ class PublishHandler {
         this.cwd = process.cwd();
         this.projectName = '';
         this.packageName = '';
+        this.domainName = '';
         this.last = 0;
         this.sent = 0;
         this.endMsg = '';
@@ -56,6 +57,7 @@ class PublishHandler {
 
             this.projectName = packageJson.name;
             this.packageName = projectMetadata.packageName || '';
+            this.domainName = packageJson.domainName || '';
 
             return Promise.resolve();
 
@@ -76,7 +78,7 @@ class PublishHandler {
         const packageJsonPath = path.join(this.cwd, 'package.json');
         let packageJson = await helpers.deserializeJsonFile(packageJsonPath);
 
-        if (packageJson.scripts.build) {
+        if (packageJson.scripts && packageJson.scripts.build) {
 
             const isAngular = !!packageJson.dependencies['@angular/core'];
             const isReact = !!packageJson.dependencies.react;
@@ -165,6 +167,7 @@ class PublishHandler {
 
             this.options.headers['x-mdb-cli-project-name'] = this.projectName;
             this.options.headers['x-mdb-cli-package-name'] = this.packageName;
+            this.options.headers['x-mdb-cli-domain-name'] = this.domainName;
             const { archiveProject } = require('../helpers/archiver-wrapper');
             const archive = archiveProject('zip', { zlib: { level: 9 } });
             const http = new HttpWrapper(this.options);

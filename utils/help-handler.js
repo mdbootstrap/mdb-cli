@@ -25,7 +25,9 @@ class HelpHandler {
             { 'Command': 'unpublish', 'Description': 'remove your project from the public server' },
             { 'Command': 'set-name', 'Description': 'change your project name' },
             { 'Command': 'rename', 'Description': 'change your project name and update name on the public server' },
-            { 'Command': 'projects', 'Description': 'list all your published projects' }
+            { 'Command': 'projects', 'Description': 'list all your published projects' },
+            { 'Command': 'set-domain-name', 'Description': 'set the domain name for your project' },
+            { 'Command': 'unset-domain-name', 'Description': 'remove the domain name from this project' }
         ];
     }
 
