@@ -83,6 +83,14 @@ class PublishHandler {
             const isAngular = !!packageJson.dependencies['@angular/core'];
             const isReact = !!packageJson.dependencies.react;
             const isVue = !!packageJson.dependencies.vue;
+            let angularFolder;
+
+            if (isAngular) {
+
+                const angularJsonPath = path.join(this.cwd, 'angular.json');
+                let angularJson = await helpers.deserializeJsonFile(angularJsonPath);
+                angularFolder = path.join('dist', angularJson.defaultProject);
+            }
 
             if (isReact) {
 
@@ -116,8 +124,6 @@ class PublishHandler {
             } else {
 
                 await helpers.buildProject();
-
-                const angularFolder = path.join('dist', 'angular-bootstrap-md-app');
 
                 const buildFolder = isAngular ? angularFolder : 'dist';
 

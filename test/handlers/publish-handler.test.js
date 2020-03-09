@@ -218,6 +218,7 @@ describe('Handler: publish', () => {
         const readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
         const writeFileStub = sandbox.stub(fs, 'writeFileSync');
         sandbox.stub(helpers, 'deserializeJsonFile').resolves({
+            defaultProject: fakeProjectName,
             scripts: { build: 'build' },
             dependencies: { '@angular/core': '7.5.4' }
         });
