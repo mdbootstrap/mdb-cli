@@ -89,6 +89,7 @@ describe('Command: publish', () => {
         sandbox.stub(fs, 'existsSync').returns(true);
         sandbox.stub(fs, 'readdirSync').returns([]);
         sandbox.stub(helpers, 'deserializeJsonFile').resolves({
+            defaultProject: 'fake-project-name',
             scripts: { build: 'build' },
             dependencies: { '@angular/core': '3.4.5' }
         });
@@ -97,7 +98,7 @@ describe('Command: publish', () => {
 
         await command.execute();
 
-        expect(command.handler.cwd.endsWith('dist/angular-bootstrap-md-app')).to.equal(true);
+        expect(command.handler.cwd.endsWith('dist/fake-project-name')).to.equal(true);
     });
 
     it('should console.error on handler.setProjectName rejected', async () => {
