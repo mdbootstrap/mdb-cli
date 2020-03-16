@@ -43,8 +43,8 @@ describe('Handler: Projects', () => {
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbootstrap.com/projects/fakeNicename/fakeProjectName/',
-            'Project Published': '6/24/2019, 8:49:53 AM',
-            'Project Edited': '6/24/2019, 8:49:53 AM'
+            'Project Published': new Date(projects[0].publishDate).toLocaleString(),
+            'Project Edited': new Date(projects[0].editDate).toLocaleString()
         }];
         sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
         projectsHandler = new ProjectsHandler();
@@ -66,11 +66,12 @@ describe('Handler: Projects', () => {
             "publishDate":"2019-06-24T06:49:53.000Z",
             "editDate":"2019-06-24T06:49:53.000Z"
         }]`;
+        const projectsJson = JSON.parse(projects);
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbootstrap.com/projects/fakeNicename/fakeProjectName/',
-            'Project Published': '6/24/2019, 8:49:53 AM',
-            'Project Edited': '6/24/2019, 8:49:53 AM'
+            'Project Published': new Date(projectsJson[0].publishDate).toLocaleString(),
+            'Project Edited': new Date(projectsJson[0].editDate).toLocaleString()
         }];
         sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
         const parseSpy = sandbox.spy(JSON, 'parse');
