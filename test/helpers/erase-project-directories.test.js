@@ -65,22 +65,11 @@ describe('Helper: erase project directories', () => {
             expect(existsSyncStub.calledOnce).to.be.true;
         });
 
-        it('should call existsSync twice if different names', async () => {
-
-            projectSlug = 'fake';
-            projectName = 'fakeSec';
-            existsSyncStub.returns(false);
-
-            await eraseProjectDirectories(projectSlug, projectName);
-
-            expect(existsSyncStub.calledTwice).to.be.true;
-        });
-
         it('should call showConfirmationPrompt', async () => {
 
             existsSyncStub.resolves(true);
             showConfirmationPromptStub.resolves(true);
-            removeFolderStub.yields();
+            removeFolderStub.resolves();
 
             await eraseProjectDirectories();
 
@@ -91,34 +80,62 @@ describe('Helper: erase project directories', () => {
 
             existsSyncStub.resolves(true);
             showConfirmationPromptStub.resolves(true);
-            removeFolderStub.yields();
+            removeFolderStub.resolves();
 
             await eraseProjectDirectories();
 
-            expect(removeFolderStub.calledTwice).to.be.true;
+            expect(removeFolderStub.called).to.be.true;
         });
     });
 
     describe('Set if folders exist', () => {
+  
+        it('should set folder name if project name is defined and folder exists', async () => {
+            
+            projectName = 'fake-name';
+            projectSlug = 'fake-slug';
+            removeFolderStub.resolves();
+            showConfirmationPromptStub.resolves(true);
+            existsSyncStub.withArgs(projectName).returns(true);
+            await eraseProjectDirectories(projectSlug, projectName);
 
-        it('should set one folder', async () => {
+            expect(existsSyncStub.calledOnceWithExactly(projectName)).to.be.true;
+        });
 
-            projectSlug = 'fake';
-            projectName = projectSlug;
+        it('should not set folder name if project name is defined and folder does not exists', async () => {
+            
+            projectName = 'fake-name';
+            // projectSlug = 'fake-slug';
+            removeFolderStub.resolves();
+            showConfirmationPromptStub.resolves(true);
+            existsSyncStub.withArgs(projectName).returns(false);
+            // existsSyncStub.withArgs(projectSlug).returns(true);
+            await eraseProjectDirectories(projectSlug, projectName);
+
+            expect(existsSyncStub.calledOnceWithExactly(projectName)).to.be.true;
+            expect(showConfirmationPromptStub.notCalled).to.be.true;
+        });
+
+        it('should set folder name if project name is empty string', async () => {
+            projectName = '';
+            projectSlug = 'fake-slug';
+            removeFolderStub.resolves();
+            showConfirmationPromptStub.resolves(true);
+            existsSyncStub.withArgs(projectSlug).returns(true);
             await eraseProjectDirectories(projectSlug, projectName);
 
             expect(existsSyncStub.calledOnceWithExactly(projectSlug)).to.be.true;
         });
 
-        it('should set two folders', async () => {
-
-            projectSlug = 'fake';
-            projectName = 'fakeSec';
+        it('should not set folder name if folders do not exist', async () => {
+            projectName = 'fake-name';
+            projectSlug = 'fake-slug';
+            showConfirmationPromptStub.resolves(true);
+            existsSyncStub.withArgs(projectName).returns(false);
+            existsSyncStub.withArgs(projectSlug).returns(false);
             await eraseProjectDirectories(projectSlug, projectName);
 
-            expect(existsSyncStub.calledTwice).to.be.true;
-            expect(existsSyncStub.firstCall.args).to.be.deep.equal([ projectName ]);
-            expect(existsSyncStub.secondCall.args).to.be.deep.equal([ projectSlug ]);
+            expect(showConfirmationPromptStub.notCalled).to.be.true;
         });
     });
 
@@ -131,7 +148,7 @@ describe('Helper: erase project directories', () => {
             projectSlug = 'fake';
             projectName = 'fakeSec';
             showConfirmationPromptStub.resolves(true);
-            removeFolderStub.yields();
+            removeFolderStub.resolves();
         });
 
         afterEach(async () => {
@@ -140,31 +157,18 @@ describe('Helper: erase project directories', () => {
             expect(showConfirmationPromptStub.calledOnceWithExactly(expectedResults)).to.be.true;
         });
 
-        it('should set message for projectSlug and projectName if same names', () => {
+        it('should set message for projectName', () => {
 
             projectName = projectSlug;
             existsSyncStub.returns(true);
             expectedResults = `It will erase data in ${projectName}. Continue?`;
         });
 
-        it('should set message for projectSlug and projectName if different names', () => {
-
-            existsSyncStub.returns(true);
-            expectedResults = `It will erase data in ${projectName} and in ${projectSlug}. Continue?`;
-        });
-
         it('should set message for projectSlug', () => {
 
+            projectName = '';
             existsSyncStub.withArgs(projectSlug).returns(true);
-            existsSyncStub.withArgs(projectName).returns(false);
             expectedResults = `It will erase data in ${projectSlug}. Continue?`;
-        });
-
-        it('should set message for projectName', () => {
-
-            existsSyncStub.withArgs(projectSlug).returns(false);
-            existsSyncStub.withArgs(projectName).returns(true);
-            expectedResults = `It will erase data in ${projectName}. Continue?`;
         });
     });
 
@@ -174,7 +178,7 @@ describe('Helper: erase project directories', () => {
 
             existsSyncStub.resolves(true);
             showConfirmationPromptStub.resolves(true);
-            removeFolderStub.yields();
+            removeFolderStub.resolves();
         });
 
         it('should call removeFolder with projectName', async () => {
@@ -188,11 +192,12 @@ describe('Helper: erase project directories', () => {
 
         it('should call removeFolder with projectSlug', async () => {
 
+            projectName = '';
             projectSlug = 'fake';
 
             await eraseProjectDirectories(projectSlug, projectName);
 
-            expect(removeFolderStub.secondCall.args[0]).to.be.equal(projectSlug);
+            expect(removeFolderStub.firstCall.args[0]).to.be.equal(projectSlug);
         });
     });
 });

@@ -1,5 +1,7 @@
 'use strict';
 
+const config = require('../config');
+const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
 
@@ -8,7 +10,8 @@ class SetNameHandler {
     constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
-        this.name = '';
+        this.newName = '';
+        this.oldName = '';
 
         this.authHandler = authHandler;
     }
@@ -22,23 +25,20 @@ class SetNameHandler {
 
         const prompt = require('inquirer').createPromptModule();
 
-        return prompt([
-            {
-                type: 'text',
-                message: 'Set new project name',
-                name: 'name',
-                validate: (value) => {
-                    /* istanbul ignore next */
-                    const valid = Boolean(value);
-                    /* istanbul ignore next */
-                    return valid || 'Project name must not be empty.';
-                }
+        return prompt([{
+            type: 'text',
+            message: 'Set new project name',
+            name: 'name',
+            validate: (value) => {
+                /* istanbul ignore next */
+                const valid = Boolean(value);
+                /* istanbul ignore next */
+                return valid || 'Project name must not be empty.';
             }
-        ])
-            .then((answers) => {
+        }]).then((answers) => {
 
-                this.name = answers.name;
-            });
+            this.newName = answers.name;
+        });
     }
 
     setName() {
@@ -48,26 +48,47 @@ class SetNameHandler {
 
         return deserializeJsonFile(fileName).then(fileContent => {
 
+            this.oldName = fileContent.name;
+
+            if (this.newName === this.oldName) {
+
+                this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' }];
+                return Promise.reject();
+            }
+
             const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-            const oldName = fileContent.name;
-            fileContent.name = this.name;
+            fileContent.name = this.newName;
 
             return serializeJsonFile(fileName, fileContent).then(() => {
 
-                this.result = [{'Status': CliStatus.SUCCESS, 'Message': `Package name has been changed from ${oldName} to ${this.name} successful`}];
+                this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${this.oldName} to ${this.newName}.` }];
                 return Promise.resolve();
             }, error => {
 
-                this.result = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}`}];
+                this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }];
                 return Promise.reject(error);
             });
-        },error => {
+        }, error => {
 
-            this.result = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}`}];
+            this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }];
             return Promise.reject(error);
         });
     }
 
+    removeProject() {
+
+        const options = {
+            method: 'DELETE',
+            port: config.port,
+            hostname: config.host,
+            path: `/project/unpublish/${this.oldName}`,
+            headers: this.authHandler.headers
+        };
+
+        const http = new HttpWrapper(options);
+
+        return http.delete();
+    }
 }
 
 module.exports = SetNameHandler;

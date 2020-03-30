@@ -88,13 +88,7 @@ class InitHandler {
         const { productSlug } = project;
         this.isFreePackage = project.productId === null;
 
-        if (this.isFreePackage) {
-
-            this.projectSlug = productSlug.indexOf('React') === -1 ? productSlug : 'React-Template';
-        } else {
-
-            this.projectSlug = helpers.getPackageName(productSlug.slice(0, productSlug.indexOf('-')));
-        }
+        this.projectSlug = productSlug;
 
         this.projectName = this.args.projectName ? this.args.projectName : this.projectSlug;
         this.projectRoot = path.join(this.cwd, this.projectName);
@@ -102,35 +96,17 @@ class InitHandler {
 
     _download() {
 
-        let initProject;
-
-        return helpers.eraseProjectDirectories(this.projectSlug, this.projectName).then(() => {
-
-            if (this.isFreePackage) {
-
-                initProject = helpers.gitClone(`https://github.com/mdbootstrap/${this.projectSlug}.git`, this.projectName);
-            } else {
-
-                initProject = helpers.downloadProStarter(this.projectSlug, this.authHeaders, this.cwd, this.projectName);
-            }
-
-            initProject.then(result => {
+        return helpers.eraseProjectDirectories(this.projectSlug, this.projectName)
+            .then(() => helpers.downloadProStarter(this.projectSlug, this.authHeaders, this.cwd, this.projectName))
+            .then(result => {
 
                 this.result = result;
-                this.removeGitFolder()
-                    .then(() => this.saveMetadata())
+                this.saveMetadata()
                     .then(() => this.notifyServer())
                     .catch(console.error)
                     .finally(() => console.table(this.result));
-            });
-        }).catch(() => console.table([{ Status: 'ok', Message: 'OK, will not delete existing project.' }]));
-    }
 
-    removeGitFolder() {
-
-        const gitPath = path.join(this.projectRoot, '.git');
-
-        return helpers.removeFolder(gitPath);
+            }).catch(() => console.table([{ Status: 'OK', Message: 'OK, will not delete existing project.' }]));
     }
 
     _handleUserProjectSelect(select) {

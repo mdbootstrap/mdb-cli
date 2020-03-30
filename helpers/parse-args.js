@@ -10,7 +10,7 @@ module.exports = {
 
             if (Object.prototype.hasOwnProperty.call(initArgsMap, args[i])) {
 
-                result[args[i]] = args[i + 1];
+                result[initArgsMap[args[i]]] = args[i + 1];
             }
         }
 

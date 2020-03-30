@@ -52,28 +52,27 @@ describe('Helper: parse args', () => {
         });
         afterEach(() => expect(parseArgs(args, initArgsMap)).to.deep.equal(expectedResult));
 
+        const fakeArg = 'fakeArg';
+        const fakeArgSec = 'fakeArgSec';
+        const fakeArgName = 'fakeArgName';
+        const fakeArgSecName = 'fakeArgSecName';
+        const fakeValue = 'fakeValue';
+        const fakeValueSec = 'fakeValueSec';
+
         it('if one argument given', () => {
 
-            const fakeArg = 'fakeArg';
-            const fakeValue = 'fakeValue';
-
             args = [fakeArg, fakeValue];
-            initArgsMap[fakeArg] = undefined;
-            expectedResult[fakeArg] = fakeValue;
+            initArgsMap[fakeArg] = fakeArgName;
+            expectedResult[fakeArgName] = fakeValue;
         });
 
         it('if two arguments given', () => {
 
-            const fakeArg = 'fakeArg';
-            const fakeArgSec = 'fakeArgSec';
-            const fakeValue = 'fakeValue';
-            const fakeValueSec = 'fakeValueSec';
-
             args = [fakeArg, fakeValue, fakeArgSec, fakeValueSec];
-            initArgsMap[fakeArg] = undefined;
-            initArgsMap[fakeArgSec] = undefined;
-            expectedResult[fakeArg] = fakeValue;
-            expectedResult[fakeArgSec] = fakeValueSec;
+            initArgsMap[fakeArg] = fakeArgName;
+            initArgsMap[fakeArgSec] = fakeArgSecName;
+            expectedResult[fakeArgName] = fakeValue;
+            expectedResult[fakeArgSecName] = fakeValueSec;
         });
     });
 });
