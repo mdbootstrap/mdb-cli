@@ -11,6 +11,7 @@ describe('Command: rename', () => {
     let command;
     let askForNewProjectNameStub;
     let setNameStub;
+    let removeProjectStub;
     let setProjectNameStub;
     let buildProjectStub;
     let publishStub;
@@ -24,6 +25,7 @@ describe('Command: rename', () => {
 
         askForNewProjectNameStub = sandbox.stub(command.setNameHandler, 'askForNewProjectName');
         setNameStub = sandbox.stub(command.setNameHandler, 'setName');
+        removeProjectStub = sandbox.stub(command.setNameHandler, 'removeProject');
         setProjectNameStub = sandbox.stub(command.publishHandler, 'setProjectName');
         buildProjectStub = sandbox.stub(command.publishHandler, 'buildProject');
         publishStub = sandbox.stub(command.publishHandler, 'publish');
@@ -175,18 +177,18 @@ describe('Command: rename', () => {
         });
     });
 
-    describe('Should log table on reject', () => {
+    describe('Should print handler result on reject', () => {
 
         afterEach(async () => {
 
-            expect(console.table.called).to.be.false;
+            expect(command.printHandlerResult.called).to.be.false;
 
             await command.execute();
 
-            expect(console.table.called).to.be.true;
+            expect(command.printHandlerResult.called).to.be.true;
         });
 
-        it('should call log on setNameHandler.askForNewProjectName', () => {
+        it('should call log on setNameHandler.askForNewProjectName', async () => {
 
             askForNewProjectNameStub.rejects(['fake error']);
         });
@@ -226,6 +228,7 @@ describe('Command: rename', () => {
 
         askForNewProjectNameStub.resolves();
         setNameStub.resolves();
+        removeProjectStub.resolves();
         setProjectNameStub.resolves();
         buildProjectStub.resolves();
         publishStub.resolves();
@@ -251,12 +254,12 @@ describe('Command: rename', () => {
         expect(printHandlerResultStub.getCall(0).args).to.be.empty;
     });
 
-    it('should not revert name change on reject  if status not equal name changed', async () => {
+    it('should not revert name change on reject if status not equal name changed', async () => {
 
         askForNewProjectNameStub.rejects('fake error');
         setNameStub.resolves();
 
-        const setNameHandlerResult = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': ''}];
+        const setNameHandlerResult = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': '' }];
         sandbox.stub(command.setNameHandler, 'getResult').returns(setNameHandlerResult);
         await command.execute();
 
@@ -270,12 +273,31 @@ describe('Command: rename', () => {
 
         const oldName = 'old';
         const newName = 'new';
-        const setNameHandlerResult = [{'Status': CliStatus.SUCCESS, 'Message': `from ${oldName} to ${newName}`}];
-        const expectedResult = {'Status': CliStatus.SUCCESS, 'Message': 'Package name has been recovered successful'};
-        sandbox.stub(command.setNameHandler, 'getResult').returns(setNameHandlerResult);
+        const setNameHandlerResult = [{ 'Status': CliStatus.SUCCESS, 'Message': `from ${oldName} to ${newName}` }];
+        const expectedResult = { 'Status': CliStatus.SUCCESS, 'Message': 'Project name has been successfully recovered' };
+        sandbox.stub(command.setNameHandler, 'getResult').onCall(0).returns(setNameHandlerResult);
 
         await command.execute();
 
         expect(command.result[0]).to.be.deep.equal(expectedResult);
+    });
+
+    it('should print error if name not recovered', async () => {
+
+        const oldName = 'old';
+        const newName = 'new';
+        const setNameHandlerResult = [{ 'Status': CliStatus.SUCCESS, 'Message': `from ${oldName} to ${newName}` }];
+        command.setNameHandler.result = setNameHandlerResult;
+        command.setNameHandler.oldName = oldName;
+        command.setNameHandler.newName = newName;
+        setNameStub.rejects('fake error');
+
+        try {
+
+            await command.revertNameChange();
+        } catch (err) {
+
+            expect(console.log.called).to.be.true;
+        }
     });
 });

@@ -62,10 +62,9 @@ class LoginHandler {
         ])
             .then((answers) => {
 
-                this.options.data = {
-                    username: answers.username,
-                    password: answers.password
-                };
+                const { username, password } = answers;
+                this.options.data = JSON.stringify({ username, password });
+                this.options.headers['Content-Length'] = Buffer.byteLength(this.options.data);
             });
     }
 
@@ -78,7 +77,7 @@ class LoginHandler {
     parseResponse(response) {
 
         response = typeof response === 'string' ? JSON.parse(response) : response;
-        const [ { token } ] = response;
+        const [{ token }] = response;
         this._userToken = token;
     }
 
@@ -95,7 +94,7 @@ class LoginHandler {
 
                 this.result = [{ 'Status': CliStatus.ERROR, 'Message': 'Login failed' }];
             }
-        } catch(e) {
+        } catch (e) {
 
             this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Login failed: ${e.message}` }];
         }

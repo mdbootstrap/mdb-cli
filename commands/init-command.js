@@ -6,7 +6,7 @@ const AuthHandler = require('../utils/auth-handler');
 const { parseArgs } = require('../helpers/parse-args');
 
 const INIT_ARGS_MAP = {
-    '-n': 'projectName'
+    '-n': 'projectName', '--name': 'projectName'
 };
 
 class InitCommand extends Command {

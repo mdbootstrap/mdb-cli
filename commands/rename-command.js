@@ -20,41 +20,34 @@ class RenameCommand extends Command {
 
         return this.setNameHandler.askForNewProjectName()
             .then(() => this.setNameHandler.setName())
+            .then(() => this.setNameHandler.removeProject())
             .then(() => this.publishHandler.setProjectName())
             .then(() => this.publishHandler.buildProject())
             .then(() => this.publishHandler.publish())
             .then(() => this.printHandlerResult())
             .catch(error => {
 
-                Array.isArray(error) ? console.table(error) : console.log(error);
+                if (error && error.statusCode && error.message) error = [{ 'Status': error.statusCode, 'Message': error.message }];
+
+                Array.isArray(error) ? this.result = error : console.log(error);
                 this.revertNameChange();
             });
     }
 
     revertNameChange() {
 
-        const [ setNameResult ] = this.setNameHandler.getResult();
+        const [setNameResult] = this.setNameHandler.getResult();
 
-        if (setNameResult) {
+        if (setNameResult && setNameResult.Status === CliStatus.SUCCESS && setNameResult.Message.includes('from' && 'to')) {
 
-            const { Status, Message } = setNameResult;
-
-            if (Status === CliStatus.SUCCESS && Message.includes('from' && 'to')) {
-
-                const start = 'from ';
-                const from = Message.indexOf(start) + start.length;
-                const to = Message.indexOf(' to');
-
-                this.setNameHandler.name = Message.substring(from, to);
-                this.setNameHandler.setName().then(() => {
-
-                    this.result = [{'Status': CliStatus.SUCCESS, 'Message': 'Package name has been recovered successful'}];
+            this.setNameHandler.newName = this.setNameHandler.oldName;
+            this.setNameHandler.setName()
+                .then(() => {
+                    this.setNameHandler.result = [];
+                    this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Project name has been successfully recovered' }];
                     this.printHandlerResult();
-                });
-            } else {
-
-                this.printHandlerResult();
-            }
+                })
+                .catch(err => console.log(err));
         } else {
 
             this.printHandlerResult();
@@ -63,7 +56,7 @@ class RenameCommand extends Command {
 
     printHandlerResult() {
 
-        this.result = [ ...this.setNameHandler.getResult(), ...this.publishHandler.getResult(), ...this.result ];
+        this.result = [...this.setNameHandler.getResult(), ...this.publishHandler.getResult(), ...this.result];
         this.print();
     }
 }

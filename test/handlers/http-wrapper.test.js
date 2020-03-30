@@ -1,7 +1,8 @@
 'use strict';
 
 const HttpWrapper = require('../../utils/http-wrapper');
-const http = require('http');
+const config = require('../../config');
+const http = config.env === 'dev' ? require('http') : require('https');
 const sandbox = require('sinon').createSandbox();
 
 describe('Utils: Http Wrapper', () => {
@@ -47,7 +48,7 @@ describe('Utils: Http Wrapper', () => {
 
     it('should reject if response status code is not between 200 and 400', (done) => {
 
-        const http = require('http');
+        const http = config.env === 'dev' ? require('http') : require('https');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub().withArgs('end').yields('fakeMessage'), headers: fakeHeader, statusCode: 404 };
@@ -66,7 +67,7 @@ describe('Utils: Http Wrapper', () => {
 
     it('should resolve if response status code is between 200 and 400', () => {
 
-        const http = require('http');
+        const http = config.env === 'dev' ? require('http') : require('https');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader, statusCode: 210 };
@@ -79,7 +80,7 @@ describe('Utils: Http Wrapper', () => {
 
     it('should convert _requestData to string if it type is diffrent', () => {
 
-        const http = require('http');
+        const http = config.env === 'dev' ? require('http') : require('https');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader, statusCode: 210 };

@@ -1,6 +1,7 @@
 'use strict';
 
-const http = require('http');
+const config = require('../config');
+const http = config.env === 'dev' ? require('http') : require('https');
 
 class HttpWrapper {
 

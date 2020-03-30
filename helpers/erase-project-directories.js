@@ -11,26 +11,15 @@ module.exports = {
         return new Promise((resolve, reject) => {
 
             let msg;
-            let projectFolder;
-            let packageFolder;
+            let folderName;
 
-            if (projectName === projectSlug) {
+            if (projectName && fs.existsSync(projectName)) {
 
-                projectFolder = fs.existsSync(projectName);
-            } else {
-
-                projectFolder = fs.existsSync(projectName);
-                packageFolder = fs.existsSync(projectSlug);
-            }
-
-            if (projectFolder && packageFolder) {
-
-                msg = `It will erase data in ${projectName} and in ${projectSlug}. Continue?`;
-            } else if (projectFolder) {
-
+                folderName = projectName;
                 msg = `It will erase data in ${projectName}. Continue?`;
-            } else if (packageFolder) {
+            } else if (!projectName && fs.existsSync(projectSlug)) {
 
+                folderName = projectSlug;
                 msg = `It will erase data in ${projectSlug}. Continue?`;
             } else {
 
@@ -39,20 +28,8 @@ module.exports = {
             }
 
             helpers.showConfirmationPrompt(msg)
-                .then(answer => {
-
-                    if (answer) {
-
-                        helpers.removeFolder(projectName, () =>
-
-                            helpers.removeFolder(projectSlug, () =>
-
-                                resolve()
-                            )
-                        );
-                    }
-                    else reject();
-                });
+                .then(answer => answer ? helpers.removeFolder(folderName).then(() => resolve()).catch(() => reject()) : reject())
+                .catch(reject);
         });
     }
 };

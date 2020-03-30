@@ -82,7 +82,7 @@ describe('Handler: Login', () => {
 
         await handler.askCredentials();
 
-        const actualOptionsData = handler.options.data;
+        const actualOptionsData = JSON.parse(handler.options.data);
 
         chai.assert.deepEqual(actualOptionsData, expectedOptionsData, 'options has not been set after askCredentials()');
 

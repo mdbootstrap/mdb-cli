@@ -39,18 +39,6 @@ describe('Handler: Init', () => {
         expect(initHandler.authHandler).to.be.an.instanceOf(AuthHandler);
     });
 
-    it('should removeGitFolder() method remove git folder', async () => {
-
-        sandbox.stub(require('path'), 'join').returns(fakePath);
-        const removeStub = sandbox.stub(helpers, 'removeFolder');
-
-        initHandler = new InitHandler(authHandler);
-
-        await initHandler.removeGitFolder();
-
-        expect(removeStub.calledWith(fakePath)).to.be.true;
-    });
-
     it('should saveMetadata() resolves if no error and send expected message', async () => {
 
         const serialize = require('../../helpers/serialize-object-to-file');
@@ -175,16 +163,6 @@ describe('Handler: Init', () => {
         expect(initHandler.projectRoot).to.equal('fake/path/angular-ui-kit');
     });
 
-    it('should _setProjectInfo method set pro project data', () => {
-
-        const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
-        initHandler.cwd = 'fake/path';
-
-        initHandler._setProjectInfo(fakeProject);
-
-        expect(initHandler.projectRoot).to.equal('fake/path/ng-uikit-pro-standard');
-    });
-
     it('should _setProjectInfo method set project name if specyfied', () => {
 
         const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
@@ -194,16 +172,6 @@ describe('Handler: Init', () => {
         initHandler._setProjectInfo(fakeProject);
 
         expect(initHandler.projectName).to.equal('fakeProjectName');
-    });
-
-    it('should _setProjectInfo method set React free project data', () => {
-
-        const fakeProject = { productId: null, productTitle: 'React', productSlug: 'React', available: true };
-        initHandler.cwd = 'fake/path';
-
-        initHandler._setProjectInfo(fakeProject);
-
-        expect(initHandler.projectSlug).to.equal('React-Template');
     });
 
     it('should init project', () => {
@@ -264,30 +232,6 @@ describe('Handler: Init', () => {
         expect(postStub.calledOnce).to.be.true;
     });
 
-    it('should download free project', async () => {
-
-        const fakeResult = [{ Status: CliStatus.SUCCESS, Message: 'Initialization completed.' }];
-        const eraseStub = sandbox.stub(helpers, 'eraseProjectDirectories').resolves();
-        const cloneStub = sandbox.stub(helpers, 'gitClone').resolves(fakeResult);
-        initHandler = new InitHandler(authHandler);
-        initHandler.projectSlug = 'fakeSlug';
-        initHandler.projectName = 'fakeName';
-        initHandler.authHaders = 'fakeHeaders';
-        initHandler.cwd = 'fakeCwd';
-        initHandler.isFreePackage = true;
-        initHandler.projectRoot = 'fake/project/root';
-        const removeStub = sandbox.stub(initHandler, 'removeGitFolder').resolves();
-        const saveMetaStub = sandbox.stub(initHandler, 'saveMetadata').resolves();
-        const notifyStub = sandbox.stub(initHandler, 'notifyServer').resolves();
-
-        await initHandler._download();
-
-        expect(eraseStub.calledBefore(cloneStub), 'eraseProjectDirectories not called').to.be.true;
-        expect(cloneStub.calledBefore(removeStub), 'gitClone not called').to.be.true;
-        expect(removeStub.calledBefore(saveMetaStub), 'removeGitFolder not called').to.be.true;
-        expect(saveMetaStub.calledBefore(notifyStub), 'saveMetadata not called').to.be.true;
-    });
-
     it('should download pro starter', async () => {
 
         const fakeResult = [{ Status: CliStatus.SUCCESS, Message: 'Initialization completed.' }];
@@ -302,15 +246,13 @@ describe('Handler: Init', () => {
         initHandler.isFreePackage = false;
         initHandler.projectRoot = 'fake/project/root';
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        const removeStub = sandbox.stub(initHandler, 'removeGitFolder').resolves();
         const saveMetaStub = sandbox.stub(initHandler, 'saveMetadata').resolves();
         const notifyStub = sandbox.stub(initHandler, 'notifyServer').resolves();
 
         await initHandler._download();
 
         expect(eraseStub.calledBefore(downloadStub), 'eraseProjectDirectories not called').to.be.true;
-        expect(downloadStub.calledBefore(removeStub), 'gitClone not called').to.be.true;
-        expect(removeStub.calledBefore(saveMetaStub), 'removeGitFolder not called').to.be.true;
+        expect(downloadStub.calledBefore(saveMetaStub), 'removeGitFolder not called').to.be.true;
         expect(saveMetaStub.calledBefore(notifyStub), 'saveMetadata not called').to.be.true;
     });
 
