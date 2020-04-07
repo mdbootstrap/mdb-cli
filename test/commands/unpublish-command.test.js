@@ -90,4 +90,15 @@ describe('Command: unpublish', () => {
 
         chai.assert.isTrue(printSpy.calledOnce, 'print not called');
     });
+
+    it('should call catchError() after rejection', async () => {
+
+        const fakeError = new Error('fake error');
+        sandbox.stub(command.handler, 'askForProjectName').rejects(fakeError);
+        const catchStub = sandbox.stub(command, 'catchError');
+
+        await command.execute();
+
+        chai.assert.isTrue(catchStub.called, 'catchError not called');
+    });
 });

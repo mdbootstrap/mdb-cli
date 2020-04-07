@@ -27,8 +27,10 @@ module.exports = {
                 return;
             }
 
+            const message = { Status: 'OK', Message: 'OK, will not delete existing project.' };
+
             helpers.showConfirmationPrompt(msg)
-                .then(answer => answer ? helpers.removeFolder(folderName).then(() => resolve()).catch(() => reject()) : reject())
+                .then(answer => answer ? helpers.removeFolder(folderName).then(() => resolve()).catch(() => reject()) : reject(message))
                 .catch(reject);
         });
     }

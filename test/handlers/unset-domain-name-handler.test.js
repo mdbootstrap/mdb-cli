@@ -66,30 +66,38 @@ describe('Handler: unset-domain-name', () => {
 
     it('should unsetDomainName() remove project domain name', async () => {
 
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Domain name has been deleted successfully'};
+        const serializer = require('../../helpers/serialize-object-to-file');
+        const deserializer = require('../../helpers/deserialize-object-from-file');
+        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ domainName: 'fake.domain.name' });
+        sandbox.stub(serializer, 'serializeJsonFile').resolves();
+
+        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Domain name has been deleted successfully' };
 
         expect(handler.result).to.be.an('array').that.is.empty;
+
         await handler.unsetDomainName();
+
         expect(handler.result).to.deep.include(expectedResults);
     });
 
-    it('should return expected result if problem with file deserialization', () => {
+    it('should return expected result if problem with file deserialization', async () => {
 
         const serializer = require('../../helpers/serialize-object-to-file');
         const deserializer = require('../../helpers/deserialize-object-from-file');
-
         const fileName = 'package.json';
         const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` };
-
         const fakeError = new Error('fake error');
         sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
         sandbox.stub(deserializer, 'deserializeJsonFile').rejects(fakeError);
+        sandbox.stub(console, 'log');
 
-        handler.unsetDomainName().catch((error) => {
+        try {
 
-            expect(error).to.be.equal(fakeError);
-            expect(handler.result[0]).to.deep.include(expectedResults);
-        });
+            await handler.unsetDomainName();
+        } catch (e) {
+
+            expect(e).to.deep.include(expectedResults);
+        }
     });
 
     it('should return expected result if problem with file serialization', async () => {
@@ -98,20 +106,36 @@ describe('Handler: unset-domain-name', () => {
         const serializer = require('../../helpers/serialize-object-to-file');
         const deserializer = require('../../helpers/deserialize-object-from-file');
         const fileName = 'package.json';
-        const expectedResults = {'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}`};
+        const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` };
         const fakeError = new Error('fake error');
         sandbox.stub(serializer, 'serializeJsonFile').rejects(fakeError);
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ domainName: undefined });
+        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ domainName: 'fake.domain.name' });
         sandbox.stub(fs, 'writeFile');
+        sandbox.stub(console, 'log');
 
         try {
 
             await handler.unsetDomainName();
 
-        } catch (e) {
+        } catch (err) {
 
-            expect(handler.result[0]).to.deep.include(expectedResults);
-            expect(e).to.be.equal(fakeError);
+            expect(err).to.deep.include(expectedResults);
+        }
+    });
+
+    it('should reject when no domain name specyfied', async () => {
+
+        const deserializer = require('../../helpers/deserialize-object-from-file');
+        const expectedResults = { Status: 404, Message: 'No domain name' };
+        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({name: 'name'});
+
+        try {
+
+            await handler.unsetDomainName();
+
+        } catch (err) {
+
+            expect(err).to.deep.include(expectedResults);
         }
     });
 

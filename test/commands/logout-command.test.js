@@ -69,14 +69,14 @@ describe('Command: Logout', () => {
         done();
     });
 
-    it('should console.error on handler.logout failure', async () => {
+    it('should console.log on handler.logout failure', async () => {
 
         sandbox.stub(command.handler, 'logout').rejects('Fake error');
-        sandbox.spy(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(console.error.called, 'console.error not called on handler.logout failure');
+        chai.assert.isTrue(consoleStub.called, 'console.log not called on handler.logout failure');
 
         return Promise.resolve();
     });
@@ -95,7 +95,7 @@ describe('Command: Logout', () => {
 
     it('should call .print() after logout', async () => {
 
-        sandbox.stub(command.handler, 'logout').resolves(undefined);
+        sandbox.stub(command.handler, 'logout').resolves();
         const commandPrintSpy = sandbox.spy(command, 'print');
 
         await command.execute();

@@ -70,4 +70,15 @@ describe('Command: List', () => {
 
         chai.assert.isTrue(printStub.called, 'handler.print not called');
     });
+
+    it('should call catchError() after rejection', async () => {
+
+        const fakeError = new Error('fake error');
+        sandbox.stub(command.handler, 'fetchProducts').rejects(fakeError);
+        const catchStub = sandbox.stub(command, 'catchError');
+
+        await command.execute();
+
+        chai.assert.isTrue(catchStub.called, 'catchError not called');
+    });
 });

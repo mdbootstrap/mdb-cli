@@ -18,13 +18,8 @@ class ProjectsCommand extends Command {
     execute() {
 
         return this.handler.fetchProjects()
-            .then(() => {
-
-                this.result = this.handler.getResult();
-
-                this.print();
-            })
-            .catch(console.error);
+            .then(() => this.print())
+            .catch(e => this.catchError(e));
     }
 }
 

@@ -75,14 +75,14 @@ describe('Handler: Login', () => {
     it('should set options.data after askCredentials()', async () => {
 
         const inquirer = require('inquirer');
-
-        const expectedOptionsData = { username: '', password: '' };
-        const promptStub = sandbox.stub().resolves(expectedOptionsData);
+        const optionsData = { username: '', password: '' };
+        const expectedOptionsData = JSON.stringify(optionsData);
+        const promptStub = sandbox.stub().resolves(optionsData);
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
 
         await handler.askCredentials();
 
-        const actualOptionsData = JSON.parse(handler.options.data);
+        const actualOptionsData = handler.options.data;
 
         chai.assert.deepEqual(actualOptionsData, expectedOptionsData, 'options has not been set after askCredentials()');
 

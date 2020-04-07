@@ -26,13 +26,18 @@ module.exports = {
 
             const request = http.createRequest((response) => {
 
-                if (response.statusCode >= 400 && response.statusCode < 500) {
+                let result;
 
-                    return reject(`${response.statusCode} ${response.statusMessage}`);
+                const { statusCode, statusMessage } = response;
+
+                if (statusCode >= 400 && statusCode <= 500) {
+
+                    result = { 'Status': statusCode, 'Message': statusMessage };
+
+                    return reject(result);
                 }
 
                 const readStream = new Readable();
-                let result;
 
                 readStream._read = () => { };
 
@@ -81,9 +86,7 @@ module.exports = {
                     });
                 } catch (e) {
 
-                    console.log(e);
-
-                    result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' }];
+                    result = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' };
 
                     reject(result);
                 }

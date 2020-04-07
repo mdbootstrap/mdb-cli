@@ -77,126 +77,78 @@ describe('Command: init', () => {
         expect(handlerSpy.calledOnce).to.equal(true);
     });
 
-    it('should call handler.getAvailableOptions', () => {
+    it('should call handler.getAvailableOptions', async () => {
 
-        const handlerStub = sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        sandbox.stub(command.handler, 'setArgs');
+        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').resolves();
+        sandbox.stub(command.handler, 'showUserPrompt').resolves();
+        sandbox.stub(command.handler, 'initProject').resolves();
+        sandbox.stub(console, 'table');
 
-        command.execute();
+        await command.execute();
 
         expect(getAvailableOptionsStub.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        showUserPromptStub.reset();
-        showUserPromptStub.restore();
-        initProjectStub.reset();
-        initProjectStub.restore();
-        handlerStub.reset();
-        handlerStub.restore();
     });
 
     it('should call console.log on handler.getAvailableOptions reject', async () => {
 
-        const handlerStub = sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').rejects('Fake error');
-        const consoleSpy = sandbox.spy(console, 'log');
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'getAvailableOptions').rejects('Fake error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        expect(consoleSpy.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        handlerStub.reset();
-        handlerStub.restore();
-        consoleSpy.restore();
+        expect(consoleStub.calledOnce).to.equal(true);
     });
 
-    it('should call handler.showUserPrompt', () => {
+    it('should call handler.showUserPrompt', async () => {
 
-        const handlerStub = sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'getAvailableOptions').resolves();
+        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').resolves();
+        sandbox.stub(command.handler, 'initProject').resolves();
+        sandbox.stub(console, 'table');
 
-        command.execute();
+        await command.execute();
 
         expect(showUserPromptStub.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        showUserPromptStub.reset();
-        showUserPromptStub.restore();
-        initProjectStub.reset();
-        initProjectStub.restore();
-        handlerStub.reset();
-        handlerStub.restore();
     });
 
     it('should call console.log on handler.showUserPrompt reject', async () => {
 
-        const handlerStub = sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').rejects('Fake error');
-        const consoleSpy = sandbox.spy(console, 'log');
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
+        sandbox.stub(command.handler, 'showUserPrompt').rejects('Fake error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        expect(consoleSpy.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        showUserPromptStub.reset();
-        showUserPromptStub.restore();
-        handlerStub.reset();
-        handlerStub.restore();
-        consoleSpy.restore();
+        expect(consoleStub.calledOnce).to.equal(true);
     });
 
-    it('should call handler.initProject', () => {
+    it('should call handler.initProject', async () => {
 
-        const handlerStub = sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'getAvailableOptions').resolves();
+        sandbox.stub(command.handler, 'showUserPrompt').resolves();
+        const initProjectStub = sandbox.stub(command.handler, 'initProject').resolves();
+        sandbox.stub(console, 'table');
 
-        command.execute();
+        await command.execute();
 
         expect(initProjectStub.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        showUserPromptStub.reset();
-        showUserPromptStub.restore();
-        initProjectStub.reset();
-        initProjectStub.restore();
-        handlerStub.reset();
-        handlerStub.restore();
     });
 
     it('should call console.log on handler.initProject reject', async () => {
 
-        const handlerStub = sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        const initProjectStub = sandbox.stub(command.handler, 'initProject').rejects('Fake error');
-        const consoleSpy = sandbox.spy(console, 'log');
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'getAvailableOptions').resolves();
+        sandbox.stub(command.handler, 'showUserPrompt').resolves();
+        sandbox.stub(command.handler, 'initProject').rejects('Fake error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        expect(consoleSpy.calledOnce).to.equal(true);
-
-        getAvailableOptionsStub.reset();
-        getAvailableOptionsStub.restore();
-        showUserPromptStub.reset();
-        showUserPromptStub.restore();
-        initProjectStub.reset();
-        initProjectStub.restore();
-        handlerStub.reset();
-        handlerStub.restore();
-        consoleSpy.restore();
+        expect(consoleStub.calledOnce).to.equal(true);
     });
 });

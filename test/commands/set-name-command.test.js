@@ -10,12 +10,14 @@ describe('Command: set-name', () => {
     let authHandler;
     let command;
     let consTabStub;
+    let consLogStub;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
         command = new commandClass(authHandler);
         consTabStub = sandbox.stub(console, 'table');
+        consLogStub = sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
@@ -67,11 +69,10 @@ describe('Command: set-name', () => {
     it('should console.log on handler.askForNewProjectName rejected string', async () => {
 
         sandbox.stub(command.handler, 'askForNewProjectName').rejects('Fake error');
-        sandbox.spy(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(console.log.called, 'console.error not called on handler.askForNewProjectName failure');
+        chai.assert.isTrue(consLogStub.called, 'console.error not called on handler.askForNewProjectName failure');
     });
 
     it('should console.table on handler.askForNewProjectName rejected array', async () => {
@@ -97,11 +98,10 @@ describe('Command: set-name', () => {
 
         sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
         sandbox.stub(command.handler, 'setName').rejects('fake error');
-        sandbox.spy(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(console.log.called, 'console.error not called on handler.setName failure');
+        chai.assert.isTrue(consLogStub.called, 'console.error not called on handler.setName failure');
     });
 
     it('should console.table on handler.setName rejected array', async () => {
@@ -114,22 +114,22 @@ describe('Command: set-name', () => {
         chai.assert.isTrue(consTabStub.called, 'console.table not called on handler.askForNewProjectName reject');
     });
 
-    it('should call printHandlerResult() after handler.setName', async () => {
+    it('should call print() after handler.setName', async () => {
 
         sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
         sandbox.stub(command.handler, 'setName').resolves(undefined);
-        const printStub = sandbox.stub(command, 'printHandlerResult').returns();
+        const printStub = sandbox.stub(command, 'print').returns();
 
         await command.execute();
 
-        chai.assert.isTrue(printStub.called, 'printHandlerResult not called');
+        chai.assert.isTrue(printStub.called, 'print not called');
     });
 
-    it('should call print() in printHandlerResult()', () => {
+    it('should call print()', () => {
 
         const printStub = sandbox.stub(command, 'print').returns();
 
-        command.printHandlerResult();
+        command.print();
 
         chai.assert.isTrue(printStub.called, 'handler.print not called');
     });

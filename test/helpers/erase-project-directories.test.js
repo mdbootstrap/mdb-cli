@@ -50,7 +50,7 @@ describe('Helper: erase project directories', () => {
             throw new Error('Error is not thrown');
         } catch (e) {
 
-            expect(e).to.be.undefined;
+            expect(e).to.be.deep.equal({ Status: 'OK', Message: 'OK, will not delete existing project.' });
         }
     });
 
@@ -89,9 +89,9 @@ describe('Helper: erase project directories', () => {
     });
 
     describe('Set if folders exist', () => {
-  
+
         it('should set folder name if project name is defined and folder exists', async () => {
-            
+
             projectName = 'fake-name';
             projectSlug = 'fake-slug';
             removeFolderStub.resolves();
@@ -103,7 +103,7 @@ describe('Helper: erase project directories', () => {
         });
 
         it('should not set folder name if project name is defined and folder does not exists', async () => {
-            
+
             projectName = 'fake-name';
             // projectSlug = 'fake-slug';
             removeFolderStub.resolves();

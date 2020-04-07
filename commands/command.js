@@ -1,6 +1,8 @@
 'use strict';
 
 const AuthHandler = require('../utils/auth-handler');
+const LogoutHandler = require('../utils/logout-handler');
+const CliStatus = require('../models/cli-status');
 const config = require('../config');
 
 class Command {
@@ -53,7 +55,35 @@ class Command {
 
     print() {
 
-        console.table(this.result);
+        if (this.result.length === 0 && this._handler) this.result = this.handler.getResult();
+
+        if (this.result) console.table(this.result);
+    }
+
+    catchError(error) {
+
+        if (Array.isArray(error)) {
+
+            this.result = error;
+            this.print();
+
+        } else if (error && error.statusCode && error.message) {
+
+            this.result = [{ Status: error.statusCode, Message: error.message }];
+
+            if (error.statusCode === CliStatus.UNAUTHORIZED) {
+
+                const logoutHandler = new LogoutHandler();
+                logoutHandler.logout();
+
+                this.result.push({ Status: CliStatus.UNAUTHORIZED, Message: 'Please login first' });
+            }
+
+            this.print();
+        } else {
+
+            console.log(error);
+        }
     }
 }
 

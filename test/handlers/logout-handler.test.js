@@ -67,12 +67,16 @@ describe('Handler: Logout', () => {
     it('should reject on fs.unlinkSync failure', async () => {
 
         const fs = require('fs');
-        const fakeError = 'Fake error';
-        sandbox.stub(fs, 'unlinkSync').throws(fakeError, fakeError);
+        const fakeError = new Error('Fake error');
+        sandbox.stub(fs, 'unlinkSync').throws(fakeError);
 
-        await handler.logout()
-            .then(() => expect.fail('logout() should be rejected'))
-            .catch((error) => expect(error.message === fakeError).to.be.true);
+        try {
+
+            await handler.logout();
+        } catch (err) {
+
+            expect(err[0].Message).to.be.equal('Logout failed: Fake error');
+        }
 
         return Promise.resolve();
     });

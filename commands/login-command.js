@@ -21,11 +21,10 @@ class LoginCommand extends Command {
 
                 this.handler.parseResponse(response);
                 this.handler.saveToken();
-                this.result = this.handler.getResult();
-
+                
                 this.print();
             })
-            .catch(console.error);
+            .catch(this.catchError);
     }
 }
 

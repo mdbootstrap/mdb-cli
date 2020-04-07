@@ -52,14 +52,14 @@ describe('Command: unset-domain-name', () => {
         chai.assert.isTrue(setDomainNameStub.called, 'handler.unsetDomainName not called');
     });
 
-    it('should console.table on handler.unsetDomainName rejected string', async () => {
+    it('should console.log on handler.unsetDomainName rejected string', async () => {
 
         sandbox.stub(command.handler, 'unsetDomainName').rejects('fake error');
-        sandbox.spy(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(console.table.called, 'console.table not called on handler.unsetDomainName failure');
+        chai.assert.isTrue(consoleStub.called, 'console.log not called on handler.unsetDomainName failure');
     });
 
     it('should console.table on handler.unsetDomainName rejected array', async () => {
@@ -71,26 +71,26 @@ describe('Command: unset-domain-name', () => {
         chai.assert.isTrue(consTabStub.called, 'console.table not called on handler.unsetDomainName reject');
     });
 
-    it('should call printHandlerResult() after handler.unsetDomainName', async () => {
+    it('should call print() after handler.unsetDomainName', async () => {
 
         const unsetDomainNameStub = sandbox.stub(command.handler, 'unsetDomainName').resolves(undefined);
-        const printStub = sandbox.stub(command, 'printHandlerResult').returns();
+        const printStub = sandbox.stub(command, 'print').returns();
 
         await command.execute();
 
-        chai.assert.isTrue(printStub.calledAfter(unsetDomainNameStub), 'printHandlerResult not called');
+        chai.assert.isTrue(printStub.calledAfter(unsetDomainNameStub), 'print not called');
     });
 
-    it('should call print() in printHandlerResult()', () => {
+    it('should call print()', () => {
 
         const printStub = sandbox.stub(command, 'print').returns();
 
-        command.printHandlerResult();
+        command.print();
 
         chai.assert.isTrue(printStub.called, 'handler.print not called');
     });
 
-    it('should call printHandlerResult() should print expected results', async () => {
+    it('should call print() should print expected results', async () => {
 
         const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!'}];
         sandbox.stub(command.handler, 'unsetDomainName').resolves(undefined);
@@ -98,7 +98,7 @@ describe('Command: unset-domain-name', () => {
 
         await command.execute();
 
-        chai.assert.isTrue(consTabStub.calledWith(expectedResult), `printHandlerResult should print ${JSON.stringify(expectedResult)}`);
+        chai.assert.isTrue(consTabStub.calledWith(expectedResult), `print should print ${JSON.stringify(expectedResult)}`);
     });
 
 });

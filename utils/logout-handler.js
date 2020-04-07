@@ -29,7 +29,7 @@ class LogoutHandler {
 
             this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Logout failed: ${e.message}` }];
 
-            return Promise.reject(e);
+            return Promise.reject(this.result);
         }
 
         return Promise.resolve();

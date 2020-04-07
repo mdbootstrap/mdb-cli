@@ -103,14 +103,14 @@ describe('Command: orders', () => {
         expect(command.result).to.deep.equal(expectedResults);
     });
 
-    it('should console.error on HttpWrapper.get rejected', async () => {
+    it('should console.log on HttpWrapper.get rejected', async () => {
 
         sandbox.stub(command.http, 'get').rejects('Fake error');
-        const errorStub = sandbox.stub(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(errorStub.calledOnce, 'console.error not called on HttpWrapper.get failure');
+        chai.assert.isTrue(consoleStub.calledOnce, 'console.log not called on HttpWrapper.get failure');
     });
 
     it('should parse orders to json format', async () => {
