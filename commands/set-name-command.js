@@ -17,21 +17,8 @@ class SetNameCommand extends Command {
 
         return this.handler.askForNewProjectName()
             .then(() => this.handler.setName())
-            .then(() => {
-
-                this.printHandlerResult();
-            }, error => {
-
-                Array.isArray(error) ? console.table(error) : console.log(error);
-
-                this.printHandlerResult();
-            });
-    }
-
-    printHandlerResult() {
-
-        this.result = this.handler.getResult();
-        this.print();
+            .then(() => this.print())
+            .catch(e => this.catchError(e));
     }
 
 }

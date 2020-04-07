@@ -15,7 +15,6 @@ class HelpCommand extends Command {
     execute() {
 
         this.handler.setResult();
-        this.result = this.handler.getResult();
         this.print();
     }
 }

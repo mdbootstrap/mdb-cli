@@ -19,39 +19,41 @@ class UnsetDomainNameHandler {
 
     unsetDomainName() {
 
-        const {deserializeJsonFile} = require('../helpers/deserialize-object-from-file');
-        const fileName = 'package.json';
+        return new Promise((resolve, reject) => {
 
-        return deserializeJsonFile(fileName).then(fileContent => {
+            const fileName = 'package.json';
 
-            const {serializeJsonFile} = require('../helpers/serialize-object-to-file');
-            delete fileContent.domainName;
+            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
 
-            return serializeJsonFile(fileName, fileContent).then(() => {
+            deserializeJsonFile(fileName).then(fileContent => {
 
-                this.result = [{
-                    'Status': CliStatus.SUCCESS,
-                    'Message': 'Domain name has been deleted successfully'
-                }];
-                return Promise.resolve();
-            }, error => {
+                if (!fileContent.domainName) {
 
-                this.result = [{
-                    'Status': CliStatus.INTERNAL_SERVER_ERROR,
-                    'Message': `Problem with saving ${fileName}`
-                }];
-                return Promise.reject(error);
+                    return reject([{ 'Status': CliStatus.NOT_FOUND, 'Message': 'No domain name' }]);
+                }
+
+                delete fileContent.domainName;
+
+                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
+
+                serializeJsonFile(fileName, fileContent).then(() => {
+
+                    this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Domain name has been deleted successfully' }];
+                    resolve();
+
+                }).catch(e => {
+
+                    console.log(e);
+                    reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
+                });
+
+            }).catch(e => {
+
+                console.log(e);
+                reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }]);
             });
-        }, error => {
-
-            this.result = [{
-                'Status': CliStatus.INTERNAL_SERVER_ERROR,
-                'Message': `Problem with reading ${fileName}`
-            }];
-            return Promise.reject(error);
         });
     }
-
 }
 
 module.exports = UnsetDomainNameHandler;

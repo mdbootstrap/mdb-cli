@@ -22,13 +22,8 @@ class ListCommand extends Command {
     execute() {
 
         return this.handler.fetchProducts()
-            .then(() => {
-
-                this.result = this.handler.getResult();
-
-                this.print();
-            })
-            .catch(console.error);
+            .then(() => this.print())
+            .catch(e => this.catchError(e));
     }
 }
 

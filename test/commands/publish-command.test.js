@@ -101,35 +101,37 @@ describe('Command: publish', () => {
         expect(command.handler.cwd.endsWith('dist/fake-project-name')).to.equal(true);
     });
 
-    it('should console.error on handler.setProjectName rejected', async () => {
+    it('should console.log on handler.setProjectName rejected', async () => {
 
         sandbox.stub(command.handler, 'setProjectName').rejects('Fake error');
-        sandbox.spy(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(console.error.calledOnce, 'console.error not called on handler.setProjectName failure');
+        chai.assert.isTrue(consoleStub.calledOnce, 'console.log not called on handler.setProjectName failure');
     });
 
-    it('should call handler.publish after handler.setProjectName', async () => {
+    it('should call handler.publish after handler.setPackageName', async () => {
 
-        sandbox.stub(command.handler, 'setProjectName').resolves(undefined);
-        const publishStub = sandbox.stub(command.handler, 'publish').resolves(undefined);
+        sandbox.stub(command.handler, 'setProjectName').resolves();
+        sandbox.stub(command.handler, 'setPackageName').resolves();
+        const publishStub = sandbox.stub(command.handler, 'publish').resolves();
 
         await command.execute();
 
         chai.assert.isTrue(publishStub.calledOnce, 'handler.publish not called');
     });
 
-    it('should console.error on handler.publish rejected', async () => {
+    it('should console.log on handler.publish rejected', async () => {
 
-        sandbox.stub(command.handler, 'setProjectName').resolves(undefined);
+        sandbox.stub(command.handler, 'setProjectName').resolves();
+        sandbox.stub(command.handler, 'setPackageName').resolves();
         sandbox.stub(command.handler, 'publish').rejects('fake error');
-        sandbox.spy(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(console.error.calledOnce, 'console.error not called on handler.publish failure');
+        chai.assert.isTrue(consoleStub.calledOnce, 'console.log not called on handler.publish failure');
     });
 
     it('should call print() after handler.publish', async () => {
@@ -146,8 +148,9 @@ describe('Command: publish', () => {
     it('should call print should print expected results', async () => {
 
         const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!' }];
-        sandbox.stub(command.handler, 'setProjectName').resolves(undefined);
-        sandbox.stub(command.handler, 'publish').resolves(undefined);
+        sandbox.stub(command.handler, 'setProjectName').resolves();
+        sandbox.stub(command.handler, 'setPackageName').resolves();
+        sandbox.stub(command.handler, 'publish').resolves();
         sandbox.stub(command.handler, 'getResult').returns(expectedResult);
 
         await command.execute();

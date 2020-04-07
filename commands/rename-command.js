@@ -24,12 +24,10 @@ class RenameCommand extends Command {
             .then(() => this.publishHandler.setProjectName())
             .then(() => this.publishHandler.buildProject())
             .then(() => this.publishHandler.publish())
-            .then(() => this.printHandlerResult())
-            .catch(error => {
+            .then(() => this.printResult())
+            .catch(e => {
 
-                if (error && error.statusCode && error.message) error = [{ 'Status': error.statusCode, 'Message': error.message }];
-
-                Array.isArray(error) ? this.result = error : console.log(error);
+                this.catchError(e);
                 this.revertNameChange();
             });
     }
@@ -45,16 +43,16 @@ class RenameCommand extends Command {
                 .then(() => {
                     this.setNameHandler.result = [];
                     this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Project name has been successfully recovered' }];
-                    this.printHandlerResult();
+                    this.printResult();
                 })
-                .catch(err => console.log(err));
+                .catch(this.catchError);
         } else {
 
-            this.printHandlerResult();
+            this.printResult();
         }
     }
 
-    printHandlerResult() {
+    printResult() {
 
         this.result = [...this.setNameHandler.getResult(), ...this.publishHandler.getResult(), ...this.result];
         this.print();

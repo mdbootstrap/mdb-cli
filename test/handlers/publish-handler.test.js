@@ -22,6 +22,7 @@ describe('Handler: publish', () => {
 
         publishHandler.cwd = fakeCwd;
         sandbox.stub(console, 'table');
+        sandbox.stub(console, 'log');
     });
 
     afterEach(() => {

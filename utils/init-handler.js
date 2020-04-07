@@ -14,6 +14,7 @@ class InitHandler {
     constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
+        this.options = [];
         this.cwd = process.cwd();
         this.projectSlug = '';
         this.projectRoot = '';
@@ -37,19 +38,25 @@ class InitHandler {
         this.authHeaders = this.authHandler.headers;
     }
 
+    getResult() {
+
+        return this.result;
+    }
+
     getAvailableOptions() {
 
         return helpers.fetchProducts(this.authHeaders)
             .then((orders) => {
 
                 orders = typeof orders === 'string' ? JSON.parse(orders) : orders;
-                this.result = helpers.getSorted(orders, 'productTitle');
-            });
+                this.options = helpers.getSorted(orders, 'productTitle');
+            })
+            .catch((error) => Promise.reject(error));
     }
 
     showUserPrompt() {
 
-        const choices = this.result.map((row) => ({
+        const choices = this.options.map((row) => ({
             name: row.productTitle,
             short: row.productSlug,
             value: row.productSlug
@@ -75,11 +82,11 @@ class InitHandler {
             helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it here?')
                 .then((confirmed) => {
 
-                    if (confirmed) this._download();
+                    if (confirmed) return this._download();
                 });
         } else {
 
-            this._download();
+            return this._download();
         }
     }
 
@@ -101,12 +108,11 @@ class InitHandler {
             .then(result => {
 
                 this.result = result;
-                this.saveMetadata()
+                return this.saveMetadata()
                     .then(() => this.notifyServer())
-                    .catch(console.error)
-                    .finally(() => console.table(this.result));
-
-            }).catch(() => console.table([{ Status: 'OK', Message: 'OK, will not delete existing project.' }]));
+                    .catch(console.error);
+            })
+            .catch((err) => this.result = [err]);
     }
 
     _handleUserProjectSelect(select) {
@@ -119,7 +125,7 @@ class InitHandler {
         }
 
         const { projectSlug } = select;
-        const project = this.result.find((row) => row.productSlug === projectSlug);
+        const project = this.options.find((row) => row.productSlug === projectSlug);
 
         if (!project.available) {
 

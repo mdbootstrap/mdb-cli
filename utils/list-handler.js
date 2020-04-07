@@ -33,9 +33,10 @@ class ListHandler {
                 const userReadable = this._mapToUserReadable(products);
                 this.result = helpers.getSorted(userReadable, 'Product Name');
                 return Promise.resolve();
-            }, (error) => {
+            }, (e) => {
 
-                return Promise.reject(error);
+                this.result = [{ Status: e.statusCode, Message: e.message }];
+                return Promise.reject(e);
             });
     }
 

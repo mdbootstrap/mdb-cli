@@ -43,27 +43,39 @@ class SetDomainNameHandler {
 
     setDomainName() {
 
-        const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
-        const fileName = 'package.json';
+        return new Promise((resolve, reject) => {
 
-        return deserializeJsonFile(fileName).then(fileContent => {
+            const fileName = 'package.json';
 
-            const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-            fileContent.domainName = this.name;
+            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
 
-            return serializeJsonFile(fileName, fileContent).then(() => {
+            deserializeJsonFile(fileName).then(fileContent => {
 
-                this.result = [{'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${this.name} successfully`}];
-                return Promise.resolve();
-            }, error => {
+                if (fileContent.domainName && fileContent.domainName === this.name) {
 
-                this.result = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}`}];
-                return Promise.reject(error);
+                    reject([{ 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.' }]);
+                }
+
+                fileContent.domainName = this.name;
+
+                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
+
+                serializeJsonFile(fileName, fileContent).then(() => {
+
+                    this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${this.name} successfully` }];
+                    resolve();
+
+                }).catch(e => {
+
+                    console.log(e);
+                    reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
+                });
+
+            }).catch(e => {
+
+                console.log(e);
+                reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }]);
             });
-        },error => {
-
-            this.result = [{'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}`}];
-            return Promise.reject(error);
         });
     }
 

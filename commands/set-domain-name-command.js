@@ -9,6 +9,7 @@ class SetDomainNameCommand extends Command {
     constructor(authHandler = new AuthHandler()) {
 
         super(authHandler);
+
         this.handler = new SetDomainNameHandler(authHandler);
     }
 
@@ -16,21 +17,8 @@ class SetDomainNameCommand extends Command {
 
         return this.handler.askForDomainName()
             .then(() => this.handler.setDomainName())
-            .then(() => {
-
-                this.printHandlerResult();
-            }, error => {
-
-                console.table(error);
-
-                this.printHandlerResult();
-            });
-    }
-
-    printHandlerResult() {
-
-        this.result = this.handler.getResult();
-        this.print();
+            .then(() => this.print())
+            .catch(e => this.catchError(e));
     }
 }
 

@@ -15,21 +15,8 @@ class UnsetDomainNameCommand extends Command {
     execute() {
 
         return this.handler.unsetDomainName()
-            .then(() => {
-
-                this.printHandlerResult();
-            }, error => {
-
-                console.table(error);
-
-                this.printHandlerResult();
-            });
-    }
-
-    printHandlerResult() {
-
-        this.result = this.handler.getResult();
-        this.print();
+            .then(() => this.print())
+            .catch(e => this.catchError(e));
     }
 }
 

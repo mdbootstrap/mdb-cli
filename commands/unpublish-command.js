@@ -19,13 +19,8 @@ class UnpublishCommand extends Command {
 
         return this.handler.askForProjectName()
             .then(() => this.handler.unpublish())
-            .then(() => {
-
-                this.result = this.handler.getResult();
-
-                this.print();
-            })
-            .catch(console.error);
+            .then(() => this.print())
+            .catch(e => this.catchError(e));
     }
 }
 

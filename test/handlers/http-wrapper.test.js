@@ -1,8 +1,8 @@
 'use strict';
 
 const HttpWrapper = require('../../utils/http-wrapper');
-const config = require('../../config');
-const http = config.env === 'dev' ? require('http') : require('https');
+const http = require('http');
+const https = require('https');
 const sandbox = require('sinon').createSandbox();
 
 describe('Utils: Http Wrapper', () => {
@@ -19,12 +19,13 @@ describe('Utils: Http Wrapper', () => {
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub(), headers: fakeHeader };
         const requestStub = sandbox.stub(http, 'request').returns(fakeRequest).yields(fakeResponse);
+        const requestStubHttps = sandbox.stub(https, 'request').returns(fakeRequest).yields(fakeResponse);
         const fakeOptions = { data: { fake: 'data' } };
         const httpWrapper = new HttpWrapper(fakeOptions);
 
         httpWrapper.createRequest();
 
-        expect(requestStub.called).to.equal(true);
+        expect(requestStub.called || requestStubHttps.called).to.equal(true);
 
         done();
     });
@@ -35,6 +36,7 @@ describe('Utils: Http Wrapper', () => {
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub(), headers: fakeHeader };
         sandbox.stub(http, 'request').returns(fakeRequest).yields(fakeResponse);
+        sandbox.stub(https, 'request').returns(fakeRequest).yields(fakeResponse);
         const fakeOptions = { data: 'fake data' };
         const httpWrapper = new HttpWrapper(fakeOptions);
         const fakeCallback = sandbox.stub();
@@ -48,11 +50,11 @@ describe('Utils: Http Wrapper', () => {
 
     it('should reject if response status code is not between 200 and 400', (done) => {
 
-        const http = config.env === 'dev' ? require('http') : require('https');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub().withArgs('end').yields('fakeMessage'), headers: fakeHeader, statusCode: 404 };
         sandbox.stub(http, 'request').returns(fakeRequest).yields(fakeResponse);
+        sandbox.stub(https, 'request').returns(fakeRequest).yields(fakeResponse);
         const fakeOptions = { data: 'fake data' };
         const httpWrapper = new HttpWrapper(fakeOptions);
 
@@ -67,11 +69,11 @@ describe('Utils: Http Wrapper', () => {
 
     it('should resolve if response status code is between 200 and 400', () => {
 
-        const http = config.env === 'dev' ? require('http') : require('https');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader, statusCode: 210 };
         sandbox.stub(http, 'request').returns(fakeRequest).yields(fakeResponse);
+        sandbox.stub(https, 'request').returns(fakeRequest).yields(fakeResponse);
         const fakeOptions = { data: {fake: 'data'} };
         const httpWrapper = new HttpWrapper(fakeOptions);
 
@@ -80,11 +82,11 @@ describe('Utils: Http Wrapper', () => {
 
     it('should convert _requestData to string if it type is diffrent', () => {
 
-        const http = config.env === 'dev' ? require('http') : require('https');
         const fakeHeader = { fake: 'fakeHeader' };
         const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
         const fakeResponse = { on: sandbox.stub().withArgs('end').yields(''), headers: fakeHeader, statusCode: 210 };
         sandbox.stub(http, 'request').returns(fakeRequest).yields(fakeResponse);
+        sandbox.stub(https, 'request').returns(fakeRequest).yields(fakeResponse);
         const fakeOptions = { data: {fake: 'data'} };
         const stringifyStub = sandbox.stub(JSON, 'stringify');
         const httpWrapper = new HttpWrapper(fakeOptions);
@@ -95,6 +97,7 @@ describe('Utils: Http Wrapper', () => {
     it('should create get request', () => {
 
         sandbox.stub(http, 'request');
+        sandbox.stub(https, 'request');
         const fakeOptions = { data: 'fake data' };
         const httpWrapper = new HttpWrapper(fakeOptions);
 
@@ -104,6 +107,7 @@ describe('Utils: Http Wrapper', () => {
     it('should create post request', () => {
 
         sandbox.stub(http, 'request');
+        sandbox.stub(https, 'request');
         const fakeOptions = { data: 'fake data' };
         const httpWrapper = new HttpWrapper(fakeOptions);
 
@@ -113,6 +117,7 @@ describe('Utils: Http Wrapper', () => {
     it('should create put request', () => {
 
         sandbox.stub(http, 'request');
+        sandbox.stub(https, 'request');
         const fakeOptions = { data: 'fake data' };
         const httpWrapper = new HttpWrapper(fakeOptions);
 

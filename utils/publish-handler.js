@@ -48,15 +48,12 @@ class PublishHandler {
 
     async setProjectName() {
 
+        const packageJsonPath = path.join(this.cwd, 'package.json');
+
         try {
 
-            const packageJsonPath = path.join(this.cwd, 'package.json');
-            const metadataPath = path.join(this.cwd, '.mdb');
             const packageJson = await helpers.deserializeJsonFile(packageJsonPath);
-            const projectMetadata = await helpers.deserializeJsonFile(metadataPath).catch(error => console.log(`Problem with reading project metadata:\n${error}`));
-
             this.projectName = packageJson.name;
-            this.packageName = projectMetadata.packageName || '';
             this.domainName = packageJson.domainName || '';
 
             return Promise.resolve();
@@ -68,7 +65,25 @@ class PublishHandler {
                 return this.handleMissingPackageJson();
             }
 
-            throw e;
+            this.result = [{ Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with reading project name: ${e}` }];
+            return Promise.reject(this.result);
+        }
+    }
+
+    async setPackageName() {
+
+        const metadataPath = path.join(this.cwd, '.mdb');
+
+        try {
+
+            const projectMetadata = await helpers.deserializeJsonFile(metadataPath);
+            this.packageName = projectMetadata.packageName || '';
+            return Promise.resolve();
+
+        } catch (e) {
+
+            this.result = [{ Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with reading project metadata: ${e}` }];
+            return Promise.reject(this.result);
         }
     }
 
@@ -191,7 +206,7 @@ class PublishHandler {
 
                     spinner.succeed(`Uploading files | ${this.sent} Mb`);
 
-                    this.result = [{ 'Status': response.statusCode, 'Message': this.endMsg }];
+                    this.result.push({ 'Status': response.statusCode, 'Message': this.endMsg });
 
                     if (response.statusCode === CliStatus.HTTP_SUCCESS) {
 
@@ -203,6 +218,8 @@ class PublishHandler {
 
                     resolve();
                 });
+
+                response.on('error', console.error);
             });
 
             archive.on('error', reject);
@@ -233,17 +250,11 @@ class PublishHandler {
     handleMissingPackageJson() {
 
         return helpers.createPackageJson(this.cwd)
-            .then((message) => {
-
-                this.result = [message];
-                this.result.push({ 'Status': CliStatus.SUCCESS, 'Message': 'package.json file created. Publishing...' });
-
-                console.table(this.result);
-            })
+            .then(msg => this.result.push(msg))
             .then(() => this.setProjectName())
-            .catch((err) => {
+            .catch(err => {
 
-                this.result = [err];
+                this.result.push(err);
                 this.result.push({ 'Status': CliStatus.ERROR, 'Message': 'Missing package.json file.' });
 
                 console.table(this.result);

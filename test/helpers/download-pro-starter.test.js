@@ -170,7 +170,7 @@ describe('Helper: download pro starter', () => {
                     throw new Error('should throw error');
                 } catch(e) {
 
-                    expect(console.log.calledOnce).to.be.true;
+                    expect(e.Message).to.be.equal('Error initializing your project');
                 }
             });
 
@@ -363,7 +363,7 @@ describe('Helper: download pro starter', () => {
                     throw new Error('should throw error');
                 } catch (e) {
 
-                    expect(e).to.be.equal(`${code} ${errorMsg}`);
+                    expect(e.Status).to.be.equal(code);
                 }
             });
 
@@ -414,7 +414,7 @@ describe('Helper: download pro starter', () => {
                     throw new Error('should throw error');
                 } catch (e) {
 
-                    expect(e).to.be.deep.equal([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' }]);
+                    expect(e).to.be.deep.equal({ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' });
                 }
             });
 

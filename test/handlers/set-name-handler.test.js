@@ -101,11 +101,14 @@ describe('Handler: set-name', () => {
     it('should reject if old and new name are the same', async () => {
 
         const deserializer = require('../../helpers/deserialize-object-from-file');
+        const serializer = require('../../helpers/serialize-object-to-file');
         const newName = 'fakeName';
         const oldName = 'fakeName';
         handler.newName = newName;
+        sandbox.stub(serializer, 'serializeJsonFile').rejects();
         sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ name: oldName });
         const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' };
+        sandbox.stub(console, 'log');
 
         expect(handler.result).to.be.an('array').that.is.empty;
 
@@ -114,7 +117,7 @@ describe('Handler: set-name', () => {
             await handler.setName();
         } catch (err) {
 
-            expect(handler.result).to.deep.include(expectedResults);
+            expect(err).to.deep.include(expectedResults);
         }
     });
 
@@ -134,8 +137,14 @@ describe('Handler: set-name', () => {
 
         handler.newName = newName;
         expect(handler.result).to.be.an('array').that.is.empty;
-        await handler.setName();
-        expect(handler.result).to.deep.include(expectedResults);
+
+        try {
+
+            await handler.setName();
+        } catch (err) {
+
+            expect(err).to.deep.include(expectedResults);
+        }
     });
 
     it('should return expected result if problem with file deserialization', async () => {
@@ -152,16 +161,16 @@ describe('Handler: set-name', () => {
         const fakeError = new Error('fake error');
         sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
         sandbox.stub(deserializer, 'deserializeJsonFile').rejects(fakeError);
+        sandbox.stub(console, 'log');
 
         try {
 
             handler.name = name;
             await handler.setName();
 
-        } catch (error) {
+        } catch (err) {
 
-            expect(error).to.be.equal(fakeError);
-            expect(handler.result[0]).to.deep.include(expectedResults);
+            expect(err).to.deep.include(expectedResults);
         }
     });
 
@@ -181,16 +190,17 @@ describe('Handler: set-name', () => {
         sandbox.stub(serializer, 'serializeJsonFile').rejects(fakeError);
         sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ name: oldName });
         sandbox.stub(fs, 'writeFile');
+        sandbox.stub(console, 'log');
 
         try {
 
-            handler.name = name;
+            handler.oldName = oldName;
+            handler.newName = name;
             await handler.setName();
 
-        } catch (e) {
+        } catch (err) {
 
-            expect(handler.result[0]).to.deep.include(expectedResults);
-            expect(e).to.be.equal(fakeError);
+            expect(err).to.deep.include(expectedResults);
         }
     });
 

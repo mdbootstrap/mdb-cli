@@ -39,6 +39,7 @@ describe('Command: projects', () => {
     it('should execute call ProjectsHandler.fetchProjects', () => {
 
         const fetchStub = sandbox.stub(ProjectsHandler.prototype, 'fetchProjects').resolves([]);
+        sandbox.stub(console, 'table');
 
         command.execute();
 
@@ -55,14 +56,14 @@ describe('Command: projects', () => {
         chai.assert.isTrue(printStub.calledOnce);
     });
 
-    it('should console.error on ProjectsHandler.fetchProjects rejected', async () => {
+    it('should console.log on ProjectsHandler.fetchProjects rejected', async () => {
 
         sandbox.stub(ProjectsHandler.prototype, 'fetchProjects').rejects('fakeError');
-        const errSpy = sandbox.spy(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(errSpy.calledOnce);
+        chai.assert.isTrue(consoleStub.calledOnce);
     });
 
 });

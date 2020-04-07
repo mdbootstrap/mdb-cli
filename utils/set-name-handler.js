@@ -43,35 +43,41 @@ class SetNameHandler {
 
     setName() {
 
-        const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
-        const fileName = 'package.json';
+        return new Promise((resolve, reject) => {
 
-        return deserializeJsonFile(fileName).then(fileContent => {
+            const fileName = 'package.json';
 
-            this.oldName = fileContent.name;
+            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
 
-            if (this.newName === this.oldName) {
+            deserializeJsonFile(fileName).then(fileContent => {
 
-                this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' }];
-                return Promise.reject();
-            }
+                this.oldName = fileContent.name;
 
-            const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-            fileContent.name = this.newName;
+                if (this.newName === this.oldName) {
 
-            return serializeJsonFile(fileName, fileContent).then(() => {
+                    reject([{ 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' }]);
+                }
 
-                this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${this.oldName} to ${this.newName}.` }];
-                return Promise.resolve();
-            }, error => {
+                fileContent.name = this.newName;
 
-                this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }];
-                return Promise.reject(error);
+                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
+
+                serializeJsonFile(fileName, fileContent).then(() => {
+
+                    this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${this.oldName} to ${this.newName}.` }];
+                    resolve();
+
+                }).catch(e => {
+
+                    console.log(e);
+                    reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
+                });
+
+            }).catch(e => {
+
+                console.log(e);
+                reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }]);
             });
-        }, error => {
-
-            this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }];
-            return Promise.reject(error);
         });
     }
 

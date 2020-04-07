@@ -70,14 +70,14 @@ describe('Command: Login', () => {
         done();
     });
 
-    it('should console.error on handler.askCredentials failure', async () => {
+    it('should console.log on handler.askCredentials failure', async () => {
 
         sandbox.stub(command.handler, 'askCredentials').rejects('Fake error');
-        const errorStub = sandbox.stub(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(errorStub.called, 'console.error not called on handler.askCredentials failure');
+        chai.assert.isTrue(consoleStub.called, 'console.error not called on handler.askCredentials failure');
 
         return Promise.resolve();
     });
@@ -95,15 +95,15 @@ describe('Command: Login', () => {
         return Promise.resolve();
     });
 
-    it('should console.error on handler.login failure', async () => {
+    it('should console.log on handler.login failure', async () => {
 
         sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
         sandbox.stub(command.handler, 'login').rejects('Fake error');
-        const errorStub = sandbox.stub(console, 'error');
+        const consoleStub = sandbox.stub(console, 'log');
 
         await command.execute();
 
-        chai.assert.isTrue(errorStub.called, 'console.error not called on handler.login failure');
+        chai.assert.isTrue(consoleStub.called, 'console.log not called on handler.login failure');
 
         return Promise.resolve();
     });

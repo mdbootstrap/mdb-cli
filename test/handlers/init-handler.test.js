@@ -90,36 +90,48 @@ describe('Handler: Init', () => {
         expect(exitStub.calledWith(0)).to.be.true;
     });
 
-    it('should getAvailableOptions() fetch, parse and return sorted products', () => {
+    it('should getAvailableOptions() fetch, parse and return sorted products', async () => {
 
         const fakeOptions = { fake: 'options' };
         const fakeResult = 'fake result';
         sandbox.stub(helpers, 'fetchProducts').resolves(fakeOptions);
         const getStub = sandbox.stub(helpers, 'getSorted').returns(fakeResult);
-
         initHandler = new InitHandler(authHandler);
 
-        initHandler.getAvailableOptions().then(() => {
+        await initHandler.getAvailableOptions();
 
-            expect(getStub.calledWith(fakeOptions)).to.be.true;
-            expect(initHandler.result).to.equal(fakeResult);
-        });
+        expect(getStub.calledWith(fakeOptions)).to.be.true;
+        expect(initHandler.options).to.equal(fakeResult);
+
     });
 
-    it('should getAvailableOptions() fetch products and return sorted result', () => {
+    it('should getAvailableOptions() fetch products and return sorted result', async () => {
 
         const fakeOptions = 'options';
         const fakeResult = 'fake result';
         sandbox.stub(helpers, 'getSorted').returns(fakeResult);
         sandbox.stub(helpers, 'fetchProducts').resolves(fakeOptions);
         sandbox.stub(JSON, 'parse');
-
         initHandler = new InitHandler(authHandler);
 
-        initHandler.getAvailableOptions().then(() => {
+        await initHandler.getAvailableOptions();
 
-            expect(initHandler.result).to.equal(fakeResult);
-        });
+        expect(initHandler.options).to.equal(fakeResult);
+    });
+
+    it('should getAvailableOptions() catch error if rejected', async () => {
+
+        const fakeError = new Error('fake error');
+        sandbox.stub(helpers, 'fetchProducts').rejects(fakeError);
+        initHandler = new InitHandler(authHandler);
+
+        try{
+
+            await initHandler.getAvailableOptions();
+        } catch(e) {
+
+            expect(e).to.be.equal(fakeError);
+        }
     });
 
     it('should handle user project selection if project is not available', () => {
@@ -129,14 +141,14 @@ describe('Handler: Init', () => {
 
         initHandler = new InitHandler(authHandler);
 
-        const consoleSpy = sandbox.spy(console, 'log');
+        const consoleStub = sandbox.stub(console, 'log');
         const promptStub = sandbox.stub(initHandler, 'showUserPrompt');
 
-        initHandler.result = fakeResult;
+        initHandler.options = fakeResult;
         initHandler._handleUserProjectSelect(fakeSelect);
 
-        expect(consoleSpy.calledWith('You cannot create this project. Please visit https://mdbootstrap.com/products/angular-ui-kit/ and make sure it is available for you.')).to.be.true;
-        expect(promptStub.calledAfter(console.log)).to.be.true;
+        expect(consoleStub.calledWith('You cannot create this project. Please visit https://mdbootstrap.com/products/angular-ui-kit/ and make sure it is available for you.')).to.be.true;
+        expect(promptStub.calledAfter(consoleStub)).to.be.true;
     });
 
     it('should handle user project selection if project is available', () => {
@@ -146,7 +158,7 @@ describe('Handler: Init', () => {
 
         initHandler = new InitHandler(authHandler);
         const infoStub = sandbox.stub(initHandler, '_setProjectInfo');
-        initHandler.result = fakeResult;
+        initHandler.options = fakeResult;
 
         initHandler._handleUserProjectSelect(fakeSelect);
 
@@ -254,6 +266,21 @@ describe('Handler: Init', () => {
         expect(eraseStub.calledBefore(downloadStub), 'eraseProjectDirectories not called').to.be.true;
         expect(downloadStub.calledBefore(saveMetaStub), 'removeGitFolder not called').to.be.true;
         expect(saveMetaStub.calledBefore(notifyStub), 'saveMetadata not called').to.be.true;
+    });
+
+    it('should _download catch error if rejected', async () => {
+
+        const fakeError = new Error('fake error');
+        sandbox.stub(helpers, 'eraseProjectDirectories').rejects(fakeError);
+        initHandler = new InitHandler(authHandler);
+        
+        try {
+
+            await initHandler._download();
+        } catch(e) {
+
+            expect(initHandler.result).to.be.equal([fakeError]);
+        }
     });
 
     it('should show user prompt and handle user select', () => {

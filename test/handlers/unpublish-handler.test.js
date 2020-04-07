@@ -15,6 +15,8 @@ describe('Handler: unpublish', () => {
         authHandler = new AuthHandler(false);
 
         handler = new handlerClass(authHandler);
+
+        sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
