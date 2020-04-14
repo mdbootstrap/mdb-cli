@@ -43,6 +43,7 @@ class ProjectsHandler {
             this.result = projects.map((project) => ({
                 'Project Name': project.projectName,
                 'Project URL': `https://mdbootstrap.com/projects/${project.userNicename}/${project.projectName}/`,
+                'Project Domain': project.domainName ? project.domainName : '-',
                 'Project Published': new Date(project.publishDate).toLocaleString(),
                 'Project Edited': new Date(project.editDate).toLocaleString()
             }));

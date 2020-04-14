@@ -37,12 +37,14 @@ describe('Handler: Projects', () => {
             projectId: 123,
             userNicename: 'fakeNicename',
             projectName: 'fakeProjectName',
+            domainName: 'fakeDomainName',
             publishDate: '2019-06-24T06:49:53.000Z',
             editDate: '2019-06-24T06:49:53.000Z'
         }];
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbootstrap.com/projects/fakeNicename/fakeProjectName/',
+            'Project Domain': 'fakeDomainName',
             'Project Published': new Date(projects[0].publishDate).toLocaleString(),
             'Project Edited': new Date(projects[0].editDate).toLocaleString()
         }];
@@ -70,6 +72,7 @@ describe('Handler: Projects', () => {
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbootstrap.com/projects/fakeNicename/fakeProjectName/',
+            'Project Domain': '-',
             'Project Published': new Date(projectsJson[0].publishDate).toLocaleString(),
             'Project Edited': new Date(projectsJson[0].editDate).toLocaleString()
         }];
