@@ -10,7 +10,21 @@ module.exports = {
 
             fs.readFile(filePath, 'utf8', (error, content) => {
 
-                error ? reject(error) : resolve(JSON.parse(content));
+                if (error) {
+
+                    return reject(error);
+                }
+
+                try {
+
+                    const result = JSON.parse(content);
+
+                    resolve(result);
+
+                } catch (err) {
+
+                    reject(err);
+                }
             });
         });
     }

@@ -28,6 +28,9 @@ describe('Command: set-name', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new commandClass();
 
         expect(command).to.have.property('handler');
@@ -77,7 +80,7 @@ describe('Command: set-name', () => {
 
     it('should console.table on handler.askForNewProjectName rejected array', async () => {
 
-        sandbox.stub(command.handler, 'askForNewProjectName').rejects([{ 'Status': CliStatus.ERROR, 'Message': 'fake error'}]);
+        sandbox.stub(command.handler, 'askForNewProjectName').rejects([{ 'Status': CliStatus.ERROR, 'Message': 'fake error' }]);
 
         await command.execute();
 
@@ -107,7 +110,7 @@ describe('Command: set-name', () => {
     it('should console.table on handler.setName rejected array', async () => {
 
         sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
-        sandbox.stub(command.handler, 'setName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': ''}]);
+        sandbox.stub(command.handler, 'setName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': '' }]);
 
         await command.execute();
 
@@ -136,7 +139,7 @@ describe('Command: set-name', () => {
 
     it('should call printHandlerResult() should print expected results', async () => {
 
-        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!'}];
+        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!' }];
         sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
         sandbox.stub(command.handler, 'setName').resolves(undefined);
         sandbox.stub(command.handler, 'getResult').returns(expectedResult);

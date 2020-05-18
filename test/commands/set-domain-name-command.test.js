@@ -26,6 +26,9 @@ describe('Command: set-domain-name', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new commandClass();
 
         expect(command).to.have.property('handler');
@@ -76,7 +79,7 @@ describe('Command: set-domain-name', () => {
 
     it('should console.table on handler.askForDomainName rejected array', async () => {
 
-        sandbox.stub(command.handler, 'askForDomainName').rejects([{ 'Status': CliStatus.ERROR, 'Message': 'fake error'}]);
+        sandbox.stub(command.handler, 'askForDomainName').rejects([{ 'Status': CliStatus.ERROR, 'Message': 'fake error' }]);
 
         await command.execute();
 
@@ -107,7 +110,7 @@ describe('Command: set-domain-name', () => {
     it('should console.table on handler.setDomainName rejected array', async () => {
 
         sandbox.stub(command.handler, 'askForDomainName').resolves(undefined);
-        sandbox.stub(command.handler, 'setDomainName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': ''}]);
+        sandbox.stub(command.handler, 'setDomainName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': '' }]);
 
         await command.execute();
 
@@ -136,7 +139,7 @@ describe('Command: set-domain-name', () => {
 
     it('should call printHandlerResult() should print expected results', async () => {
 
-        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!'}];
+        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!' }];
         sandbox.stub(command.handler, 'askForDomainName').resolves(undefined);
         sandbox.stub(command.handler, 'setDomainName').resolves(undefined);
         sandbox.stub(command.handler, 'getResult').returns(expectedResult);

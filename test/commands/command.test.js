@@ -1,10 +1,17 @@
 'use strict';
 
+const LogoutHandler = require('../../utils/logout-handler');
 const Command = require('../../commands/command');
 const sandbox = require('sinon').createSandbox();
-const LogoutHandler = require('../../utils/logout-handler');
+const fs = require('fs');
 
 describe('Command: parent', () => {
+
+    beforeEach(() => {
+
+        sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(fs, 'readFileSync').returns('fakeToken');
+    });
 
     afterEach(() => {
 

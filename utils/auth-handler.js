@@ -41,7 +41,7 @@ class AuthHandler {
 
             console.table(this.result);
 
-            process.exit(0);
+            return process.exit(0);
         }
 
         this.headers = { 'Authorization': `Bearer ${fs.readFileSync(this._tokenFile, { encoding: 'utf8' })}` };

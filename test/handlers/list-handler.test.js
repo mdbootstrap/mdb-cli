@@ -11,6 +11,9 @@ describe('Handler: List', () => {
 
     beforeEach(() => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         authHandler = new AuthHandler(true);
         listHandler = new ListHandler(authHandler);
     });
@@ -48,7 +51,7 @@ describe('Handler: List', () => {
         ];
         const result = listHandler._mapToUserReadable(fakeProducts);
 
-        expect(result).to.deep.equal(expectedResult); 
+        expect(result).to.deep.equal(expectedResult);
     });
 
     it('should fetchProducts() method return a promise', () => {
@@ -61,7 +64,7 @@ describe('Handler: List', () => {
         const helpers = require('../../helpers');
         sandbox.stub(helpers, 'fetchProducts').resolves(fakeProducts);
         listHandler = new ListHandler();
-        
+
         expect(listHandler.fetchProducts()).to.be.a('promise');
     });
 
@@ -93,6 +96,6 @@ describe('Handler: List', () => {
         sandbox.stub(helpers, 'fetchProducts').rejects(fakeError);
         listHandler = new ListHandler();
 
-        listHandler.fetchProducts().then((res) => expect(res).to.be.equal(fakeError)).catch(() => {});
+        listHandler.fetchProducts().then((res) => expect(res).to.be.equal(fakeError)).catch(() => { });
     });
 });

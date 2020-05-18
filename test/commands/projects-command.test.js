@@ -26,6 +26,9 @@ describe('Command: projects', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new ProjectsCommand();
 
         expect(command).to.have.property('authHandler');

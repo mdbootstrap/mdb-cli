@@ -1,5 +1,6 @@
 'use strict';
 
+const handlerClass = require('../../utils/unset-domain-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
@@ -11,7 +12,6 @@ describe('Handler: unset-domain-name', () => {
 
     beforeEach(() => {
 
-        const handlerClass = require('../../utils/unset-domain-name-handler');
         authHandler = new AuthHandler(false);
 
         handler = new handlerClass(authHandler);
@@ -45,8 +45,11 @@ describe('Handler: unset-domain-name', () => {
 
     it('should have assigned authHandler if not specified in constructor', (done) => {
 
-        const handlerClass = require('../../utils/unset-domain-name-handler');
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         handler = new handlerClass();
+
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
 
@@ -127,7 +130,7 @@ describe('Handler: unset-domain-name', () => {
 
         const deserializer = require('../../helpers/deserialize-object-from-file');
         const expectedResults = { Status: 404, Message: 'No domain name' };
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({name: 'name'});
+        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ name: 'name' });
 
         try {
 

@@ -33,6 +33,9 @@ describe('Handler: Init', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         initHandler = new InitHandler();
 
         expect(initHandler).to.have.property('authHandler');
@@ -125,10 +128,10 @@ describe('Handler: Init', () => {
         sandbox.stub(helpers, 'fetchProducts').rejects(fakeError);
         initHandler = new InitHandler(authHandler);
 
-        try{
+        try {
 
             await initHandler.getAvailableOptions();
-        } catch(e) {
+        } catch (e) {
 
             expect(e).to.be.equal(fakeError);
         }
@@ -206,9 +209,7 @@ describe('Handler: Init', () => {
         sandbox.stub(require('path'), 'join');
         sandbox.stub(require('fs'), 'existsSync').returns(true);
         const promptStub = sandbox.stub(helpers, 'showConfirmationPrompt').resolves(true);
-
         initHandler = new InitHandler(authHandler);
-
         const downloadStub = sandbox.stub(initHandler, '_download');
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
 
@@ -222,9 +223,7 @@ describe('Handler: Init', () => {
         sandbox.stub(require('path'), 'join');
         sandbox.stub(require('fs'), 'existsSync').returns(true);
         const promptStub = sandbox.stub(helpers, 'showConfirmationPrompt').resolves(false);
-
         initHandler = new InitHandler(authHandler);
-
         const downloadStub = sandbox.stub(initHandler, '_download');
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
 
@@ -237,8 +236,8 @@ describe('Handler: Init', () => {
 
         const HttpWrapper = require('../../utils/http-wrapper');
         const postStub = sandbox.stub(HttpWrapper.prototype, 'post');
-
         initHandler = new InitHandler(authHandler);
+
         await initHandler.notifyServer();
 
         expect(postStub.calledOnce).to.be.true;
@@ -273,26 +272,25 @@ describe('Handler: Init', () => {
         const fakeError = new Error('fake error');
         sandbox.stub(helpers, 'eraseProjectDirectories').rejects(fakeError);
         initHandler = new InitHandler(authHandler);
-        
+
         try {
 
             await initHandler._download();
-        } catch(e) {
+        } catch (e) {
 
             expect(initHandler.result).to.be.equal([fakeError]);
         }
     });
 
-    it('should show user prompt and handle user select', () => {
+    it('should show user prompt and handle user select', async () => {
 
         const createPromptModuleStub = sandbox.stub(require('inquirer'), 'createPromptModule').returns(promptStub);
         initHandler = new InitHandler(authHandler);
         const handleSelectStub = sandbox.stub(initHandler, '_handleUserProjectSelect');
 
-        initHandler.showUserPrompt().then(() => {
+        await initHandler.showUserPrompt();
 
-            expect(handleSelectStub.calledWith(fakeSelect)).to.be.true;
-            expect(handleSelectStub.calledAfter(createPromptModuleStub)).to.be.true;
-        });
+        expect(handleSelectStub.calledWith(fakeSelect)).to.be.true;
+        expect(handleSelectStub.calledAfter(createPromptModuleStub)).to.be.true;
     });
 });

@@ -31,6 +31,9 @@ describe('Handler: Logout', () => {
 
     it('should have assigned authHandler', (done) => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         handler = new handlerClass();
 
         expect(handler).to.have.property('authHandler');

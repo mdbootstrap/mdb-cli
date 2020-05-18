@@ -26,6 +26,9 @@ describe('Command: unset-domain-name', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new commandClass();
 
         expect(command).to.have.property('handler');
@@ -64,7 +67,7 @@ describe('Command: unset-domain-name', () => {
 
     it('should console.table on handler.unsetDomainName rejected array', async () => {
 
-        sandbox.stub(command.handler, 'unsetDomainName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': ''}]);
+        sandbox.stub(command.handler, 'unsetDomainName').rejects([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': '' }]);
 
         await command.execute();
 
@@ -92,7 +95,7 @@ describe('Command: unset-domain-name', () => {
 
     it('should call print() should print expected results', async () => {
 
-        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!'}];
+        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!' }];
         sandbox.stub(command.handler, 'unsetDomainName').resolves(undefined);
         sandbox.stub(command.handler, 'getResult').returns(expectedResult);
 
