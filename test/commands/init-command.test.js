@@ -41,6 +41,9 @@ describe('Command: init', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new InitCommand();
 
         expect(command).to.have.property('authHandler');

@@ -1,13 +1,14 @@
 'use strict';
 
+const fs = require('fs');
 const Ora = require('ora');
 const path = require('path');
 const atob = require('atob');
 
-const AuthHandler = require('./auth-handler');
-const CliStatus = require('../models/cli-status');
 const config = require('../config');
 const helpers = require('../helpers');
+const AuthHandler = require('./auth-handler');
+const CliStatus = require('../models/cli-status');
 const HttpWrapper = require('../utils/http-wrapper');
 
 class PublishHandler {
@@ -78,18 +79,17 @@ class PublishHandler {
 
             const projectMetadata = await helpers.deserializeJsonFile(metadataPath);
             this.packageName = projectMetadata.packageName || '';
-            return Promise.resolve();
 
         } catch (e) {
 
-            this.result = [{ Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with reading project metadata: ${e}` }];
-            return Promise.reject(this.result);
+            this.packageName = '';
         }
+
+        return Promise.resolve();
     }
 
     async buildProject() {
 
-        const fs = require('fs');
         const packageJsonPath = path.join(this.cwd, 'package.json');
         let packageJson = await helpers.deserializeJsonFile(packageJsonPath);
 
@@ -98,16 +98,23 @@ class PublishHandler {
             const isAngular = !!packageJson.dependencies['@angular/core'];
             const isReact = !!packageJson.dependencies.react;
             const isVue = !!packageJson.dependencies.vue;
-            let angularFolder;
 
             if (isAngular) {
 
                 const angularJsonPath = path.join(this.cwd, 'angular.json');
-                let angularJson = await helpers.deserializeJsonFile(angularJsonPath);
-                angularFolder = path.join('dist', angularJson.defaultProject);
-            }
+                const angularJson = await helpers.deserializeJsonFile(angularJsonPath);
+                const angularFolder = path.join('dist', angularJson.defaultProject);
 
-            if (isReact) {
+                await helpers.buildProject();
+
+                this.cwd = path.join(this.cwd, angularFolder);
+
+                const indexPath = path.join(this.cwd, 'index.html');
+                let indexHtml = fs.readFileSync(indexPath, 'utf8');
+                indexHtml = indexHtml.replace(/<base href="\/">/g, '<base href=".">');
+                fs.writeFileSync(indexPath, indexHtml, 'utf8');
+
+            } else if (isReact) {
 
                 const token = this.authHandler.headers.Authorization;
                 const [, jwtBody] = token.split('.');
@@ -119,7 +126,6 @@ class PublishHandler {
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
 
                 packageJson.homepage = `https://mdbootstrap.com/projects/${username}/${packageJson.name}/`;
-
                 await helpers.serializeJsonFile('package.json', packageJson);
 
                 await helpers.buildProject();
@@ -131,43 +137,24 @@ class PublishHandler {
 
                 packageJson = await helpers.deserializeJsonFile(packageJsonPath);
                 delete packageJson.homepage;
-
                 await helpers.serializeJsonFile('package.json', packageJson);
 
                 this.cwd = path.join(this.cwd, 'build');
 
-            } else {
+            } else if (isVue) {
+
+                const vueConfigFile = path.join(this.cwd, 'vue.config.js');
+
+                if (!fs.existsSync(vueConfigFile)) {
+
+                    const vueConfigContent = 'module.exports = { publicPath: \'.\' }';
+
+                    fs.writeFileSync(vueConfigFile, vueConfigContent, 'utf8');
+                }
 
                 await helpers.buildProject();
 
-                const buildFolder = isAngular ? angularFolder : 'dist';
-
-                this.cwd = path.join(this.cwd, buildFolder);
-
-                const indexHtmlPath = path.join(this.cwd, 'index.html');
-                let indexHtml = fs.readFileSync(indexHtmlPath, 'utf8');
-                indexHtml = indexHtml.replace(/<base href="\/">/g, '<base href=".">');
-
-                if (isVue) {
-
-                    indexHtml = indexHtml.replace(/=\/static/g, '=./static');
-
-                    const files = fs.readdirSync(path.join(this.cwd, 'static', 'css'), { encoding: 'utf-8' });
-                    files.forEach(file => {
-
-                        if (file.endsWith('.css')) {
-                            const cssFilePath = path.join(this.cwd, 'static', 'css', file);
-                            let cssFile = fs.readFileSync(cssFilePath, 'utf8');
-                            cssFile = cssFile
-                                .replace(/\/static\/fonts/g, '../fonts')
-                                .replace(/\/static\/media/g, '../media');
-
-                            fs.writeFileSync(cssFilePath, cssFile, 'utf8');
-                        }
-                    });
-                }
-
-                fs.writeFileSync(indexHtmlPath, indexHtml, 'utf8');
+                this.cwd = path.join(this.cwd, 'dist');
             }
         }
 

@@ -33,6 +33,9 @@ describe('Handler: publish', () => {
 
     it('should have assigned authHandler if not specyfied in constructor', (done) => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         publishHandler = new PublishHandler();
         expect(publishHandler).to.have.property('authHandler');
         expect(publishHandler.authHandler).to.be.an.instanceOf(AuthHandler);
@@ -232,14 +235,32 @@ describe('Handler: publish', () => {
 
         expect(readFileStub.calledOnce).to.be.true;
         expect(writeFileStub.calledOnce).to.be.true;
+        expect(publishHandler.cwd).to.be.equal('fake/cwd/dist/fakeProjectName');
     });
 
-    it('should recognize and build Vue project', async () => {
+    it('should recognize and build Vue project if config file exists', async () => {
 
         const fs = require('fs');
-        const fakeFiles = ['app.225c80327851430b8c91.css', 'app.225c80327851430b8c91.css.map', 'vendors~app.334a3e24b7b4d447dd55.css', 'vendors~app.334a3e24b7b4d447dd55.css.map'];
-        const readdirStub = sandbox.stub(fs, 'readdirSync').returns(fakeFiles);
-        const readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
+        sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(helpers, 'deserializeJsonFile').resolves({
+            scripts: { build: 'build' },
+            dependencies: { 'vue': '7.5.4' }
+        });
+        const buildStub = sandbox.stub(helpers, 'buildProject').resolves();
+        const publishHandler = new PublishHandler(authHandler);
+        publishHandler.cwd = fakeCwd;
+        publishHandler.projectName = fakeProjectName;
+
+        await publishHandler.buildProject();
+
+        expect(buildStub.calledOnce).to.be.true;
+        expect(publishHandler.cwd).to.be.equal('fake/cwd/dist');
+    });
+
+    it('should recognize Vue project and add config file if not exists', async () => {
+
+        const fs = require('fs');
+        sandbox.stub(fs, 'existsSync').returns(false);
         const writeFileStub = sandbox.stub(fs, 'writeFileSync');
         sandbox.stub(helpers, 'deserializeJsonFile').resolves({
             scripts: { build: 'build' },
@@ -252,9 +273,7 @@ describe('Handler: publish', () => {
 
         await publishHandler.buildProject();
 
-        expect(readFileStub.callCount).to.equal(3);
-        expect(readdirStub.callCount).to.equal(1);
-        expect(writeFileStub.callCount).to.equal(3);
+        expect(writeFileStub.callCount).to.equal(1);
     });
 
     it('should recognize and build React project', async () => {
@@ -280,6 +299,7 @@ describe('Handler: publish', () => {
         expect(serializeStub.callCount).to.equal(2);
         expect(readFileStub.callCount).to.equal(2);
         expect(writeFileStub.callCount).to.equal(2);
+        expect(publishHandler.cwd).to.be.equal('fake/cwd/build');
     });
 
     it('should convert pointer to Mb', () => {

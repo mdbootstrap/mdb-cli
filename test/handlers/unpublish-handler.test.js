@@ -1,5 +1,6 @@
 'use strict';
 
+const handlerClass = require('../../utils/unpublish-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
@@ -8,7 +9,6 @@ describe('Handler: unpublish', () => {
 
     let authHandler;
     let handler;
-    const handlerClass = require('../../utils/unpublish-handler');
 
     beforeEach(() => {
 
@@ -51,6 +51,9 @@ describe('Handler: unpublish', () => {
     });
 
     it('should have assigned authHandler', () => {
+
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
         handler = new handlerClass();
 
@@ -121,7 +124,7 @@ describe('Handler: unpublish', () => {
 
             await handler.unpublish();
 
-            expect(handler.result).to.deep.equal([{ 'Status': CliStatus.HTTP_SUCCESS, 'Message': 'fake response'}]);
+            expect(handler.result).to.deep.equal([{ 'Status': CliStatus.HTTP_SUCCESS, 'Message': 'fake response' }]);
         });
     });
 });

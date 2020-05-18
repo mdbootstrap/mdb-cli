@@ -26,6 +26,9 @@ describe('Command: orders', () => {
 
     it('should have assigned authHandler even though AuthHandler is undefined', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new OrdersCommand();
 
         expect(command).to.have.property('authHandler');

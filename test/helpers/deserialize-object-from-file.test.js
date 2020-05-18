@@ -61,4 +61,17 @@ describe('Helper: deserialize object from file', () => {
             expect(e).to.be.equal(fakeError);
         }
     });
+
+    it('should reject if parsing to json problem', async () => {
+
+        readFileStub.yields(undefined, '');
+
+        try {
+
+            await deserializeJsonFile();
+        } catch (e) {
+
+            expect(e.message).to.be.equal('Unexpected end of JSON input');
+        }
+    });
 });

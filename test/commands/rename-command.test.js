@@ -55,6 +55,9 @@ describe('Command: rename', () => {
 
     it('should have assigned authHandler', () => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         command = new commandClass();
 
         expect(command).to.have.property('authHandler');

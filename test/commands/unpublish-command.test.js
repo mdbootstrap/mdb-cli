@@ -10,9 +10,9 @@ describe('Command: unpublish', () => {
     let authHandler;
     let command;
     let commandClass;
-    
+
     beforeEach(() => {
-        
+
         commandClass = require('../../commands/unpublish-command');
         authHandler = new AuthHandler(false);
 
@@ -32,6 +32,9 @@ describe('Command: unpublish', () => {
     });
 
     it('should have assigned authHandler even though it is not specified', () => {
+
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
         command = new commandClass();
 

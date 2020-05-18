@@ -1,5 +1,6 @@
 'use strict';
 
+const handlerClass = require('../../utils/set-domain-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
@@ -11,9 +12,7 @@ describe('Handler: set-domain-name', () => {
 
     beforeEach(() => {
 
-        const handlerClass = require('../../utils/set-domain-name-handler');
         authHandler = new AuthHandler(false);
-
         handler = new handlerClass(authHandler);
     });
 
@@ -55,7 +54,9 @@ describe('Handler: set-domain-name', () => {
 
     it('should have assigned authHandler if not specified in constructor', (done) => {
 
-        const handlerClass = require('../../utils/set-domain-name-handler');
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         handler = new handlerClass();
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
@@ -104,7 +105,7 @@ describe('Handler: set-domain-name', () => {
         const serializer = require('../../helpers/serialize-object-to-file');
         const deserializer = require('../../helpers/deserialize-object-from-file');
         const name = 'domain-name';
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${name} successfully`};
+        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${name} successfully` };
 
         const promptStub = sandbox.stub().resolves({ name: name });
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
@@ -123,7 +124,7 @@ describe('Handler: set-domain-name', () => {
         const serializer = require('../../helpers/serialize-object-to-file');
         const deserializer = require('../../helpers/deserialize-object-from-file');
         const name = 'domain-name';
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.'};
+        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.' };
 
         const promptStub = sandbox.stub().resolves({ name: name });
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
@@ -132,10 +133,10 @@ describe('Handler: set-domain-name', () => {
 
         handler.name = name;
         expect(handler.result).to.be.an('array').that.is.empty;
-        try{
+        try {
 
             await handler.setDomainName();
-        
+
         } catch (err) {
 
             expect(err).to.deep.include(expectedResults);
@@ -163,7 +164,7 @@ describe('Handler: set-domain-name', () => {
         try {
 
             await handler.setDomainName();
-        } catch(e) {
+        } catch (e) {
 
             expect(e).to.deep.include(expectedResults);
         }
@@ -177,7 +178,7 @@ describe('Handler: set-domain-name', () => {
         const deserializer = require('../../helpers/deserialize-object-from-file');
         const name = 'domain.com';
         const fileName = 'package.json';
-        const expectedResults = {'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}`};
+        const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` };
         const promptStub = sandbox.stub().resolves({ name: name });
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
         const fakeError = new Error('fake error');

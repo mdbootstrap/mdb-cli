@@ -1,8 +1,9 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
-const { assert, expect } = require('chai');
 const sandbox = require('sinon').createSandbox();
+const { assert, expect } = require('chai');
+const fs = require('fs');
 
 describe('Command: Help', () => {
 
@@ -50,18 +51,21 @@ describe('Command: Help', () => {
             { Command: 'init', Description: 'initialize chosen package' },
             { Command: 'publish', Description: 'publish your project' },
             { Command: 'set-name', Description: 'change your project name' }
-        ]);  
+        ]);
     });
 
     it('should include login command if user is not logged in', () => {
 
+        sandbox.stub(fs, 'existsSync').returns(false);
+        sandbox.stub(fs, 'readFileSync').returns('fakeToken');
+        sandbox.stub(process, 'exit');
         authHandler = new AuthHandler(true);
         authHandler.isAuth = false;
         command = new HelpCommand(authHandler);
 
         command.execute();
 
-        expect(command.result).to.deep.include({ Command: 'login', Description: 'log in to your MDB account' });  
+        expect(command.result).to.deep.include({ Command: 'login', Description: 'log in to your MDB account' });
     });
 
     it('should include logout command if user is logged in', () => {
@@ -72,7 +76,7 @@ describe('Command: Help', () => {
 
         command.execute();
 
-        expect(command.result).to.deep.include({ 'Command': 'logout', 'Description': 'logout from cli' });  
+        expect(command.result).to.deep.include({ 'Command': 'logout', 'Description': 'logout from cli' });
     });
 
     it('should print all availiable commands', () => {
@@ -81,7 +85,7 @@ describe('Command: Help', () => {
 
         command.execute();
 
-        assert.isTrue(consoleTableStub.calledImmediatelyAfter(printSpy), 'print not called'); 
+        assert.isTrue(consoleTableStub.calledImmediatelyAfter(printSpy), 'print not called');
         expect(consoleTableStub.calledOnce).to.equal(true);
     });
 });

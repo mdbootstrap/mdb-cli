@@ -8,17 +8,17 @@ describe('Handler: Projects', () => {
 
     let projectsHandler;
     let ProjectsHandler;
-    let authHandler;
 
     beforeEach(() => {
 
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         ProjectsHandler = require('../../utils/projects-handler');
-        authHandler = new AuthHandler(false);
     });
 
     afterEach(() => {
 
-        authHandler = undefined;
         sandbox.reset();
         sandbox.restore();
     });

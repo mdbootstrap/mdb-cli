@@ -1,5 +1,6 @@
 'use strict';
 
+const handlerClass = require('../../utils/set-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
@@ -11,7 +12,6 @@ describe('Handler: set-name', () => {
 
     beforeEach(() => {
 
-        const handlerClass = require('../../utils/set-name-handler');
         authHandler = new AuthHandler(false);
 
         handler = new handlerClass(authHandler);
@@ -55,7 +55,9 @@ describe('Handler: set-name', () => {
 
     it('should have assigned authHandler if not specified in constructor', (done) => {
 
-        const handlerClass = require('../../utils/set-name-handler');
+        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
+        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
+
         handler = new handlerClass();
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
