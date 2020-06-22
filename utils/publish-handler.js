@@ -121,19 +121,27 @@ class PublishHandler {
                 const username = JSON.parse(atob(jwtBody)).name;
 
                 const appJsPath = path.join(this.cwd, 'src', 'App.js');
-                let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/projects/${username}/${packageJson.name}'`);
-                fs.writeFileSync(appJsPath, appJsFile, 'utf8');
+
+                if (fs.existsSync(appJsPath)) {
+                    
+                    let appJsFile = fs.readFileSync(appJsPath, 'utf8');
+                    appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/projects/${username}/${packageJson.name}'`);
+                    fs.writeFileSync(appJsPath, appJsFile, 'utf8');
+                }
 
                 packageJson.homepage = `https://mdbootstrap.com/projects/${username}/${packageJson.name}/`;
                 await helpers.serializeJsonFile('package.json', packageJson);
 
                 await helpers.buildProject();
 
-                appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                const regex = new RegExp(`<Router basename='/projects/${username}/${packageJson.name}'`, 'g');
-                appJsFile = appJsFile.replace(regex, '<Router');
-                fs.writeFileSync(appJsPath, appJsFile, 'utf8');
+                if (fs.existsSync(appJsPath)) {
+
+                    let appJsFile = fs.readFileSync(appJsPath, 'utf8');
+                    appJsFile = fs.readFileSync(appJsPath, 'utf8');
+                    const regex = new RegExp(`<Router basename='/projects/${username}/${packageJson.name}'`, 'g');
+                    appJsFile = appJsFile.replace(regex, '<Router');
+                    fs.writeFileSync(appJsPath, appJsFile, 'utf8');
+                }
 
                 packageJson = await helpers.deserializeJsonFile(packageJsonPath);
                 delete packageJson.homepage;
