@@ -3,6 +3,7 @@
 const homedir = require('os').homedir();
 const env = process.env.NODE_ENV || 'prd';
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
+process.env['NODE_NO_WARNINGS'] = 1;
 module.exports = {
     tokenDir: `${homedir}/.mdbcli`,
     tokenFile: '/.auth',
