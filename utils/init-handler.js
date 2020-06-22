@@ -79,10 +79,11 @@ class InitHandler {
 
         if (fs.existsSync(packageJsonPath)) {
 
-            helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it here?')
+            return helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it here?')
                 .then((confirmed) => {
 
                     if (confirmed) return this._download();
+                    else this.result.push({ Status: CliStatus.SUCCESS, Message: 'OK, will not initialize project in this location.' });
                 });
         } else {
 

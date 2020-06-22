@@ -286,6 +286,7 @@ describe('Handler: publish', () => {
             scripts: { build: 'build' },
             dependencies: { 'react': '7.5.4' }
         });
+        sandbox.stub(fs, 'existsSync').returns(true);
         const serializeStub = sandbox.stub(helpers, 'serializeJsonFile').resolves();
         const buildStub = sandbox.stub(helpers, 'buildProject').resolves();
         const publishHandler = new PublishHandler(authHandler);
@@ -297,8 +298,35 @@ describe('Handler: publish', () => {
 
         expect(buildStub.calledOnce).to.be.true;
         expect(serializeStub.callCount).to.equal(2);
-        expect(readFileStub.callCount).to.equal(2);
+        expect(readFileStub.callCount).to.equal(3);
         expect(writeFileStub.callCount).to.equal(2);
+        expect(publishHandler.cwd).to.be.equal('fake/cwd/build');
+    });
+
+    it('should recognize and build React typescript project', async () => {
+
+        const fs = require('fs');
+        const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyMyIsIm5hbWUiOiJGYWtlTmFtZSIsImlzUHJvIjp0cnVlfQ.o0DZ3QXQn6mF8PEPikG27QBSuiiOJC5LktnaLzKtU8k';
+        const readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
+        const writeFileStub = sandbox.stub(fs, 'writeFileSync');
+        sandbox.stub(helpers, 'deserializeJsonFile').resolves({
+            scripts: { build: 'build' },
+            dependencies: { 'react': '7.5.4' }
+        });
+        sandbox.stub(fs, 'existsSync').returns(false);
+        const serializeStub = sandbox.stub(helpers, 'serializeJsonFile').resolves();
+        const buildStub = sandbox.stub(helpers, 'buildProject').resolves();
+        const publishHandler = new PublishHandler(authHandler);
+        publishHandler.cwd = fakeCwd;
+        publishHandler.projectName = fakeProjectName;
+        publishHandler.authHandler.headers.Authorization = fakeToken;
+
+        await publishHandler.buildProject();
+
+        expect(buildStub.calledOnce).to.be.true;
+        expect(serializeStub.callCount).to.equal(2);
+        expect(readFileStub.callCount).to.equal(0);
+        expect(writeFileStub.callCount).to.equal(0);
         expect(publishHandler.cwd).to.be.equal('fake/cwd/build');
     });
 
