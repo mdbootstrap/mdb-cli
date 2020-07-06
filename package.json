@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "1.1.31",
+  "version": "1.1.32",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
