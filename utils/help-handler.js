@@ -27,7 +27,8 @@ class HelpHandler {
             { 'Command': 'rename', 'Description': 'change your project name and update name on the public server' },
             { 'Command': 'projects', 'Description': 'list all your published projects' },
             { 'Command': 'set-domain-name', 'Description': 'set the domain name for your project' },
-            { 'Command': 'unset-domain-name', 'Description': 'remove the domain name from this project' }
+            { 'Command': 'unset-domain-name', 'Description': 'remove the domain name from this project' },
+            { 'Command': 'version (-v)', 'Description': 'print mdb-cli version' }
         ];
     }
 
