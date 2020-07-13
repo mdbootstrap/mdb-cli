@@ -6,7 +6,7 @@ const CliStatus = require('../models/cli-status');
 
 module.exports = {
 
-    createPackageJson(directoryPath) {
+    createPackageJson(packageManeger, directoryPath) {
 
         const packageJsonPath = path.join(directoryPath, 'package.json');
         const successStatus = { 'Status': CliStatus.SUCCESS, 'Message': 'package.json created.' };
@@ -26,13 +26,12 @@ module.exports = {
 
                         if (confirmed) {
 
-                            const { spawn } = require('child_process');
-                            const isWindows = process.platform === 'win32';
-                            const npmInit = spawn('npm', ['init'], { cwd: directoryPath, stdio: 'inherit', ...(isWindows && { shell: true }) });
+                            const init = packageManeger.init(directoryPath);
 
-                            npmInit.on('error', (error) => reject(error));
+                            init.on('error', (error) => reject(error));
 
-                            npmInit.on('exit', (code) => code === CliStatus.SUCCESS ? resolve(successStatus) : reject({'Status': code, 'Message': 'Problem with npm initialization'}));
+                            init.on('exit', (code) => code === CliStatus.SUCCESS ?
+                                resolve(successStatus) : reject({ 'Status': code, 'Message': 'Problem with npm initialization' }));
 
                         } else {
 

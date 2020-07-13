@@ -14,6 +14,7 @@ const { removeFolder } = require('./remove-folder');
 const { saveToken } = require('./save-token');
 const { serializeJsonFile } = require('./serialize-object-to-file');
 const { showConfirmationPrompt } = require('./show-confirmation-prompt');
+const { showTextPrompt } = require('./show-text-prompt');
 
 module.exports = {
     archiveProject,
@@ -29,5 +30,6 @@ module.exports = {
     gitClone,
     removeFolder,
     saveToken,
-    showConfirmationPrompt
+    showConfirmationPrompt,
+    showTextPrompt
 };

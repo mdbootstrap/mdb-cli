@@ -1,23 +1,26 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
+const loadPackageManager = require('./managers/load-package-manager');
 
 class VersionHandler {
 
     constructor(authHandler = new AuthHandler(false)) {
 
         this.authHandler = authHandler;
+        this.packageManager = null;
+    }
+
+    async loadPackageManager() {
+
+        this.packageManager = await loadPackageManager();
     }
 
     printVersion() {
 
-        const { spawn } = require('child_process');
+        const info = this.packageManager.info();
 
-        const isWindows = process.platform === 'win32';
-
-        const npmInfo = spawn('npm', ['info', 'mdb-cli', 'version'], { stdio: 'inherit', ...(isWindows && { shell: true }) });
-
-        npmInfo.on('error', (err) => console.log(err));
+        info.on('error', err => { throw new Error(err.message); });
     }
 }
 

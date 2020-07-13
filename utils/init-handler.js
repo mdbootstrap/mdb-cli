@@ -1,13 +1,19 @@
 'use strict';
 
 const AuthHandler = require('./auth-handler');
-const helpers = require('../helpers/');
-const CliStatus = require('../models/cli-status');
-const fs = require('fs');
-const path = require('path');
-const inquirer = require('inquirer');
 const HttpWrapper = require('../utils/http-wrapper');
+const { parseArgs } = require('../helpers/parse-args');
+const CliStatus = require('../models/cli-status');
+const helpers = require('../helpers/');
 const config = require('../config');
+const childProcess = require('child_process');
+const inquirer = require('inquirer');
+const path = require('path');
+const fs = require('fs');
+
+const INIT_ARGS_MAP = {
+    '-n': 'projectName', '--name': 'projectName'
+};
 
 class InitHandler {
 
@@ -17,11 +23,12 @@ class InitHandler {
         this.options = [];
         this.cwd = process.cwd();
         this.projectSlug = '';
+        this.projectName = '';
         this.projectRoot = '';
         this.authHeaders = {};
         this._promptShownCount = 0;
         this.authHandler = authHandler;
-        this.args = { projectName: '' };
+        this.args = { projectName: '', blank: false };
         this.isFreePackage = true;
 
         this.setAuthHeader();
@@ -29,7 +36,18 @@ class InitHandler {
 
     setArgs(args) {
 
-        this.args = { ...this.args, ...args };
+        const flags = ['-b', '--blank'];
+
+        flags.forEach(flag => {
+
+            if (args.includes(flag)) {
+
+                args.splice(args.indexOf(flag), 1);
+                this.args.blank = true;
+            }
+        });
+
+        this.args = { ...this.args, ...parseArgs(args, INIT_ARGS_MAP) };
     }
 
     setAuthHeader() {
@@ -45,6 +63,11 @@ class InitHandler {
 
     getAvailableOptions() {
 
+        if (this.args.blank) {
+
+            return Promise.resolve();
+        }
+
         return helpers.fetchProducts(this.authHeaders)
             .then((orders) => {
 
@@ -56,11 +79,17 @@ class InitHandler {
 
     showUserPrompt() {
 
+        if (this.args.blank) {
+
+            return Promise.resolve();
+        }
+
         const choices = this.options.map((row) => ({
             name: row.productTitle,
             short: row.productSlug,
             value: row.productSlug
         }));
+        choices.push({ name: 'Blank projct', short: 'blank', value: 'blank' });
 
         return inquirer.createPromptModule()([
             {
@@ -82,12 +111,14 @@ class InitHandler {
             return helpers.showConfirmationPrompt('There is already an npm project in this location, are you sure you want to init it here?')
                 .then((confirmed) => {
 
-                    if (confirmed) return this._download();
+                    if (confirmed && this.args.blank) return this._initEmptyProject();
+                    else if (confirmed) return this._download();
                     else this.result.push({ Status: CliStatus.SUCCESS, Message: 'OK, will not initialize project in this location.' });
                 });
         } else {
 
-            return this._download();
+            if (this.args.blank) return this._initEmptyProject();
+            else return this._download();
         }
     }
 
@@ -100,6 +131,64 @@ class InitHandler {
 
         this.projectName = this.args.projectName ? this.args.projectName : this.projectSlug;
         this.projectRoot = path.join(this.cwd, this.projectName);
+    }
+
+    _initEmptyProject() {
+
+        return this.askForProjectName()
+            .then(() => helpers.eraseProjectDirectories(this.projectSlug, this.projectName))
+            .then(() => this.createDirectory())
+            .then(() => this.createPackageJson())
+            .then(res => this.result = [res])
+            .catch(err => this.result = [err]);
+    }
+
+    askForProjectName() {
+
+        if (this.args.projectName) {
+
+            this.projectName = this.args.projectName;
+            return Promise.resolve();
+        }
+
+        return helpers.showTextPrompt('Enter project name', 'Project name must not be empty.')
+            .then(answer => this.projectName = answer);
+    }
+
+    createDirectory() {
+
+        const dirPath = path.join(this.cwd, this.projectName);
+
+        return new Promise((resolve, reject) => {
+
+            fs.mkdir(dirPath, err => {
+    
+                if (err) {
+    
+                    return reject({ Status: CliStatus.ERROR, Message: `Error: ${err}` });
+                }
+    
+                resolve();
+            });
+        });
+    }
+
+    createPackageJson() {
+
+        return new Promise((resolve, reject) => {
+
+            const isWindows = process.platform === 'win32';
+
+            const npmInit = childProcess.spawn('npm', ['init'], {
+                cwd: path.join(this.cwd, this.projectName), stdio: 'inherit', ...(isWindows && { shell: true })
+            });
+
+            npmInit.on('error', (error) => reject({ Status: CliStatus.ERROR, Message: error.message }));
+
+            npmInit.on('exit', (code) => code === CliStatus.SUCCESS ?
+                resolve({ Status: CliStatus.SUCCESS, Message: `Project ${this.projectName} successfully created` }) :
+                reject({ Status: code, Message: 'Problem with npm initialization' }));
+        });
     }
 
     _download() {
@@ -126,6 +215,14 @@ class InitHandler {
         }
 
         const { projectSlug } = select;
+
+        if (projectSlug === 'blank') {
+
+            this.args.blank = true;
+
+            return Promise.resolve();
+        }
+
         const project = this.options.find((row) => row.productSlug === projectSlug);
 
         if (!project.available) {
@@ -140,12 +237,11 @@ class InitHandler {
 
     saveMetadata() {
 
-        const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
         const metadataPath = path.join(this.projectRoot, '.mdb');
 
         return new Promise((resolve) =>
 
-            serializeJsonFile(metadataPath, { packageName: this.projectSlug })
+            helpers.serializeJsonFile(metadataPath, { packageName: this.projectSlug })
                 .then(() => {
 
                     this.result.push({ 'Status': CliStatus.SUCCESS, 'Message': 'Project metadata saved.' });

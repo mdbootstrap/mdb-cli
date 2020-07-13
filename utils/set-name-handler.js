@@ -4,6 +4,7 @@ const config = require('../config');
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
+const helpers = require('../helpers/');
 
 class SetNameHandler {
 
@@ -23,22 +24,8 @@ class SetNameHandler {
 
     askForNewProjectName() {
 
-        const prompt = require('inquirer').createPromptModule();
-
-        return prompt([{
-            type: 'text',
-            message: 'Set new project name',
-            name: 'name',
-            validate: (value) => {
-                /* istanbul ignore next */
-                const valid = Boolean(value);
-                /* istanbul ignore next */
-                return valid || 'Project name must not be empty.';
-            }
-        }]).then((answers) => {
-
-            this.newName = answers.name;
-        });
+        return helpers.showTextPrompt('Enter new project name', 'Project name must not be empty.')
+            .then(answer => this.newName = answer);
     }
 
     setName() {
@@ -47,9 +34,7 @@ class SetNameHandler {
 
             const fileName = 'package.json';
 
-            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
-
-            deserializeJsonFile(fileName).then(fileContent => {
+            helpers.deserializeJsonFile(fileName).then(fileContent => {
 
                 this.oldName = fileContent.name;
 
@@ -60,9 +45,7 @@ class SetNameHandler {
 
                 fileContent.name = this.newName;
 
-                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-
-                serializeJsonFile(fileName, fileContent).then(() => {
+                helpers.serializeJsonFile(fileName, fileContent).then(() => {
 
                     this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${this.oldName} to ${this.newName}.` }];
                     resolve();

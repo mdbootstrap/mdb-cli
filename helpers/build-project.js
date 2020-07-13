@@ -4,19 +4,16 @@ const CliStatus = require('../models/cli-status');
 
 module.exports = {
 
-    buildProject(directoryPath = process.cwd()) {
-
-        const { spawn } = require('child_process');
+    buildProject(packageManager, directoryPath = process.cwd()) {
 
         return new Promise((resolve, reject) => {
 
-            const isWindows = process.platform === 'win32';
+            const build = packageManager.build(directoryPath);
 
-            const npmBuild = spawn('npm', ['run', 'build'], { cwd: directoryPath, stdio: 'inherit', ...(isWindows && { shell: true }) });
+            build.on('error', error => reject(error));
 
-            npmBuild.on('error', error => reject(error));
-
-            npmBuild.on('exit', code => code === CliStatus.SUCCESS ? resolve({ 'Status': code, 'Message': 'Success' }) : reject({ 'Status': code, 'Message': 'Problem with project building' }));
+            build.on('exit', code => code === CliStatus.SUCCESS ?
+                resolve({ Status: code, Message: 'Success' }) : reject({ Status: code, Message: 'Problem with project building' }));
         });
     }
 };

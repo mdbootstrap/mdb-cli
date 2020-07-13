@@ -1,20 +1,34 @@
 'use strict';
 
-const handlerClass = require('../../utils/set-name-handler');
+const SetNameHandler = require('../../utils/set-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
+const HttpWrapper = require('../../utils/http-wrapper');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
+const helpers = require('../../helpers');
+const config = require('../../config');
 
 describe('Handler: set-name', () => {
 
-    let authHandler;
-    let handler;
+    const newProjectName = 'newProjectName';
+    const oldProjectName = 'oldProjectName';
+    const fakeError = new Error('fake error');
+    const fileName = 'package.json';
+
+    let authHandler,
+        handler,
+        showTextPromptStub,
+        serializeJsonFileStub,
+        deserializeJsonFileStub;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
-
-        handler = new handlerClass(authHandler);
+        handler = new SetNameHandler(authHandler);
+        showTextPromptStub = sandbox.stub(helpers, 'showTextPrompt');
+        serializeJsonFileStub = sandbox.stub(helpers, 'serializeJsonFile');
+        deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
+        sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
@@ -53,16 +67,15 @@ describe('Handler: set-name', () => {
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
     });
 
-    it('should have assigned authHandler if not specified in constructor', (done) => {
+    it('should have assigned authHandler if not specified in constructor', () => {
 
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        handler = new handlerClass();
+        handler = new SetNameHandler();
+
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
-
-        done();
     });
 
     it('should getResult() return result array', () => {
@@ -76,145 +89,95 @@ describe('Handler: set-name', () => {
         chai.assert.deepEqual(actualResult[0], expectedResult[0], 'getResult() returns invalid result');
     });
 
-    it('should createPromptModule() be invoked in askForNewProjectName() invoke', async () => {
-
-        const inquirer = require('inquirer');
-        const promptStub = sandbox.stub().resolves({ name: 'stub' });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        expect(promptStub.called === false, 'promptStub.called shouldn\'t be called');
-        await handler.askForNewProjectName();
-        expect(promptStub.called === true, 'promptStub.called should be called');
-    });
-
     it('should askForNewProjectName() return expected result', async () => {
 
-        const inquirer = require('inquirer');
-        const expectedResult = 'stub';
+        showTextPromptStub.resolves(newProjectName);
 
-        const promptStub = sandbox.stub().resolves({ name: expectedResult });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        expect(handler.name !== expectedResult, 'handler.name should have different name from expectedResult');
+        expect(handler.name !== newProjectName, 'handler.name should have different name from expectedResult');
         await handler.askForNewProjectName();
-        expect(handler.name === expectedResult, 'handler.name should have the same name as expectedResult');
+        expect(handler.name === newProjectName, 'handler.name should have the same name as expectedResult');
     });
 
-    it('should reject if old and new name are the same', async () => {
+    describe('Method: setName', () => {
 
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const newName = 'fakeName';
-        const oldName = 'fakeName';
-        handler.newName = newName;
-        sandbox.stub(serializer, 'serializeJsonFile').rejects();
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ name: oldName });
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' };
-        sandbox.stub(console, 'log');
+        it('should reject if names are the same', async () => {
 
-        expect(handler.result).to.be.an('array').that.is.empty;
+            sandbox.stub(handler, 'newName').value(oldProjectName);
+            deserializeJsonFileStub.resolves({ name: oldProjectName });
+            const expectedResult = { 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' };
 
-        try {
+            expect(handler.result).to.be.an('array').that.is.empty;
 
-            await handler.setName();
-        } catch (err) {
+            try {
 
-            expect(err).to.deep.include(expectedResults);
-        }
-    });
+                await handler.setName();
+            }
+            catch (err) {
 
-    it('should setName() change project name', async () => {
+                expect(err).to.deep.include(expectedResult);
+            }
+        });
 
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const newName = 'newName';
-        const oldName = 'oldName';
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${oldName} to ${newName}.` };
+        it('should change project name', async () => {
 
-        const promptStub = sandbox.stub().resolves({ name: newName });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ name: oldName });
+            sandbox.stub(handler, 'newName').value(newProjectName);
+            const expectedResults = { Status: CliStatus.SUCCESS, Message: `Project name has been successfully changed from ${oldProjectName} to ${newProjectName}.` };
+            deserializeJsonFileStub.resolves({ name: oldProjectName });
+            serializeJsonFileStub.resolves();
 
-        handler.newName = newName;
-        expect(handler.result).to.be.an('array').that.is.empty;
+            expect(handler.result).to.be.an('array').that.is.empty;
 
-        try {
+            try {
 
-            await handler.setName();
-        } catch (err) {
+                await handler.setName();
+            }
+            catch (err) {
 
-            expect(err).to.deep.include(expectedResults);
-        }
-    });
+                expect(err).to.deep.include(expectedResults);
+            }
+        });
 
-    it('should return expected result if problem with file deserialization', async () => {
+        it('should return expected result if problem with file deserialization', async () => {
 
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const name = 'name';
-        const fileName = 'package.json';
-        const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` };
+            const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` };
+            deserializeJsonFileStub.rejects(fakeError);
 
-        const promptStub = sandbox.stub().resolves({ name: name });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        const fakeError = new Error('fake error');
-        sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
-        sandbox.stub(deserializer, 'deserializeJsonFile').rejects(fakeError);
-        sandbox.stub(console, 'log');
+            try {
 
-        try {
+                await handler.setName();
+            }
+            catch (err) {
 
-            handler.name = name;
-            await handler.setName();
+                expect(err).to.deep.include(expectedResults);
+            }
+        });
 
-        } catch (err) {
+        it('should return expected result if problem with file serialization', async () => {
 
-            expect(err).to.deep.include(expectedResults);
-        }
-    });
+            const expectedResults = { Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with saving ${fileName}` };
+            deserializeJsonFileStub.resolves({ name: oldProjectName });
+            serializeJsonFileStub.rejects(fakeError);
 
-    it('should return expected result if problem with file serialization', async () => {
+            try {
 
-        const fs = require('fs');
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const name = 'name';
-        const oldName = 'oldName';
-        const fileName = 'package.json';
-        const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` };
-        const promptStub = sandbox.stub().resolves({ name: name });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        const fakeError = new Error('fake error');
-        sandbox.stub(serializer, 'serializeJsonFile').rejects(fakeError);
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ name: oldName });
-        sandbox.stub(fs, 'writeFile');
-        sandbox.stub(console, 'log');
+                await handler.setName();
 
-        try {
+            }
+            catch (err) {
 
-            handler.oldName = oldName;
-            handler.newName = name;
-            await handler.setName();
-
-        } catch (err) {
-
-            expect(err).to.deep.include(expectedResults);
-        }
+                expect(err).to.deep.include(expectedResults);
+            }
+        });
     });
 
     it('should removeProject() call HttpWrapper.delete() function', async () => {
 
-        const config = require('../../config');
         sandbox.stub(config, 'port').value('fakePort');
         sandbox.stub(config, 'host').value('fakeHost');
-        const HttpWrapper = require('../../utils/http-wrapper');
         const deleteStub = sandbox.stub(HttpWrapper.prototype, 'delete');
 
         await handler.removeProject();
+
         expect(deleteStub.calledOnce).to.be.true;
     });
 });

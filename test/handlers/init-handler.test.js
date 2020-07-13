@@ -1,32 +1,43 @@
 'use strict';
 
 const AuthHandler = require('../../utils/auth-handler');
+const InitHandler = require('../../utils/init-handler');
+const HttpWrapper = require('../../utils/http-wrapper');
 const CliStatus = require('../../models/cli-status');
-const helpers = require('../../helpers');
 const sandbox = require('sinon').createSandbox();
+const childProcess = require('child_process');
+const helpers = require('../../helpers');
 const inquirer = require('inquirer');
+const fse = require('fs-extra');
+const path = require('path');
+const fs = require('fs');
 
 describe('Handler: Init', () => {
 
-    let initHandler;
     const fakePath = 'fake/path';
-    let authHandler;
-    let InitHandler;
     const fakeSelect = { projectSlug: 'fakeProjectSlug' };
-    let promptStub;
+
+    let authHandler,
+        initHandler,
+        joinStub,
+        platformStub,
+        promptStub,
+        spawnStub;
 
     beforeEach(() => {
 
-        sandbox.stub(require('fs-extra'), 'remove');
-        sandbox.stub(console, 'table');
-        promptStub = sandbox.stub().resolves(fakeSelect);
-        InitHandler = require('../../utils/init-handler');
         authHandler = new AuthHandler(false);
+        initHandler = new InitHandler(authHandler);
+        joinStub = sandbox.stub(path, 'join').returns(fakePath);
+        promptStub = sandbox.stub().resolves(fakeSelect);
+        platformStub = sandbox.stub(process, 'platform');
+        spawnStub = sandbox.stub(childProcess, 'spawn');
+        sandbox.stub(console, 'table');
+        sandbox.stub(fse, 'remove');
     });
 
     afterEach(() => {
 
-        authHandler = undefined;
         sandbox.reset();
         sandbox.restore();
     });
@@ -42,255 +53,500 @@ describe('Handler: Init', () => {
         expect(initHandler.authHandler).to.be.an.instanceOf(AuthHandler);
     });
 
-    it('should saveMetadata() resolves if no error and send expected message', async () => {
+    it('should set handler args', () => {
 
-        const serialize = require('../../helpers/serialize-object-to-file');
-        sandbox.stub(require('path'), 'join').returns(fakePath);
-        sandbox.stub(serialize, 'serializeJsonFile').resolves();
-        const expectedResult = { 'Status': CliStatus.SUCCESS, 'Message': 'Project metadata saved.' };
+        const fakeProjectName = 'fake-project-name';
 
-        initHandler = new InitHandler(authHandler);
+        initHandler.setArgs(['-b', '-n', fakeProjectName, '--blank']);
 
-        await initHandler.saveMetadata();
-
-        expect(initHandler.result).to.deep.include(expectedResult);
+        expect(initHandler.args.projectName).to.be.equal(fakeProjectName);
+        expect(initHandler.args.blank).to.be.equal(true);
     });
 
-    it('should saveMetadata() resolves if error and send expected message', async () => {
+    describe('Method: saveMetadata', () => {
 
-        const serialize = require('../../helpers/serialize-object-to-file');
-        sandbox.stub(require('path'), 'join').returns(fakePath);
-        sandbox.stub(serialize, 'serializeJsonFile').rejects();
-        const expectedResult = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Project metadata not saved.' };
+        it('should resolve if no error and send expected message', async () => {
 
-        initHandler = new InitHandler(authHandler);
+            sandbox.stub(helpers, 'serializeJsonFile').resolves();
+            const expectedResult = { 'Status': CliStatus.SUCCESS, 'Message': 'Project metadata saved.' };
 
-        await initHandler.saveMetadata();
+            await initHandler.saveMetadata();
 
-        expect(initHandler.result).to.deep.include(expectedResult);
+            expect(initHandler.result).to.deep.include(expectedResult);
+        });
+
+        it('should resolve if error and send expected message', async () => {
+
+            sandbox.stub(helpers, 'serializeJsonFile').rejects();
+            const expectedResult = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Project metadata not saved.' };
+
+            await initHandler.saveMetadata();
+
+            expect(initHandler.result).to.deep.include(expectedResult);
+        });
     });
 
-    it('should exit if prompt shown count is greater than 10 and send expected message', () => {
-
-        const fakeSelect = { projectSlug: 'angular-ui-kit' };
-        const fakeResult = [{
-            product_id: 16867,
-            product_title: 'Material Design for Bootstrap Pro (Angular version)',
-            product_slug: 'angular-ui-kit',
-            available: true
-        }];
-
-        sandbox.stub(initHandler, '_setProjectInfo');
-        const exitStub = sandbox.stub(process, 'exit');
-
-        initHandler = new InitHandler(authHandler);
-
-        initHandler.result = fakeResult;
-        initHandler._promptShownCount = 11;
-        initHandler._handleUserProjectSelect(fakeSelect);
-
-        expect(console.table.calledWith([{ 'Status': CliStatus.SEE_OTHER, 'Message': 'Please run `mdb list` to see available packages.' }])).to.be.true;
-        expect(exitStub.calledWith(0)).to.be.true;
-    });
-
-    it('should getAvailableOptions() fetch, parse and return sorted products', async () => {
-
-        const fakeOptions = { fake: 'options' };
-        const fakeResult = 'fake result';
-        sandbox.stub(helpers, 'fetchProducts').resolves(fakeOptions);
-        const getStub = sandbox.stub(helpers, 'getSorted').returns(fakeResult);
-        initHandler = new InitHandler(authHandler);
-
-        await initHandler.getAvailableOptions();
-
-        expect(getStub.calledWith(fakeOptions)).to.be.true;
-        expect(initHandler.options).to.equal(fakeResult);
-
-    });
-
-    it('should getAvailableOptions() fetch products and return sorted result', async () => {
-
-        const fakeOptions = 'options';
-        const fakeResult = 'fake result';
-        sandbox.stub(helpers, 'getSorted').returns(fakeResult);
-        sandbox.stub(helpers, 'fetchProducts').resolves(fakeOptions);
-        sandbox.stub(JSON, 'parse');
-        initHandler = new InitHandler(authHandler);
-
-        await initHandler.getAvailableOptions();
-
-        expect(initHandler.options).to.equal(fakeResult);
-    });
-
-    it('should getAvailableOptions() catch error if rejected', async () => {
+    describe('Method: getAvailableOptions', () => {
 
         const fakeError = new Error('fake error');
-        sandbox.stub(helpers, 'fetchProducts').rejects(fakeError);
-        initHandler = new InitHandler(authHandler);
+        const fakeResult = 'fake result';
 
-        try {
+        it('should resolve if --blank flag is set', async () => {
+
+            sandbox.stub(initHandler.args, 'blank').value(true);
+            const promiseStub = sandbox.stub(Promise, 'resolve');
 
             await initHandler.getAvailableOptions();
-        } catch (e) {
 
-            expect(e).to.be.equal(fakeError);
-        }
+            expect(promiseStub.called).to.be.true;
+        });
+
+        it('should fetch, parse and return sorted products', async () => {
+
+            const fakeOptions = { fake: 'options' };
+            sandbox.stub(helpers, 'fetchProducts').resolves(fakeOptions);
+            const getStub = sandbox.stub(helpers, 'getSorted').returns(fakeResult);
+
+            await initHandler.getAvailableOptions();
+
+            expect(getStub.calledWith(fakeOptions)).to.be.true;
+            expect(initHandler.options).to.equal(fakeResult);
+        });
+
+        it('should fetch products and return sorted result', async () => {
+
+            const fakeOptions = 'options';
+            sandbox.stub(helpers, 'getSorted').returns(fakeResult);
+            sandbox.stub(helpers, 'fetchProducts').resolves(fakeOptions);
+            sandbox.stub(JSON, 'parse');
+
+            await initHandler.getAvailableOptions();
+
+            expect(initHandler.options).to.equal(fakeResult);
+        });
+
+        it('should catch error if rejected', async () => {
+
+            sandbox.stub(helpers, 'fetchProducts').rejects(fakeError);
+
+            try {
+
+                await initHandler.getAvailableOptions();
+            }
+            catch (e) {
+
+                expect(e).to.be.equal(fakeError);
+            }
+        });
     });
 
-    it('should handle user project selection if project is not available', () => {
+    describe('Method: showUserPrompt', () => {
 
-        const fakeSelect = { projectSlug: 'angular-ui-kit' };
-        const fakeResult = [{ productId: 16867, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: false }];
+        it('should resolve if --blank flag is set', async () => {
 
-        initHandler = new InitHandler(authHandler);
+            sandbox.stub(initHandler.args, 'blank').value(true);
+            const promiseStub = sandbox.stub(Promise, 'resolve');
 
-        const consoleStub = sandbox.stub(console, 'log');
-        const promptStub = sandbox.stub(initHandler, 'showUserPrompt');
+            await initHandler.showUserPrompt();
 
-        initHandler.options = fakeResult;
-        initHandler._handleUserProjectSelect(fakeSelect);
+            expect(promiseStub.called).to.be.true;
+        });
 
-        expect(consoleStub.calledWith('You cannot create this project. Please visit https://mdbootstrap.com/products/angular-ui-kit/ and make sure it is available for you.')).to.be.true;
-        expect(promptStub.calledAfter(consoleStub)).to.be.true;
+        it('should show user prompt and handle user selection', async () => {
+
+            const createPromptModuleStub = sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
+            const handleSelectStub = sandbox.stub(initHandler, '_handleUserProjectSelect');
+
+            await initHandler.showUserPrompt();
+
+            expect(handleSelectStub.calledWith(fakeSelect)).to.be.true;
+            expect(handleSelectStub.calledAfter(createPromptModuleStub)).to.be.true;
+        });
     });
 
-    it('should handle user project selection if project is available', () => {
+    describe('Method: _handleUserProjectSelect', () => {
 
-        const fakeSelect = { projectSlug: 'angular-ui-kit' };
-        const fakeResult = [{ productId: 16867, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true }];
+        it('should exit if prompt shown count is greater than 10 and send expected message', () => {
 
-        initHandler = new InitHandler(authHandler);
-        const infoStub = sandbox.stub(initHandler, '_setProjectInfo');
-        initHandler.options = fakeResult;
+            const fakeSelect = { projectSlug: 'angular-ui-kit' };
+            const fakeResult = [{
+                product_id: 16867,
+                product_title: 'Material Design for Bootstrap Pro (Angular version)',
+                product_slug: 'angular-ui-kit',
+                available: true
+            }];
 
-        initHandler._handleUserProjectSelect(fakeSelect);
+            sandbox.stub(initHandler, '_setProjectInfo');
+            const exitStub = sandbox.stub(process, 'exit');
 
-        expect(infoStub.calledWith(fakeResult[0])).to.be.true;
+            initHandler.result = fakeResult;
+            initHandler._promptShownCount = 11;
+
+            initHandler._handleUserProjectSelect(fakeSelect);
+
+            expect(console.table.calledWith([{ 'Status': CliStatus.SEE_OTHER, 'Message': 'Please run `mdb list` to see available packages.' }])).to.be.true;
+            expect(exitStub.calledWith(0)).to.be.true;
+        });
+
+        it('should handle user project selection if project is not available', () => {
+
+            const fakeSelect = { projectSlug: 'angular-ui-kit' };
+            const fakeResult = [{ productId: 16867, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: false }];
+            const consoleStub = sandbox.stub(console, 'log');
+            const promptStub = sandbox.stub(initHandler, 'showUserPrompt');
+            initHandler.options = fakeResult;
+
+            initHandler._handleUserProjectSelect(fakeSelect);
+
+            expect(consoleStub.calledWith('You cannot create this project. Please visit https://mdbootstrap.com/products/angular-ui-kit/ and make sure it is available for you.')).to.be.true;
+            expect(promptStub.calledAfter(consoleStub)).to.be.true;
+        });
+
+        it('should handle user project selection if project is available', () => {
+
+            const fakeSelect = { projectSlug: 'angular-ui-kit' };
+            const fakeResult = [{ productId: 16867, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true }];
+            const infoStub = sandbox.stub(initHandler, '_setProjectInfo');
+            initHandler.options = fakeResult;
+
+            initHandler._handleUserProjectSelect(fakeSelect);
+
+            expect(infoStub.calledWith(fakeResult[0])).to.be.true;
+        });
+
+        it('should handle the user project selection if an empty project has been selected', () => {
+
+            const fakeSelect = { projectSlug: 'blank' };
+            const promiseStub = sandbox.stub(Promise, 'resolve');
+
+            initHandler._handleUserProjectSelect(fakeSelect);
+
+            expect(initHandler.args.blank).to.be.true;
+            expect(promiseStub.called).to.be.true;
+        });
     });
 
-    it('should _setProjectInfo method set free project data', () => {
+    describe('Method: _setProjectInfo', () => {
 
-        const fakeProject = { productId: null, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
-        initHandler.cwd = 'fake/path';
+        it('should set free project data', () => {
 
-        initHandler._setProjectInfo(fakeProject);
+            const fakeProject = { productId: null, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
+            joinStub.returns('fake/path/angular-ui-kit');
+            initHandler.cwd = 'fake/path';
 
-        expect(initHandler.projectRoot).to.equal('fake/path/angular-ui-kit');
+            initHandler._setProjectInfo(fakeProject);
+
+            expect(initHandler.projectRoot).to.equal('fake/path/angular-ui-kit');
+        });
+
+        it('should set project name if specyfied', () => {
+
+            const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
+            initHandler.cwd = 'fake/path';
+            initHandler.args.projectName = 'fakeProjectName';
+
+            initHandler._setProjectInfo(fakeProject);
+
+            expect(initHandler.projectName).to.equal('fakeProjectName');
+        });
     });
 
-    it('should _setProjectInfo method set project name if specyfied', () => {
+    describe('Method: initProject', () => {
 
-        const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
-        initHandler.cwd = 'fake/path';
-        initHandler.args.projectName = 'fakeProjectName';
+        let existsSyncStub, confirmationPromptStub, downloadStub, initEmptyProjectStub;
 
-        initHandler._setProjectInfo(fakeProject);
+        beforeEach(() => {
 
-        expect(initHandler.projectName).to.equal('fakeProjectName');
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            confirmationPromptStub = sandbox.stub(helpers, 'showConfirmationPrompt');
+            initEmptyProjectStub = sandbox.stub(initHandler, '_initEmptyProject');
+            downloadStub = sandbox.stub(initHandler, '_download');
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should init project', () => {
+
+            existsSyncStub.returns(false);
+            spawnStub.returns(promptStub);
+
+            initHandler.initProject();
+
+            expect(downloadStub.calledAfter(existsSyncStub)).to.be.true;
+            expect(initEmptyProjectStub.notCalled).to.be.true;
+        });
+
+        it('should init empty project', async () => {
+
+            existsSyncStub.returns(false);
+            spawnStub.returns(promptStub);
+            sandbox.stub(initHandler.args, 'blank').value(true);
+
+            await initHandler.initProject();
+
+            expect(downloadStub.notCalled).to.be.true;
+            expect(initEmptyProjectStub.calledAfter(existsSyncStub)).to.be.true;
+        });
+
+        it('should init empty project if confirmed', async () => {
+
+            existsSyncStub.returns(true);
+            confirmationPromptStub.resolves(true);
+            sandbox.stub(initHandler.args, 'blank').value(true);
+            spawnStub.returns(confirmationPromptStub);
+
+            await initHandler.initProject();
+
+            expect(downloadStub.notCalled).to.be.true;
+            expect(initEmptyProjectStub.calledAfter(confirmationPromptStub)).to.be.true;
+        });
+
+        it('should init project if confirmed', async () => {
+
+            existsSyncStub.returns(true);
+            confirmationPromptStub.resolves(true);
+            spawnStub.returns(confirmationPromptStub);
+
+            await initHandler.initProject();
+
+            expect(initEmptyProjectStub.notCalled).to.be.true;
+            expect(downloadStub.calledAfter(confirmationPromptStub)).to.be.true;
+        });
+
+        it('should not init project if not confirmed', async () => {
+
+            existsSyncStub.returns(true);
+            confirmationPromptStub.resolves(false);
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'OK, will not initialize project in this location.' };
+
+            await initHandler.initProject();
+
+            expect(downloadStub.called).to.be.false;
+            expect(initEmptyProjectStub.called).to.be.false;
+            expect(initHandler.result).to.deep.include(expectedResult);
+        });
     });
 
-    it('should init project', () => {
+    describe('Method: _download', () => {
 
-        sandbox.stub(require('path'), 'join');
-        const existsStub = sandbox.stub(require('fs'), 'existsSync').returns(false);
+        it('should download pro starter', async () => {
 
-        initHandler = new InitHandler(authHandler);
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        const downloadStub = sandbox.stub(initHandler, '_download');
-
-        initHandler.initProject();
-
-        expect(downloadStub.calledAfter(existsStub)).to.be.true;
-    });
-
-    it('should init project if confirmed', async () => {
-
-        sandbox.stub(require('path'), 'join');
-        sandbox.stub(require('fs'), 'existsSync').returns(true);
-        const promptStub = sandbox.stub(helpers, 'showConfirmationPrompt').resolves(true);
-        initHandler = new InitHandler(authHandler);
-        const downloadStub = sandbox.stub(initHandler, '_download');
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        await initHandler.initProject();
-
-        expect(downloadStub.calledAfter(promptStub)).to.be.true;
-    });
-
-    it('should not init project if not confirmed', async () => {
-
-        sandbox.stub(require('path'), 'join');
-        sandbox.stub(require('fs'), 'existsSync').returns(true);
-        const promptStub = sandbox.stub(helpers, 'showConfirmationPrompt').resolves(false);
-        initHandler = new InitHandler(authHandler);
-        const downloadStub = sandbox.stub(initHandler, '_download');
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        await initHandler.initProject();
-
-        expect(downloadStub.called).to.be.false;
-    });
-
-    it('should notifyServer() method notify server', async () => {
-
-        const HttpWrapper = require('../../utils/http-wrapper');
-        const postStub = sandbox.stub(HttpWrapper.prototype, 'post');
-        initHandler = new InitHandler(authHandler);
-
-        await initHandler.notifyServer();
-
-        expect(postStub.calledOnce).to.be.true;
-    });
-
-    it('should download pro starter', async () => {
-
-        const fakeResult = [{ Status: CliStatus.SUCCESS, Message: 'Initialization completed.' }];
-        const eraseStub = sandbox.stub(helpers, 'eraseProjectDirectories').resolves();
-        sandbox.stub(helpers, 'gitClone').resolves(fakeResult);
-        const downloadStub = sandbox.stub(helpers, 'downloadProStarter').resolves(fakeResult);
-        initHandler = new InitHandler(authHandler);
-        initHandler.projectSlug = 'fakeSlug';
-        initHandler.projectName = 'fakeName';
-        initHandler.authHaders = 'fakeHeaders';
-        initHandler.cwd = 'fakeCwd';
-        initHandler.isFreePackage = false;
-        initHandler.projectRoot = 'fake/project/root';
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        const saveMetaStub = sandbox.stub(initHandler, 'saveMetadata').resolves();
-        const notifyStub = sandbox.stub(initHandler, 'notifyServer').resolves();
-
-        await initHandler._download();
-
-        expect(eraseStub.calledBefore(downloadStub), 'eraseProjectDirectories not called').to.be.true;
-        expect(downloadStub.calledBefore(saveMetaStub), 'removeGitFolder not called').to.be.true;
-        expect(saveMetaStub.calledBefore(notifyStub), 'saveMetadata not called').to.be.true;
-    });
-
-    it('should _download catch error if rejected', async () => {
-
-        const fakeError = new Error('fake error');
-        sandbox.stub(helpers, 'eraseProjectDirectories').rejects(fakeError);
-        initHandler = new InitHandler(authHandler);
-
-        try {
+            const fakeResult = [{ Status: CliStatus.SUCCESS, Message: 'Initialization completed.' }];
+            const eraseStub = sandbox.stub(helpers, 'eraseProjectDirectories').resolves();
+            sandbox.stub(helpers, 'gitClone').resolves(fakeResult);
+            const downloadStub = sandbox.stub(helpers, 'downloadProStarter').resolves(fakeResult);
+            initHandler.projectSlug = 'fakeSlug';
+            initHandler.projectName = 'fakeName';
+            initHandler.authHaders = 'fakeHeaders';
+            initHandler.cwd = 'fakeCwd';
+            initHandler.isFreePackage = false;
+            initHandler.projectRoot = 'fake/project/root';
+            sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
+            const saveMetaStub = sandbox.stub(initHandler, 'saveMetadata').resolves();
+            const notifyStub = sandbox.stub(initHandler, 'notifyServer').resolves();
 
             await initHandler._download();
-        } catch (e) {
 
-            expect(initHandler.result).to.be.equal([fakeError]);
-        }
+            expect(eraseStub.calledBefore(downloadStub), 'eraseProjectDirectories not called').to.be.true;
+            expect(downloadStub.calledBefore(saveMetaStub), 'removeGitFolder not called').to.be.true;
+            expect(saveMetaStub.calledBefore(notifyStub), 'saveMetadata not called').to.be.true;
+        });
+
+        it('should catch error if rejected', async () => {
+
+            const fakeError = new Error('fake error');
+            sandbox.stub(helpers, 'eraseProjectDirectories').rejects(fakeError);
+
+            try {
+
+                await initHandler._download();
+            }
+            catch (e) {
+
+                expect(initHandler.result).to.be.equal([fakeError]);
+            }
+        });
     });
 
-    it('should show user prompt and handle user select', async () => {
+    describe('Method: _initEmptyProject', () => {
 
-        const createPromptModuleStub = sandbox.stub(require('inquirer'), 'createPromptModule').returns(promptStub);
-        initHandler = new InitHandler(authHandler);
-        const handleSelectStub = sandbox.stub(initHandler, '_handleUserProjectSelect');
+        beforeEach(() => {
 
-        await initHandler.showUserPrompt();
+            sandbox.stub(helpers, 'eraseProjectDirectories').resolves();
+            sandbox.stub(initHandler, 'askForProjectName').resolves();
+            sandbox.stub(initHandler, 'createDirectory').resolves();
+        });
 
-        expect(handleSelectStub.calledWith(fakeSelect)).to.be.true;
-        expect(handleSelectStub.calledAfter(createPromptModuleStub)).to.be.true;
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should return an expected result', async () => {
+
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Project created' };
+            sandbox.stub(initHandler, 'createPackageJson').resolves(expectedResult);
+
+            await initHandler._initEmptyProject();
+
+            expect(initHandler.result).to.deep.include(expectedResult);
+        });
+
+        it('should return an expected result if error', async () => {
+
+            const expectedResult = { Status: CliStatus.ERROR, Message: 'Project not created' };
+            sandbox.stub(initHandler, 'createPackageJson').rejects(expectedResult);
+
+            try {
+
+                await initHandler._initEmptyProject();
+            }
+            catch (err) {
+
+                expect(err).to.deep.include(expectedResult);
+            }
+        });
+    });
+
+    describe('Method: askForProjectName', () => {
+
+        const fakeProjectName = 'fake-project-name';
+
+        it('should resolve if project name is set', async () => {
+
+            sandbox.stub(initHandler.args, 'projectName').value(fakeProjectName);
+
+            await initHandler.askForProjectName();
+
+            expect(initHandler.projectName).to.be.equal(fakeProjectName);
+        });
+
+        it('should show prompt and get project name', async () => {
+
+            sandbox.stub(helpers, 'showTextPrompt').resolves(fakeProjectName);
+
+            await initHandler.askForProjectName();
+
+            expect(initHandler.projectName).to.be.equal(fakeProjectName);
+        });
+    });
+
+    describe('Method: createDirectory', () => {
+
+        let mkdirStub;
+
+        beforeEach(() => {
+
+            sandbox.stub(initHandler, 'cwd').value('fake/cwd');
+            sandbox.stub(initHandler, 'projectName').value('fakeName');
+            mkdirStub = sandbox.stub(fs, 'mkdir');
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should reject with message if error', async () => {
+
+            mkdirStub.yields('Fake error');
+
+            try {
+
+                await initHandler.createDirectory();
+
+            } catch (err) {
+
+                expect(err).to.deep.include({ Status: CliStatus.ERROR, Message: 'Error: Fake error' });
+            }
+        });
+
+        it('should resolve if no errors', async () => {
+
+            mkdirStub.yields(null);
+
+            const result = await initHandler.createDirectory();
+
+            expect(result).to.be.undefined;
+            expect(mkdirStub.called).to.be.true;
+        });
+    });
+
+    describe('Method: createPackageJson', () => {
+
+        beforeEach(() => {
+
+            sandbox.stub(initHandler, 'cwd').value('fake/cwd');
+            sandbox.stub(initHandler, 'projectName').value('fakeName');
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should reject if error', async () => {
+
+            const fakeReturnedStream = { on(event = 'error', cb) { if (event === 'error') cb(new Error('Fake error')); } };
+            spawnStub.returns(fakeReturnedStream);
+            platformStub.value('linux');
+
+            try {
+
+                await initHandler.createPackageJson();
+            }
+            catch (err) {
+
+                expect(err).to.deep.include({ Status: CliStatus.ERROR, Message: 'Fake error' });
+            }
+        });
+
+        it('should reject if code is diffrent than 0', async () => {
+
+            const code = 1;
+            const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(code); } };
+            spawnStub.returns(fakeReturnedStream);
+            platformStub.value('win32');
+
+            try {
+
+                await initHandler.createPackageJson();
+            }
+            catch (err) {
+
+                expect(err).to.deep.include({ Status: code, Message: 'Problem with npm initialization' });
+            }
+        });
+
+        it('should resolve if code is 0', async () => {
+
+            const code = 0;
+            const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(code); } };
+            spawnStub.returns(fakeReturnedStream);
+            platformStub.value('linux');
+
+            const result = await initHandler.createPackageJson();
+
+            expect(result).to.deep.include({ 'Status': code, Message: 'Project fakeName successfully created' });
+        });
+    });
+
+    describe('Method: notifyServer', () => {
+
+        it('should notify server', async () => {
+
+            const postStub = sandbox.stub(HttpWrapper.prototype, 'post');
+
+            await initHandler.notifyServer();
+
+            expect(postStub.calledOnce).to.be.true;
+        });
     });
 });

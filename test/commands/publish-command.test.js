@@ -1,24 +1,34 @@
 'use strict';
 
-const AuthHandler = require('../../utils/auth-handler');
-const CliStatus = require('../../models/cli-status');
-const helpers = require('../../helpers');
-const sandbox = require('sinon').createSandbox();
-const chai = require('chai');
-const { expect } = require('chai');
 const commandClass = require('../../commands/publish-command');
+const AuthHandler = require('../../utils/auth-handler');
+const { expect } = require('chai');
+const sandbox = require('sinon').createSandbox();
 
 describe('Command: publish', () => {
 
-    let authHandler;
-    let command;
-    let consTabStub;
+    let command,
+        authHandler,
+        loadPackageManagerStub,
+        setProjectNameStub,
+        setPackageNameStub,
+        buildProjectStub,
+        publishStub,
+        printStub,
+        catchErrorStub;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
         command = new commandClass(authHandler);
-        consTabStub = sandbox.stub(console, 'table');
+
+        loadPackageManagerStub = sandbox.stub(command.handler, 'loadPackageManager');
+        setPackageNameStub = sandbox.stub(command.handler, 'setPackageName');
+        setProjectNameStub = sandbox.stub(command.handler, 'setProjectName');
+        buildProjectStub = sandbox.stub(command.handler, 'buildProject');
+        publishStub = sandbox.stub(command.handler, 'publish');
+        printStub = sandbox.stub(command, 'print');
+        catchErrorStub = sandbox.stub(command, 'catchError');
     });
 
     afterEach(() => {
@@ -49,115 +59,42 @@ describe('Command: publish', () => {
         expect(command.handler).to.be.an.instanceOf(PublishHandler);
     });
 
-    it('should execute call handler.setProjectName', () => {
+    it('should call handler methods in expected order and print result', async () => {
 
-        const fakeReturnedPromise = {
-
-            then() {
-
-                return this;
-            },
-            catch() {
-
-                return this;
-            }
-
-        };
-
-        const setProjectNameStub = sandbox.stub(command.handler, 'setProjectName').returns(fakeReturnedPromise);
-
-        chai.assert.isTrue(!setProjectNameStub.called, 'HttpWrapper.setProjectName called');
-
-        command.execute();
-
-        chai.assert.isTrue(setProjectNameStub.calledOnce, 'HttpWrapper.setProjectName not called');
-    });
-
-    it('should call buildProject before publish if build script exists', async () => {
-
-        sandbox.stub(helpers, 'deserializeJsonFile').resolves({ scripts: { build: 'build' } });
-        const buildStub = sandbox.stub(command.handler, 'buildProject').resolves();
-        const publishStub = sandbox.stub(command.handler, 'publish').resolves();
+        loadPackageManagerStub.resolves();
+        setProjectNameStub.resolves();
+        setPackageNameStub.resolves();
+        buildProjectStub.resolves();
+        publishStub.resolves();
 
         await command.execute();
 
-        expect(buildStub.calledBefore(publishStub)).to.equal(true);
+        expect(loadPackageManagerStub.calledBefore(setProjectNameStub)).to.be.true;
+        expect(setProjectNameStub.calledBefore(setPackageNameStub)).to.be.true;
+        expect(setPackageNameStub.calledBefore(buildProjectStub)).to.be.true;
+        expect(buildProjectStub.calledBefore(publishStub)).to.be.true;
+        expect(publishStub.calledBefore(printStub)).to.be.true;
+        expect(catchErrorStub.notCalled).to.be.true;
     });
 
-    it('should add dist folder to project path after buildProject', async () => {
+    it('should call catchError if any of methods rejects', async () => {
 
-        const fs = require('fs');
-        sandbox.stub(fs, 'readFileSync').returns('');
-        sandbox.stub(fs, 'writeFileSync').returns();
-        sandbox.stub(fs, 'existsSync').returns(true);
-        sandbox.stub(fs, 'readdirSync').returns([]);
-        sandbox.stub(helpers, 'deserializeJsonFile').resolves({
-            defaultProject: 'fake-project-name',
-            scripts: { build: 'build' },
-            dependencies: { '@angular/core': '3.4.5' }
-        });
-        sandbox.stub(helpers, 'buildProject').resolves();
-        sandbox.stub(command.handler, 'publish').resolves();
+        const fakeError = 'fakeError';
+        loadPackageManagerStub.resolves();
+        setProjectNameStub.resolves();
+        setPackageNameStub.resolves();
+        buildProjectStub.resolves();
+        publishStub.rejects(fakeError);
 
         await command.execute();
 
-        expect(command.handler.cwd.endsWith('dist/fake-project-name')).to.equal(true);
-    });
-
-    it('should console.log on handler.setProjectName rejected', async () => {
-
-        sandbox.stub(command.handler, 'setProjectName').rejects('Fake error');
-        const consoleStub = sandbox.stub(console, 'log');
-
-        await command.execute();
-
-        chai.assert.isTrue(consoleStub.calledOnce, 'console.log not called on handler.setProjectName failure');
-    });
-
-    it('should call handler.publish after handler.setPackageName', async () => {
-
-        sandbox.stub(command.handler, 'setProjectName').resolves();
-        sandbox.stub(command.handler, 'setPackageName').resolves();
-        const publishStub = sandbox.stub(command.handler, 'publish').resolves();
-
-        await command.execute();
-
-        chai.assert.isTrue(publishStub.calledOnce, 'handler.publish not called');
-    });
-
-    it('should console.log on handler.publish rejected', async () => {
-
-        sandbox.stub(command.handler, 'setProjectName').resolves();
-        sandbox.stub(command.handler, 'setPackageName').resolves();
-        sandbox.stub(command.handler, 'publish').rejects('fake error');
-        const consoleStub = sandbox.stub(console, 'log');
-
-        await command.execute();
-
-        chai.assert.isTrue(consoleStub.calledOnce, 'console.log not called on handler.publish failure');
-    });
-
-    it('should call print() after handler.publish', async () => {
-
-        sandbox.stub(command.handler, 'setProjectName').resolves(undefined);
-        sandbox.stub(command.handler, 'publish').resolves(undefined);
-        const printSpy = sandbox.spy(command, 'print');
-
-        await command.execute();
-
-        chai.assert.isTrue(printSpy.calledOnce, 'print not called');
-    });
-
-    it('should call print should print expected results', async () => {
-
-        const expectedResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'OK!' }];
-        sandbox.stub(command.handler, 'setProjectName').resolves();
-        sandbox.stub(command.handler, 'setPackageName').resolves();
-        sandbox.stub(command.handler, 'publish').resolves();
-        sandbox.stub(command.handler, 'getResult').returns(expectedResult);
-
-        await command.execute();
-
-        chai.assert.isTrue(consTabStub.calledWith(expectedResult), `print should print ${JSON.stringify(expectedResult)}`);
+        expect(loadPackageManagerStub.calledBefore(setProjectNameStub)).to.be.true;
+        expect(setProjectNameStub.calledBefore(setPackageNameStub)).to.be.true;
+        expect(setPackageNameStub.calledBefore(buildProjectStub)).to.be.true;
+        expect(buildProjectStub.calledBefore(publishStub)).to.be.true;
+        expect(publishStub.calledBefore(catchErrorStub)).to.be.true;
+        expect(printStub.notCalled).to.be.true;
+        expect(catchErrorStub.calledWith(fakeError));
+        expect(catchErrorStub.calledAfter(publishStub)).to.be.true;
     });
 });

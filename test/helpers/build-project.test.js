@@ -3,13 +3,19 @@
 const sandbox = require('sinon').createSandbox();
 const { expect, assert } = require('chai');
 const CliStatus = require('../../models/cli-status');
+const NpmPackageManager = require('../../utils/managers/npm-package-manager');
 
 describe('Helper: buildProject', () => {
 
     const childProcess = require('child_process');
     const directoryPath = '/fake/directory/path';
     const { buildProject } = require('../../helpers/build-project');
-    let spawnStub;
+    let spawnStub, manager;
+
+    beforeEach(() => {
+
+        manager = new NpmPackageManager();
+    });
 
     afterEach(() => {
 
@@ -22,7 +28,7 @@ describe('Helper: buildProject', () => {
         const fakeReturnedStream = { on: (event, cb) => cb() };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath).catch(err => {
+        buildProject(manager, directoryPath).catch(err => {
             if (err) console.log(err);
         });
 
@@ -34,10 +40,10 @@ describe('Helper: buildProject', () => {
     it('should spawn npm run build on linux with expected args', (done) => {
 
         const fakeReturnedStream = { on: (event, cb) => cb() };
-        sandbox.stub(process, 'platform').value('linux');
+        sandbox.stub(manager, 'isWindows').value(false);
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath).catch((err) => {
+        buildProject(manager, directoryPath).catch((err) => {
             if (err) console.log(err);
         });
 
@@ -49,11 +55,11 @@ describe('Helper: buildProject', () => {
     it('should spawn npm run build on windows with extected args', (done) => {
 
         const fakeReturnedStream = { on: (event, cb) => cb() };
-        sandbox.stub(process, 'platform').value('win32');
+        sandbox.stub(manager, 'isWindows').value(true);
 
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath).catch(err => {
+        buildProject(manager, directoryPath).catch(err => {
             if (err) console.log(err);
         });
 
@@ -71,7 +77,7 @@ describe('Helper: buildProject', () => {
         };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath).catch(err => {
+        buildProject(manager, directoryPath).catch(err => {
 
             assert.isDefined(err);
 
@@ -88,7 +94,7 @@ describe('Helper: buildProject', () => {
         };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath).catch((err) => {
+        buildProject(manager, directoryPath).catch((err) => {
 
             expect(err).to.include({ 'Status': CliStatus.ERROR, 'Message': 'Problem with project building' })
 
@@ -96,7 +102,7 @@ describe('Helper: buildProject', () => {
         });
     });
 
-    it('should resolve if status code is 0', (done) => {
+    it('should resolve if status code is 0', async () => {
 
         const fakeReturnedStream = {
             on(event = 'exit', cb) {
@@ -105,12 +111,9 @@ describe('Helper: buildProject', () => {
         };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject(directoryPath).then((res) => {
+        const result = await buildProject(manager, directoryPath);
 
-            expect(res).to.include({ 'Status': CliStatus.SUCCESS, 'Message': 'Success' })
-
-            done();
-        });
+        expect(result).to.include({ 'Status': CliStatus.SUCCESS, 'Message': 'Success' })
     });
 
     it('should assign directoryPath to process.cwd() if not specyfied', (done) => {
@@ -119,7 +122,7 @@ describe('Helper: buildProject', () => {
         const fakeReturnedStream = { on: (event, cb) => cb() };
         spawnStub = sandbox.stub(childProcess, 'spawn').returns(fakeReturnedStream);
 
-        buildProject().catch(() => {
+        buildProject(manager).catch(() => {
 
             expect(processCwdSpy.calledOnce).to.equal(true);
 

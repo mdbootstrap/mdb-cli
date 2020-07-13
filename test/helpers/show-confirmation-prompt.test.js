@@ -19,13 +19,11 @@ describe('Helper: show confirmation prompt', () => {
         sandbox.restore();
     });
 
-    it('should return promise', (done) => {
+    it('should return promise', () => {
 
         createPromptModuleStub.returns(() => Promise.resolve({}));
 
         expect(showConfirmationPrompt('')).to.be.a('promise');
-
-        done();
     });
 
     it('should return true', async () => {
