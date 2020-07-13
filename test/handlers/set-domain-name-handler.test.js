@@ -1,19 +1,32 @@
 'use strict';
 
-const handlerClass = require('../../utils/set-domain-name-handler');
+const SetDomainNameHandler = require('../../utils/set-domain-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
+const helpers = require('../../helpers');
 
 describe('Handler: set-domain-name', () => {
 
-    let authHandler;
-    let handler;
+    const newDomainName = 'newDomainName';
+    const oldDomainName = 'oldDomainName';
+    const fakeError = new Error('fake error');
+    const fileName = 'package.json';
+
+    let authHandler,
+        handler,
+        showTextPromptStub,
+        serializeJsonFileStub,
+        deserializeJsonFileStub;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
-        handler = new handlerClass(authHandler);
+        handler = new SetDomainNameHandler(authHandler);
+        showTextPromptStub = sandbox.stub(helpers, 'showTextPrompt');
+        serializeJsonFileStub = sandbox.stub(helpers, 'serializeJsonFile');
+        deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
+        sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
@@ -52,16 +65,15 @@ describe('Handler: set-domain-name', () => {
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
     });
 
-    it('should have assigned authHandler if not specified in constructor', (done) => {
+    it('should have assigned authHandler if not specified in constructor', () => {
 
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        handler = new handlerClass();
+        handler = new SetDomainNameHandler();
+
         expect(handler).to.have.property('authHandler');
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
-
-        done();
     });
 
     it('should getResult() return result array', () => {
@@ -75,127 +87,78 @@ describe('Handler: set-domain-name', () => {
         chai.assert.deepEqual(actualResult[0], expectedResult[0], 'getResult() returns invalid result');
     });
 
-    it('should createPromptModule() be invoked in askForDomainName() invoke', async () => {
-
-        const inquirer = require('inquirer');
-        const promptStub = sandbox.stub().resolves({ name: 'stub' });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        expect(promptStub.called === false, 'promptStub.called shouldn\'t be called');
-        await handler.askForDomainName();
-        expect(promptStub.called === true, 'promptStub.called should be called');
-    });
-
     it('should askForDomainName() return expected result', async () => {
 
-        const inquirer = require('inquirer');
-        const expectedResult = 'stub';
+        showTextPromptStub.resolves(newDomainName);
 
-        const promptStub = sandbox.stub().resolves({ name: expectedResult });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-
-        expect(handler.name !== expectedResult, 'handler.name should have different name from expectedResult');
+        expect(handler.name !== newDomainName, 'handler.name should have different name from expectedResult');
         await handler.askForDomainName();
-        expect(handler.name === expectedResult, 'handler.name should have the same name as expectedResult');
+        expect(handler.name === newDomainName, 'handler.name should have the same name as expectedResult');
     });
 
-    it('should setDomainName() change project domain name', async () => {
+    describe('Method: setDomainName', () => {
 
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const name = 'domain-name';
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${name} successfully` };
+        it('should change project domain name', async () => {
 
-        const promptStub = sandbox.stub().resolves({ name: name });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ domainName: 'old-domain-name' });
+            sandbox.stub(handler, 'name').value(newDomainName);
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: `Domain name has been changed to ${newDomainName} successfully` };
+            deserializeJsonFileStub.resolves({ domainName: oldDomainName });
+            serializeJsonFileStub.resolves();
 
-        handler.name = name;
-        expect(handler.result).to.be.an('array').that.is.empty;
-        await handler.setDomainName();
-        expect(handler.result).to.deep.include(expectedResults);
-    });
-
-    it('should reject if old and new domain names are the same', async () => {
-
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const name = 'domain-name';
-        const expectedResults = { 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.' };
-
-        const promptStub = sandbox.stub().resolves({ name: name });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ domainName: name });
-
-        handler.name = name;
-        expect(handler.result).to.be.an('array').that.is.empty;
-        try {
+            expect(handler.result).to.be.an('array').that.is.empty;
 
             await handler.setDomainName();
 
-        } catch (err) {
+            expect(handler.result).to.deep.include(expectedResult);
+        });
 
-            expect(err).to.deep.include(expectedResults);
-        }
+        it('should reject if old and new domain names are the same', async () => {
+
+            sandbox.stub(handler, 'name').value(oldDomainName);
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Domain names are the same.' };
+            deserializeJsonFileStub.resolves({ domainName: oldDomainName });
+
+            expect(handler.result).to.be.an('array').that.is.empty;
+
+            try {
+
+                await handler.setDomainName();
+            }
+            catch (err) {
+
+                expect(err).to.deep.include(expectedResult);
+            }
+        });
+
+        it('should return expected result if problem with file deserialization', async () => {
+
+            const expectedResult = { Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with reading ${fileName}` };
+            deserializeJsonFileStub.rejects(fakeError);
+
+            try {
+
+                await handler.setDomainName();
+            }
+            catch (e) {
+
+                expect(e).to.deep.include(expectedResult);
+            }
+        });
+
+        it('should return expected result if problem with file serialization', async () => {
+
+            const expectedResult = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` };
+            deserializeJsonFileStub.resolves({ domainName: oldDomainName });
+            serializeJsonFileStub.rejects(fakeError);
+
+            try {
+
+                await handler.setDomainName();
+            }
+            catch (e) {
+
+                expect(e).to.deep.include(expectedResult);
+            }
+        });
     });
-
-    it('should return expected result if problem with file deserialization', async () => {
-
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const name = 'name';
-        const fileName = 'package.json';
-        const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` };
-
-        const promptStub = sandbox.stub().resolves({ name: name });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        const fakeError = new Error('fake error');
-        sandbox.stub(serializer, 'serializeJsonFile').resolves(undefined);
-        sandbox.stub(deserializer, 'deserializeJsonFile').rejects(fakeError);
-        sandbox.stub(console, 'log');
-
-        handler.name = name;
-
-        try {
-
-            await handler.setDomainName();
-        } catch (e) {
-
-            expect(e).to.deep.include(expectedResults);
-        }
-    });
-
-    it('should return expected result if problem with file serialization', async () => {
-
-        const fs = require('fs');
-        const inquirer = require('inquirer');
-        const serializer = require('../../helpers/serialize-object-to-file');
-        const deserializer = require('../../helpers/deserialize-object-from-file');
-        const name = 'domain.com';
-        const fileName = 'package.json';
-        const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` };
-        const promptStub = sandbox.stub().resolves({ name: name });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        const fakeError = new Error('fake error');
-        sandbox.stub(serializer, 'serializeJsonFile').rejects(fakeError);
-        sandbox.stub(deserializer, 'deserializeJsonFile').resolves({ domainName: 'fake.domain.name' });
-        sandbox.stub(fs, 'writeFile');
-        sandbox.stub(console, 'log');
-
-        try {
-
-            handler.name = name;
-            await handler.setDomainName();
-
-        } catch (e) {
-
-            expect(e).to.deep.include(expectedResults);
-        }
-    });
-
 });

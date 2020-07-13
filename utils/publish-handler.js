@@ -10,6 +10,7 @@ const helpers = require('../helpers');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
 const HttpWrapper = require('../utils/http-wrapper');
+const loadPackageManager = require('./managers/load-package-manager');
 
 class PublishHandler {
 
@@ -23,6 +24,7 @@ class PublishHandler {
         this.last = 0;
         this.sent = 0;
         this.endMsg = '';
+        this.packageManager = null;
 
         this.options = {
             port: config.port,
@@ -45,6 +47,11 @@ class PublishHandler {
     getResult() {
 
         return this.result;
+    }
+
+    async loadPackageManager() {
+
+        this.packageManager = await loadPackageManager();
     }
 
     async setProjectName() {
@@ -95,9 +102,9 @@ class PublishHandler {
 
         if (packageJson.scripts && packageJson.scripts.build) {
 
-            const isAngular = !!packageJson.dependencies['@angular/core'];
-            const isReact = !!packageJson.dependencies.react;
-            const isVue = !!packageJson.dependencies.vue;
+            const isAngular = packageJson.dependencies && !!packageJson.dependencies['@angular/core'];
+            const isReact = packageJson.dependencies && !!packageJson.dependencies.react;
+            const isVue = packageJson.dependencies && !!packageJson.dependencies.vue;
 
             if (isAngular) {
 
@@ -105,7 +112,7 @@ class PublishHandler {
                 const angularJson = await helpers.deserializeJsonFile(angularJsonPath);
                 const angularFolder = path.join('dist', angularJson.defaultProject);
 
-                await helpers.buildProject();
+                await helpers.buildProject(this.packageManager);
 
                 this.cwd = path.join(this.cwd, angularFolder);
 
@@ -123,22 +130,22 @@ class PublishHandler {
                 const appJsPath = path.join(this.cwd, 'src', 'App.js');
 
                 if (fs.existsSync(appJsPath)) {
-                    
+
                     let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                    appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/projects/${username}/${packageJson.name}'`);
+                    appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/${username}/${packageJson.name}'`);
                     fs.writeFileSync(appJsPath, appJsFile, 'utf8');
                 }
 
-                packageJson.homepage = `https://mdbootstrap.com/projects/${username}/${packageJson.name}/`;
+                packageJson.homepage = `${config.projectsDomain}/${username}/${packageJson.name}/`;
                 await helpers.serializeJsonFile('package.json', packageJson);
 
-                await helpers.buildProject();
+                await helpers.buildProject(this.packageManager);
 
                 if (fs.existsSync(appJsPath)) {
 
                     let appJsFile = fs.readFileSync(appJsPath, 'utf8');
                     appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                    const regex = new RegExp(`<Router basename='/projects/${username}/${packageJson.name}'`, 'g');
+                    const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}'`, 'g');
                     appJsFile = appJsFile.replace(regex, '<Router');
                     fs.writeFileSync(appJsPath, appJsFile, 'utf8');
                 }
@@ -160,9 +167,25 @@ class PublishHandler {
                     fs.writeFileSync(vueConfigFile, vueConfigContent, 'utf8');
                 }
 
-                await helpers.buildProject();
+                await helpers.buildProject(this.packageManager);
 
                 this.cwd = path.join(this.cwd, 'dist');
+
+            } else {
+
+                await helpers.buildProject(this.packageManager);
+
+                const distPath = path.join(this.cwd, 'dist');
+                const buildPath = path.join(this.cwd, 'build');
+                const warning = `
+This is not MDB JARV project and there is no guarantee that it will work properly after publishing.
+In case of problems, please write to our support https://mdbootstrap.com/support/
+`;
+                console.log('\x1b[36m%s\x1b[0m', warning);
+
+                if (fs.existsSync(distPath)) this.cwd = distPath;
+                else if (fs.existsSync(buildPath)) this.cwd = buildPath;
+                else return Promise.reject({ Status: CliStatus.ERROR, Message: 'Build folder not found.' });
             }
         }
 
@@ -244,7 +267,7 @@ class PublishHandler {
 
     handleMissingPackageJson() {
 
-        return helpers.createPackageJson(this.cwd)
+        return helpers.createPackageJson(this.packageManager, this.cwd)
             .then(msg => this.result.push(msg))
             .then(() => this.setProjectName())
             .catch(err => {

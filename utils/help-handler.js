@@ -28,6 +28,7 @@ class HelpHandler {
             { 'Command': 'projects', 'Description': 'list all your published projects' },
             { 'Command': 'set-domain-name', 'Description': 'set the domain name for your project' },
             { 'Command': 'unset-domain-name', 'Description': 'remove the domain name from this project' },
+            { 'Command': 'update', 'Description': 'update mdb-cli to the latest version' },
             { 'Command': 'version (-v)', 'Description': 'print mdb-cli version' }
         ];
     }

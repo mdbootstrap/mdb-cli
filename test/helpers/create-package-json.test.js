@@ -4,19 +4,23 @@ const { createPackageJson } = require('../../helpers/create-package-json');
 const fs = require('fs');
 const path = require('path');
 const ShowConfirmationPrompt = require('../../helpers/show-confirmation-prompt');
+const PackageManager = require('../../utils/managers/npm-package-manager');
 const childProcess = require('child_process');
 const sandbox = require('sinon').createSandbox();
 
 describe('Helper: create package json', () => {
 
-    let joinStub;
-    let existsStub;
-    let showConfirmationPromptStub;
-    let spawnStub;
+    let joinStub,
+        existsStub,
+        showConfirmationPromptStub,
+        spawnStub,
+        manager;
+
     const fakePath = 'fakePath';
 
     beforeEach(() => {
 
+        manager = new PackageManager();
         joinStub = sandbox.stub(path, 'join').returns('fakePath');
         existsStub = sandbox.stub(fs, 'exists');
         showConfirmationPromptStub = sandbox.stub(ShowConfirmationPrompt, 'showConfirmationPrompt');
@@ -35,7 +39,7 @@ describe('Helper: create package json', () => {
 
             existsStub.yields(true);
 
-            await createPackageJson(fakePath);
+            await createPackageJson(manager, fakePath);
 
             expect(joinStub.calledBefore(existsStub));
         });
@@ -44,7 +48,7 @@ describe('Helper: create package json', () => {
 
             existsStub.yields(true);
 
-            await createPackageJson(fakePath);
+            await createPackageJson(manager, fakePath);
 
             expect(showConfirmationPromptStub.called).to.be.false;
         });
@@ -55,7 +59,7 @@ describe('Helper: create package json', () => {
             showConfirmationPromptStub.resolves(true);
             spawnStub.on = sandbox.stub();
 
-            createPackageJson(fakePath);
+            createPackageJson(manager, fakePath);
 
             expect(showConfirmationPromptStub.calledAfter(existsStub)).to.be.true;
 
@@ -67,7 +71,7 @@ describe('Helper: create package json', () => {
             existsStub.yields(false);
             showConfirmationPromptStub.resolves(false);
 
-            createPackageJson(fakePath).catch((err) => {
+            createPackageJson(manager, fakePath).catch((err) => {
 
                 expect(spawnStub.calledAfter(showConfirmationPromptStub)).to.be.false;
                 expect(err).to.have.property('Status');
@@ -87,7 +91,7 @@ describe('Helper: create package json', () => {
             showConfirmationPromptStub.resolves(true);
             spawnStub.returns(fakeReturnedStream);
 
-            await createPackageJson(fakePath);
+            await createPackageJson(manager, fakePath);
 
             expect(spawnStub.calledAfter(showConfirmationPromptStub)).to.be.true;
         });
@@ -100,7 +104,7 @@ describe('Helper: create package json', () => {
             const file = 'package.json';
             existsStub.yields(true);
 
-            await createPackageJson(fakePath);
+            await createPackageJson(manager, fakePath);
 
             expect(joinStub.calledWith(fakePath, file)).to.be.true;
         });
@@ -109,7 +113,7 @@ describe('Helper: create package json', () => {
 
             existsStub.yields(true);
 
-            await createPackageJson();
+            await createPackageJson(manager);
 
             expect(existsStub.calledWith(fakePath)).to.be.true;
         });
@@ -119,7 +123,7 @@ describe('Helper: create package json', () => {
             existsStub.yields(false);
             showConfirmationPromptStub.resolves(true);
 
-            createPackageJson(fakePath);
+            createPackageJson(manager, fakePath);
 
             expect(showConfirmationPromptStub.calledWith('Missing package.json file. Create?')).to.be.true;
 
@@ -131,11 +135,11 @@ describe('Helper: create package json', () => {
             const fakeReturnedStream = { on: sandbox.stub() };
             fakeReturnedStream.on.withArgs('exit').yields(0);
             existsStub.yields(false);
-            sandbox.stub(process, 'platform').value('win32');
+            sandbox.stub(manager, 'isWindows').value(true);
             showConfirmationPromptStub.resolves(true);
             spawnStub.returns(fakeReturnedStream);
 
-            await createPackageJson(fakePath);
+            await createPackageJson(manager, fakePath);
 
             const result = spawnStub.getCall(0).args;
 
@@ -151,11 +155,11 @@ describe('Helper: create package json', () => {
             const fakeReturnedStream = { on: sandbox.stub() };
             fakeReturnedStream.on.withArgs('exit').yields(0);
             existsStub.yields(false);
-            sandbox.stub(process, 'platform').value('linux');
+            sandbox.stub(manager, 'isWindows').value(false);
             showConfirmationPromptStub.resolves(true);
             spawnStub.returns(fakeReturnedStream);
 
-            await createPackageJson(fakePath);
+            await createPackageJson(manager, fakePath);
 
             const result = spawnStub.getCall(0).args;
 
@@ -177,7 +181,7 @@ describe('Helper: create package json', () => {
 
                 existsStub.yields(true);
 
-                const result = await createPackageJson(fakePath);
+                const result = await createPackageJson(manager, fakePath);
 
                 expect(result).to.be.deep.equal(successMsg);
             });
@@ -190,7 +194,7 @@ describe('Helper: create package json', () => {
                 showConfirmationPromptStub.resolves(true);
                 spawnStub.returns(fakeReturnedStream);
 
-                const result = await createPackageJson(fakePath);
+                const result = await createPackageJson(manager, fakePath);
 
                 expect(result).to.be.deep.equal(successMsg);
             });
@@ -210,7 +214,7 @@ describe('Helper: create package json', () => {
 
                 try {
 
-                    await createPackageJson(fakePath);
+                    await createPackageJson(manager, fakePath);
                     throw new Error('Error is not thrown');
                 } catch (e) {
 
@@ -229,7 +233,7 @@ describe('Helper: create package json', () => {
 
                 try {
 
-                    await createPackageJson(fakePath);
+                    await createPackageJson(manager, fakePath);
                     throw new Error('Error is not thrown');
                 } catch (e) {
 

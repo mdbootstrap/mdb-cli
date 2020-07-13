@@ -2,6 +2,7 @@
 
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
+const helpers = require('../helpers/');
 
 class SetDomainNameHandler {
 
@@ -20,25 +21,8 @@ class SetDomainNameHandler {
 
     askForDomainName() {
 
-        const prompt = require('inquirer').createPromptModule();
-
-        return prompt([
-            {
-                type: 'text',
-                message: 'Set domain name',
-                name: 'name',
-                validate: (value) => {
-                    /* istanbul ignore next */
-                    const valid = Boolean(value);
-                    /* istanbul ignore next */
-                    return valid || 'Domain name must not be empty.';
-                }
-            }
-        ])
-            .then((answers) => {
-
-                this.name = answers.name;
-            });
+        return helpers.showTextPrompt('Enter domain name', 'Domain name must not be empty.')
+            .then(answer => this.name = answer);
     }
 
     setDomainName() {
@@ -47,20 +31,16 @@ class SetDomainNameHandler {
 
             const fileName = 'package.json';
 
-            const { deserializeJsonFile } = require('../helpers/deserialize-object-from-file');
-
-            deserializeJsonFile(fileName).then(fileContent => {
+            helpers.deserializeJsonFile(fileName).then(fileContent => {
 
                 if (fileContent.domainName && fileContent.domainName === this.name) {
 
-                    reject([{ 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.' }]);
+                    return reject([{ 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.' }]);
                 }
 
                 fileContent.domainName = this.name;
 
-                const { serializeJsonFile } = require('../helpers/serialize-object-to-file');
-
-                serializeJsonFile(fileName, fileContent).then(() => {
+                helpers.serializeJsonFile(fileName, fileContent).then(() => {
 
                     this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${this.name} successfully` }];
                     resolve();
@@ -68,7 +48,7 @@ class SetDomainNameHandler {
                 }).catch(e => {
 
                     console.log(e);
-                    reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
+                    return reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
                 });
 
             }).catch(e => {
