@@ -23,7 +23,7 @@ const readDefaultManager = async () => {
     }
 
     return result.packageManager;
-}
+};
 
 const saveDefaultManager = async (value) => {
 
@@ -33,7 +33,7 @@ const saveDefaultManager = async (value) => {
         content.packageManager = value;
         helpers.serializeJsonFile(configFile, content);
     }
-}
+};
 
 const chosePackageManager = async () => {
 
@@ -63,6 +63,6 @@ const loadPackageManager = async () => {
         case 'npm': return new NpmPackageManager();
         case 'yarn': return new YarnPackageManager();
     }
-}
+};
 
 module.exports = loadPackageManager;

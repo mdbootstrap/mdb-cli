@@ -3,10 +3,10 @@
 const AuthHandler = require('./auth-handler');
 const HttpWrapper = require('../utils/http-wrapper');
 const { parseArgs } = require('../helpers/parse-args');
+const loadPackageManager = require('./managers/load-package-manager');
 const CliStatus = require('../models/cli-status');
 const helpers = require('../helpers/');
 const config = require('../config');
-const childProcess = require('child_process');
 const inquirer = require('inquirer');
 const path = require('path');
 const fs = require('fs');
@@ -30,6 +30,7 @@ class InitHandler {
         this.authHandler = authHandler;
         this.args = { projectName: '', blank: false };
         this.isFreePackage = true;
+        this.packageManager = null;
 
         this.setAuthHeader();
     }
@@ -138,6 +139,7 @@ class InitHandler {
         return this.askForProjectName()
             .then(() => helpers.eraseProjectDirectories(this.projectSlug, this.projectName))
             .then(() => this.createDirectory())
+            .then(() => this.loadPackageManager())
             .then(() => this.createPackageJson())
             .then(res => this.result = [res])
             .catch(err => this.result = [err]);
@@ -173,19 +175,20 @@ class InitHandler {
         });
     }
 
+    async loadPackageManager() {
+
+        this.packageManager = await loadPackageManager();
+    }
+
     createPackageJson() {
 
         return new Promise((resolve, reject) => {
 
-            const isWindows = process.platform === 'win32';
+            const init = this.packageManager.init(path.join(this.cwd, this.projectName));
 
-            const npmInit = childProcess.spawn('npm', ['init'], {
-                cwd: path.join(this.cwd, this.projectName), stdio: 'inherit', ...(isWindows && { shell: true })
-            });
+            init.on('error', (error) => reject({ Status: CliStatus.ERROR, Message: error.message }));
 
-            npmInit.on('error', (error) => reject({ Status: CliStatus.ERROR, Message: error.message }));
-
-            npmInit.on('exit', (code) => code === CliStatus.SUCCESS ?
+            init.on('exit', (code) => code === CliStatus.SUCCESS ?
                 resolve({ Status: CliStatus.SUCCESS, Message: `Project ${this.projectName} successfully created` }) :
                 reject({ Status: code, Message: 'Problem with npm initialization' }));
         });

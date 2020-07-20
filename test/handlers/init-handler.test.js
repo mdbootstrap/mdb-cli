@@ -1,11 +1,12 @@
 'use strict';
 
+const NpmPackageManager = require('../../utils/managers/npm-package-manager');
+const PackageManager = require('../../utils/managers/package-manager');
 const AuthHandler = require('../../utils/auth-handler');
 const InitHandler = require('../../utils/init-handler');
 const HttpWrapper = require('../../utils/http-wrapper');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
-const childProcess = require('child_process');
 const helpers = require('../../helpers');
 const inquirer = require('inquirer');
 const fse = require('fs-extra');
@@ -21,8 +22,7 @@ describe('Handler: Init', () => {
         initHandler,
         joinStub,
         platformStub,
-        promptStub,
-        spawnStub;
+        promptStub;
 
     beforeEach(() => {
 
@@ -31,7 +31,6 @@ describe('Handler: Init', () => {
         joinStub = sandbox.stub(path, 'join').returns(fakePath);
         promptStub = sandbox.stub().resolves(fakeSelect);
         platformStub = sandbox.stub(process, 'platform');
-        spawnStub = sandbox.stub(childProcess, 'spawn');
         sandbox.stub(console, 'table');
         sandbox.stub(fse, 'remove');
     });
@@ -61,6 +60,15 @@ describe('Handler: Init', () => {
 
         expect(initHandler.args.projectName).to.be.equal(fakeProjectName);
         expect(initHandler.args.blank).to.be.equal(true);
+    });
+
+    it('should load package manager', async () => {
+
+        sandbox.stub(helpers, 'deserializeJsonFile').resolves({ packageManager: 'npm' });
+
+        await initHandler.loadPackageManager();
+
+        expect(initHandler.packageManager).to.be.an.instanceOf(PackageManager);
     });
 
     describe('Method: saveMetadata', () => {
@@ -272,7 +280,6 @@ describe('Handler: Init', () => {
         it('should init project', () => {
 
             existsSyncStub.returns(false);
-            spawnStub.returns(promptStub);
 
             initHandler.initProject();
 
@@ -283,7 +290,6 @@ describe('Handler: Init', () => {
         it('should init empty project', async () => {
 
             existsSyncStub.returns(false);
-            spawnStub.returns(promptStub);
             sandbox.stub(initHandler.args, 'blank').value(true);
 
             await initHandler.initProject();
@@ -297,7 +303,6 @@ describe('Handler: Init', () => {
             existsSyncStub.returns(true);
             confirmationPromptStub.resolves(true);
             sandbox.stub(initHandler.args, 'blank').value(true);
-            spawnStub.returns(confirmationPromptStub);
 
             await initHandler.initProject();
 
@@ -309,7 +314,6 @@ describe('Handler: Init', () => {
 
             existsSyncStub.returns(true);
             confirmationPromptStub.resolves(true);
-            spawnStub.returns(confirmationPromptStub);
 
             await initHandler.initProject();
 
@@ -379,6 +383,7 @@ describe('Handler: Init', () => {
             sandbox.stub(helpers, 'eraseProjectDirectories').resolves();
             sandbox.stub(initHandler, 'askForProjectName').resolves();
             sandbox.stub(initHandler, 'createDirectory').resolves();
+            sandbox.stub(initHandler, 'loadPackageManager').resolves();
         });
 
         afterEach(() => {
@@ -494,9 +499,10 @@ describe('Handler: Init', () => {
 
         it('should reject if error', async () => {
 
-            const fakeReturnedStream = { on(event = 'error', cb) { if (event === 'error') cb(new Error('Fake error')); } };
-            spawnStub.returns(fakeReturnedStream);
             platformStub.value('linux');
+            const fakeReturnedStream = { on(event = 'error', cb) { if (event === 'error') cb(new Error('Fake error')); } };
+            initHandler.packageManager = new NpmPackageManager();
+            sandbox.stub(initHandler.packageManager, 'init').returns(fakeReturnedStream);
 
             try {
 
@@ -511,9 +517,10 @@ describe('Handler: Init', () => {
         it('should reject if code is diffrent than 0', async () => {
 
             const code = 1;
-            const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(code); } };
-            spawnStub.returns(fakeReturnedStream);
             platformStub.value('win32');
+            const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(code); } };
+            initHandler.packageManager = new NpmPackageManager();
+            sandbox.stub(initHandler.packageManager, 'init').returns(fakeReturnedStream);
 
             try {
 
@@ -528,9 +535,10 @@ describe('Handler: Init', () => {
         it('should resolve if code is 0', async () => {
 
             const code = 0;
-            const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(code); } };
-            spawnStub.returns(fakeReturnedStream);
             platformStub.value('linux');
+            const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(code); } };
+            initHandler.packageManager = new NpmPackageManager();
+            sandbox.stub(initHandler.packageManager, 'init').returns(fakeReturnedStream);
 
             const result = await initHandler.createPackageJson();
 
