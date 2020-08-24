@@ -47,7 +47,16 @@ module.exports = {
 
         const helpers = require('../helpers');
         const packageJsonPath = path.join(cwd, 'package.json');
-        const packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+        let packageJson;
+
+        try {
+
+            packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+        } 
+        catch (err) {
+
+            packageJson = {};
+        }
 
         if (packageJson.dependencies && packageJson.scripts && packageJson.scripts.test) {
 

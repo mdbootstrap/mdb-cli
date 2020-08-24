@@ -43,6 +43,16 @@ describe('Helper: create jenkinsfile', () => {
         sandbox.assert.calledOnce(writeFileSyncStub);
     });
 
+    it('should call writeFileSync if package.json does not exist', async () => {
+
+        existsSyncStub.returns(false);
+        deserializeJsonFileStub.rejects();
+
+        await createJenkinsfile(fakePath);
+
+        sandbox.assert.calledOnce(writeFileSyncStub);
+    });
+
     it('should call writeFileSync on ARV project', async () => {
 
         existsSyncStub.returns(false);
