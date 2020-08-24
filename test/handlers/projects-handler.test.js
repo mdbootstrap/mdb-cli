@@ -39,14 +39,17 @@ describe('Handler: Projects', () => {
             projectName: 'fakeProjectName',
             domainName: 'fakeDomainName',
             publishDate: '2019-06-24T06:49:53.000Z',
-            editDate: '2019-06-24T06:49:53.000Z'
+            editDate: '2019-06-24T06:49:53.000Z',
+            repoUrl: 'https://gitlab.com/fakeUsername/fakeProjectName/',
+            status: 'created'
         }];
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbgo.dev/fakeNicename/fakeProjectName/',
             'Project Domain': 'fakeDomainName',
-            'Project Published': new Date(projects[0].publishDate).toLocaleString(),
-            'Project Edited': new Date(projects[0].editDate).toLocaleString()
+            'Project Published': '-',
+            'Project Edited': new Date(projects[0].editDate).toLocaleString(),
+            'Project Repo': 'https://gitlab.com/fakeUsername/fakeProjectName/'
         }];
         sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
         projectsHandler = new ProjectsHandler();
@@ -66,7 +69,8 @@ describe('Handler: Projects', () => {
             "userNicename":"fakeNicename",
             "projectName":"fakeProjectName",
             "publishDate":"2019-06-24T06:49:53.000Z",
-            "editDate":"2019-06-24T06:49:53.000Z"
+            "editDate":"2019-06-24T06:49:53.000Z",
+            "status":"published"
         }]`;
         const projectsJson = JSON.parse(projects);
         const formatedResult = [{
@@ -74,7 +78,8 @@ describe('Handler: Projects', () => {
             'Project URL': 'https://mdbgo.dev/fakeNicename/fakeProjectName/',
             'Project Domain': '-',
             'Project Published': new Date(projectsJson[0].publishDate).toLocaleString(),
-            'Project Edited': new Date(projectsJson[0].editDate).toLocaleString()
+            'Project Edited': new Date(projectsJson[0].editDate).toLocaleString(),
+            'Project Repo': '-'
         }];
         sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
         const parseSpy = sandbox.spy(JSON, 'parse');

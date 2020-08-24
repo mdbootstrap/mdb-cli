@@ -4,9 +4,9 @@ const fs = require('fs');
 const Ora = require('ora');
 const path = require('path');
 const atob = require('atob');
-
 const config = require('../config');
 const helpers = require('../helpers');
+const childProcess = require('child_process');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
 const HttpWrapper = require('../utils/http-wrapper');
@@ -24,7 +24,12 @@ class PublishHandler {
         this.last = 0;
         this.sent = 0;
         this.endMsg = '';
+        this.useFtp = false;
+        this.test = false;
+        this.useGitlab = false;
+        this.currentBranch = '';
         this.packageManager = null;
+        this.isWindows = process.platform === 'win32';
 
         this.options = {
             port: config.port,
@@ -49,9 +54,339 @@ class PublishHandler {
         return this.result;
     }
 
+    setArgs(args) {
+
+        this.useFtp = args.some(arg => arg === '--ftp');
+        this.test = args.some(arg => ['-t', '--test'].includes(arg));
+    }
+
+    handlePublishArgs() {
+
+        if (this.useFtp) return Promise.resolve();
+
+        return this.getSavedSettings().then(() => this.checkIsGitlab());
+    }
+
+    async getSavedSettings() {
+
+        const settingsPath = path.join(this.cwd, '.mdb');
+        const settings = fs.existsSync(settingsPath) ? await helpers.deserializeJsonFile(settingsPath) : {};
+
+        if (settings.useGitlab) {
+
+            this.useGitlab = true;
+        }
+    }
+
+    async checkIsGitlab() {
+
+        const configPath = path.join(this.cwd, '.git', 'config');
+        const configContent = fs.existsSync(configPath) ? fs.readFileSync(configPath, 'utf8') : '';
+        const lines = configContent.replace(/\t/g, '').split('\n');
+        const remoteUrls = [];
+
+        lines.forEach((line, index) => {
+
+            if (line.startsWith('[remote')) {
+
+                const url = lines[index + 1].split(' = ')[1];
+
+                if (url.startsWith(config.gitlabUrl)) this.repoUrl = url;
+
+                remoteUrls.push(url);
+            }
+        });
+
+        if (this.repoUrl) {
+
+            if (this.useGitlab) return;
+
+            const useGitlab = await helpers.showConfirmationPrompt(
+                'This project seems to be created on MDB Go GitLab server. Do you want to use our pipeline to publish your project now?'
+            );
+
+            if (useGitlab === false) this.useFtp = true;
+
+        } else {
+
+            this.useFtp = true;
+        }
+    }
+
+    publish() {
+
+        return this.useFtp ? this.uploadToFtp() : this.useGitlabPipeline();
+    }
+
+    uploadToFtp() {
+
+        return this.setPackageName()
+            .then(() => this.buildProject())
+            .then(() => this.uploadFiles());
+    }
+
+    useGitlabPipeline() {
+
+        return this.getProjectStatus()
+            .then(() => this.getCurrentBranch())
+            .then(() => this.askAboutMerge())
+            .then(() => this.pullFromGitlab())
+            .then(() => this.createJenkinsfile())
+            .then(() => this.pushToGitlab())
+            .then(() => this.askAboutSaveSettings());
+    }
+
+    getProjectStatus() {
+
+        return new Promise((resolve, reject) => {
+
+            const gitStatus = childProcess.spawn('git', ['status'], { cwd: this.cwd, ...(this.isWindows && { shell: true }) });
+
+            gitStatus.stdout.on('data', (data) => {
+
+                if (data.indexOf('nothing to commit, working tree clean') !== -1) {
+
+                    return resolve({ Status: 0, Message: 'OK' });
+
+                }
+
+                return reject({ Status: 1, Message: 'You have uncommited changes in your project, please commit and try again.' });
+            });
+
+            gitStatus.stderr.on('data', (data) => {
+
+                return reject(data.toString());
+            });
+        });
+    }
+
+    getCurrentBranch() {
+
+        return new Promise((resolve, reject) => {
+
+            const gitBranch = childProcess.spawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'],
+                { cwd: this.cwd, ...(this.isWindows && { shell: true }) });
+
+            gitBranch.stdout.on('data', (data) => {
+
+                this.currentBranch = data.toString().trim();
+
+                return resolve();
+            });
+
+            gitBranch.stderr.on('data', (data) => {
+
+                return reject(data.toString());
+            });
+        });
+    }
+
+    async askAboutMerge() {
+
+        if (this.currentBranch === 'master') return;
+
+        const answer = await helpers.showConfirmationPrompt(`Your currenct branch is ${this.currentBranch}. Do you want to merge it into master?`);
+
+        if (answer) {
+
+            await this.changeBranch();
+
+            await this.mergeBranch();
+
+        } else {
+
+            process.exit(0);
+        }
+    }
+
+    changeBranch() {
+
+        return new Promise((resolve, reject) => {
+
+            const gitCheckout = childProcess.spawn('git', ['checkout', 'master'],
+                { cwd: process.cwd(), stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+
+            gitCheckout.on('error', error => reject(error));
+
+            gitCheckout.on('exit', code => {
+
+                if (code === CliStatus.SUCCESS) {
+
+                    this.result.push({ Status: CliStatus.SUCCESS, Message: 'Switched to branch master.' });
+
+                    return resolve();
+                }
+
+                return reject({ Status: code, Message: 'Problem with git branch change.' });
+            });
+        });
+    }
+
+    mergeBranch() {
+
+        return new Promise((resolve, reject) => {
+
+            const gitMerge = childProcess.spawn('git', ['merge', this.currentBranch],
+                { cwd: process.cwd(), stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+
+            gitMerge.on('error', error => reject(error));
+
+            gitMerge.on('exit', code => {
+
+                if (code === CliStatus.SUCCESS) {
+
+                    this.result.push({ Status: CliStatus.SUCCESS, Message: `Branch ${this.currentBranch} merged into master` });
+
+                    return resolve();
+                }
+
+                return reject({ Status: code, Message: 'Problem with git branch merge.' });
+            });
+        });
+    }
+
+    pullFromGitlab() {
+
+        return new Promise((resolve, reject) => {
+
+            const gitPull = childProcess.spawn('git', ['pull', 'origin', 'master'], {
+                cwd: process.cwd(), ...this.isWindows && { shell: true }
+            });
+
+            let result;
+
+            gitPull.stdout.on('data', (data) => {
+
+                result = `\n${data}`
+                console.log(result);
+            });
+
+            gitPull.stderr.on('data', (data) => {
+
+                result = `\n${data}`
+                console.error(result);
+            });
+
+            gitPull.on('exit', (code) => {
+
+                if (code === CliStatus.SUCCESS || result.indexOf("Couldn't find remote ref master") !== -1) resolve();
+
+                else reject({ Status: code, Message: 'Problem with project fetching from GitLab.' });
+            });
+        });
+    }
+
+    async createJenkinsfile() {
+
+        const created = await helpers.createJenkinsfile(this.cwd);
+
+        created && await helpers.commitFile('Jenkinsfile', 'Add Jenkinsfile');
+    }
+
+    pushToGitlab() {
+
+        return new Promise((resolve, reject) => {
+
+            const gitPush = childProcess.spawn('git', ['push', 'origin', 'master'],
+                { cwd: process.cwd(), stdio: 'inherit', ...this.isWindows && { shell: true } });
+
+            gitPush.on('error', error => reject(error));
+
+            gitPush.on('exit', code => {
+
+                if (code === CliStatus.SUCCESS) {
+
+                    this.result.push({ Status: code, Message: 'Success! Your project will be published using GitLab pipeline' });
+
+                    const options = {
+                        port: config.port,
+                        hostname: config.host,
+                        path: `/project/save/${this.projectName}`,
+                        method: 'POST',
+                        data: { repoUrl: this.repoUrl },
+                        headers: {
+                            ...this.authHandler.headers,
+                            'Content-Type': 'application/json'
+                        }
+                    };
+
+                    const http = new HttpWrapper(options);
+
+                    return http.post().then((res) => {
+
+                        this.result.push(JSON.parse(res));
+
+                        return resolve();
+
+                    }).catch((err) => {
+
+                        return reject(err);
+                    });
+                }
+
+                return reject({ Status: code, Message: 'Problem with project publishing.' });
+            });
+        });
+    }
+
+    async askAboutSaveSettings() {
+
+        if (this.useGitlab === false) {
+
+            const save = await helpers.showConfirmationPrompt('Do you want to use GitLab pipelines as a default publish method?');
+
+            if (save) this.saveSettings();
+            else this.result = [{
+                Status: CliStatus.SUCCESS,
+                Message: 'Success! This time your project will be published using GitLab pipeline but we will not use it next time.'
+            }];
+        }
+    }
+
+    async saveSettings() {
+
+        const settingsPath = path.join(this.cwd, '.mdb');
+
+        try {
+
+            const settings = await helpers.deserializeJsonFile(settingsPath);
+
+            settings.useGitlab = true;
+            await helpers.serializeJsonFile(settingsPath, settings);
+            await helpers.commitFile('.mdb', 'Add settings to .mdb config file');
+        }
+        catch (err) {
+
+            if (err.code === 'ENOENT') {
+
+                helpers.saveMdbConfig(settingsPath, JSON.stringify({ useGitlab: true }), true);
+            }
+        }
+    }
+
     async loadPackageManager() {
 
-        this.packageManager = await loadPackageManager();
+        this.packageManager = await loadPackageManager(true, !this.useFtp);
+    }
+
+    runTests() {
+
+        if (this.test) {
+
+            return new Promise((resolve, reject) => {
+
+                const test = this.packageManager.test();
+
+                test.on('error', error => reject(error));
+
+                test.on('exit', code => code === CliStatus.SUCCESS ?
+                    resolve({ Status: code, Message: 'Success' }) : reject({ Status: code, Message: 'Tests failed' }));
+            });
+
+        } else {
+
+            return Promise.resolve();
+        }
     }
 
     async setProjectName() {
@@ -192,7 +527,7 @@ In case of problems, please write to our support https://mdbootstrap.com/support
         return Promise.resolve();
     }
 
-    publish() {
+    uploadFiles() {
 
         console.log('Publishing...');
 

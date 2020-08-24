@@ -83,6 +83,24 @@ describe('Utils: NpmPackageManager', () => {
         sandbox.assert.calledWith(spawnStub, PackageManagers.NPM, ['run', 'build'], { cwd: fakeCwd, shell: true, stdio: 'inherit' });
     });
 
+    it('should spawn `npm test` with expected arguments', async () => {
+
+        sandbox.stub(manager, 'isWindows').value(false);
+
+        await manager.test();
+
+        sandbox.assert.calledWith(spawnStub, PackageManagers.NPM, ['run', 'test'], { stdio: 'inherit' });
+    });
+
+    it('should spawn `npm test` with expected arguments on windows', async () => {
+
+        sandbox.stub(manager, 'isWindows').value(true);
+
+        await manager.test();
+
+        sandbox.assert.calledWith(spawnStub, PackageManagers.NPM, ['run', 'test'], { shell: true, stdio: 'inherit' });
+    });
+
     it('should spawn `npm i` with expected arguments', async () => {
 
         sandbox.stub(manager, 'isWindows').value(false);

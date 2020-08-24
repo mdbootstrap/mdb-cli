@@ -21,6 +21,7 @@ class InitCommand extends Command {
         return this.handler.getAvailableOptions()
             .then(() => this.handler.showUserPrompt())
             .then(() => this.handler.initProject())
+            .then(() => this.handler.addJenkinsfile())
             .then(() => this.print())
             .catch(e => this.catchError(e));
     }

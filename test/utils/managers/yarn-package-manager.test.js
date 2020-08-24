@@ -83,6 +83,24 @@ describe('Utils: YarnPackageManager', () => {
         sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['build'], { cwd: fakeCwd, shell: true, stdio: 'inherit' });
     });
 
+    it('should spawn `yarn test` with expected arguments', async () => {
+
+        sandbox.stub(manager, 'isWindows').value(false);
+
+        await manager.test();
+
+        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['test'], { stdio: 'inherit' });
+    });
+
+    it('should spawn `yarn test` with expected arguments on windows', async () => {
+
+        sandbox.stub(manager, 'isWindows').value(true);
+
+        await manager.test();
+
+        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['test'], { shell: true, stdio: 'inherit' });
+    });
+
     it('should spawn `yarn global add` with expected arguments', async () => {
 
         sandbox.stub(manager, 'isWindows').value(false);

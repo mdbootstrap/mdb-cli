@@ -2,6 +2,7 @@
 
 const AuthHandler = require('./auth-handler');
 const HttpWrapper = require('../utils/http-wrapper');
+const ProjectStatus = require('../models/project-status');
 const config = require('../config');
 
 class ProjectsHandler {
@@ -44,8 +45,9 @@ class ProjectsHandler {
                 'Project Name': project.projectName,
                 'Project URL': `https://mdbgo.dev/${project.userNicename}/${project.projectName}/`,
                 'Project Domain': project.domainName ? project.domainName : '-',
-                'Project Published': new Date(project.publishDate).toLocaleString(),
-                'Project Edited': new Date(project.editDate).toLocaleString()
+                'Project Published': project.status === ProjectStatus.PUBLISHED ? new Date(project.publishDate).toLocaleString() : '-',
+                'Project Edited': new Date(project.editDate).toLocaleString(),
+                'Project Repo' : project.repoUrl ? project.repoUrl : '-'
             }));
         });
     }

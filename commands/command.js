@@ -80,6 +80,12 @@ class Command {
             }
 
             this.print();
+
+        } else if (error && error.Status && error.Message) {
+
+            this.result.push(error);
+            this.print();
+
         } else {
 
             console.log(error);

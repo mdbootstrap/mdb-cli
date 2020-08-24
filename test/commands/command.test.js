@@ -68,7 +68,20 @@ describe('Command: parent', () => {
         expect(tableStub.calledOnce).to.be.true;
     });
 
-    it('should catchError() call set result and print error', () => {
+    it('should catchError() print error if it is an object', () => {
+
+        const command = new Command();
+        const fakeError = { Status: 123, Message: 'fake message' };
+        const printStub = sandbox.stub(command, 'print');
+        const expectedResult = { Status: 123, Message: 'fake message' };
+
+        command.catchError(fakeError);
+
+        expect(printStub.calledOnce).to.be.true;
+        expect(command.result).to.deep.include(expectedResult);
+    });
+
+    it('should catchError() set result and print error', () => {
 
         const command = new Command();
         const fakeError = { statusCode: 123, message: 'fake message' };

@@ -54,6 +54,18 @@ describe('Utils: PackageManager', () => {
         }
     });
 
+    it('should throw ReferenceError if manager test method is not implemented', () => {
+
+        try {
+
+            manager.test();
+        }
+        catch (err) {
+
+            expect(err.message).to.equal('Method must be implemented in a child-class');
+        }
+    });
+
     it('should throw ReferenceError if manager update method is not implemented', () => {
 
         try {

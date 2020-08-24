@@ -13,6 +13,8 @@ class PackageManager {
 
     build() { throw new ReferenceError('Method must be implemented in a child-class'); }
 
+    test() { throw new ReferenceError('Method must be implemented in a child-class'); }
+
     update() { throw new ReferenceError('Method must be implemented in a child-class'); }
 }
 

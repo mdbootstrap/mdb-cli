@@ -20,6 +20,11 @@ class YarnPackageManager extends PackageManager {
         return childProcess.spawn('yarn', ['build'], { cwd, stdio: 'inherit', ...(this.isWindows && { shell: true }) });
     }
 
+    test() {
+
+        return childProcess.spawn('yarn', ['test'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+    }
+
     update() {
 
         return childProcess.spawn('yarn', ['global', 'add', 'mdb-cli'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });

@@ -18,6 +18,8 @@ class HelpHandler {
         this.result = [
             { 'Command': 'help', 'Description': 'show this info' },
             authCommand,
+            { 'Command': 'create', 'Description': 'create new project on GitLab' },
+            { 'Command': 'get', 'Description': 'get your project from GitLab' },
             { 'Command': 'list', 'Description': 'list available packages' },
             { 'Command': 'orders', 'Description': 'list all your orders' },
             { 'Command': 'init', 'Description': 'initialize chosen package' },

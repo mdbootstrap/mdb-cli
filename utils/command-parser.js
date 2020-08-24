@@ -6,7 +6,25 @@ class CommandParser {
 
         this.args = [];
         this.command = '';
-        this.validCommands = ['help', 'login', 'orders', 'list', 'publish', 'unpublish', 'init', 'logout', 'set-name', 'rename', 'projects', 'set-domain-name', 'unset-domain-name', 'update', 'version'];
+        this.validCommands = [
+            'create',
+            'get',
+            'help',
+            'init',
+            'list',
+            'login',
+            'logout',
+            'orders',
+            'projects',
+            'publish',
+            'rename',
+            'set-domain-name',
+            'set-name',
+            'unpublish',
+            'unset-domain-name',
+            'update',
+            'version'
+        ];
     }
 
     isValid() {

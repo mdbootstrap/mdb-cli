@@ -2,13 +2,15 @@
 
 const commandClass = require('../../commands/publish-command');
 const AuthHandler = require('../../utils/auth-handler');
-const { expect } = require('chai');
 const sandbox = require('sinon').createSandbox();
+const chai = require('chai');
 
 describe('Command: publish', () => {
 
     let command,
         authHandler,
+        setArgsStub,
+        handlePublishArgsStub,
         loadPackageManagerStub,
         setProjectNameStub,
         setPackageNameStub,
@@ -21,11 +23,10 @@ describe('Command: publish', () => {
 
         authHandler = new AuthHandler(false);
         command = new commandClass(authHandler);
-
+        setArgsStub = sandbox.stub(command.handler, 'setArgs');
+        handlePublishArgsStub = sandbox.stub(command.handler, 'handlePublishArgs');
         loadPackageManagerStub = sandbox.stub(command.handler, 'loadPackageManager');
-        setPackageNameStub = sandbox.stub(command.handler, 'setPackageName');
         setProjectNameStub = sandbox.stub(command.handler, 'setProjectName');
-        buildProjectStub = sandbox.stub(command.handler, 'buildProject');
         publishStub = sandbox.stub(command.handler, 'publish');
         printStub = sandbox.stub(command, 'print');
         catchErrorStub = sandbox.stub(command, 'catchError');
@@ -61,18 +62,15 @@ describe('Command: publish', () => {
 
     it('should call handler methods in expected order and print result', async () => {
 
+        handlePublishArgsStub.resolves();
         loadPackageManagerStub.resolves();
         setProjectNameStub.resolves();
-        setPackageNameStub.resolves();
-        buildProjectStub.resolves();
         publishStub.resolves();
 
         await command.execute();
 
         expect(loadPackageManagerStub.calledBefore(setProjectNameStub)).to.be.true;
-        expect(setProjectNameStub.calledBefore(setPackageNameStub)).to.be.true;
-        expect(setPackageNameStub.calledBefore(buildProjectStub)).to.be.true;
-        expect(buildProjectStub.calledBefore(publishStub)).to.be.true;
+        expect(setProjectNameStub.calledBefore(publishStub)).to.be.true;
         expect(publishStub.calledBefore(printStub)).to.be.true;
         expect(catchErrorStub.notCalled).to.be.true;
     });
@@ -80,18 +78,15 @@ describe('Command: publish', () => {
     it('should call catchError if any of methods rejects', async () => {
 
         const fakeError = 'fakeError';
+        handlePublishArgsStub.resolves();
         loadPackageManagerStub.resolves();
         setProjectNameStub.resolves();
-        setPackageNameStub.resolves();
-        buildProjectStub.resolves();
         publishStub.rejects(fakeError);
 
         await command.execute();
 
         expect(loadPackageManagerStub.calledBefore(setProjectNameStub)).to.be.true;
-        expect(setProjectNameStub.calledBefore(setPackageNameStub)).to.be.true;
-        expect(setPackageNameStub.calledBefore(buildProjectStub)).to.be.true;
-        expect(buildProjectStub.calledBefore(publishStub)).to.be.true;
+        expect(setProjectNameStub.calledBefore(publishStub)).to.be.true;
         expect(publishStub.calledBefore(catchErrorStub)).to.be.true;
         expect(printStub.notCalled).to.be.true;
         expect(catchErrorStub.calledWith(fakeError));

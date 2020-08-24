@@ -10,8 +10,14 @@ class SetDomainNameHandler {
 
         this.result = [];
         this.name = '';
+        this.args = [];
 
         this.authHandler = authHandler;
+    }
+
+    setArgs(args) {
+
+        this.args = args;
     }
 
     getResult() {
@@ -19,10 +25,16 @@ class SetDomainNameHandler {
         return this.result;
     }
 
-    askForDomainName() {
+    async askForDomainName() {
 
-        return helpers.showTextPrompt('Enter domain name', 'Domain name must not be empty.')
-            .then(answer => this.name = answer);
+        if (this.args.length > 0) {
+
+            this.name = this.args[0];
+
+            return;
+        }
+
+        this.name = await helpers.showTextPrompt('Enter domain name', 'Domain name must not be empty.');
     }
 
     setDomainName() {

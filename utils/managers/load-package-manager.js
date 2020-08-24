@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 const configFile = path.join(process.cwd(), '.mdb');
+const packageJson = path.join(process.cwd(), 'package.json');
 
 const readDefaultManager = async () => {
 
@@ -25,17 +26,29 @@ const readDefaultManager = async () => {
     return result.packageManager;
 };
 
-const saveDefaultManager = async (value) => {
+const saveDefaultManager = async (value, commit) => {
 
-    if (fs.existsSync(configFile)) {
+    try {
 
-        let content = await helpers.deserializeJsonFile(configFile);
-        content.packageManager = value;
-        helpers.serializeJsonFile(configFile, content);
+        if (fs.existsSync(configFile)) {
+
+            let content = await helpers.deserializeJsonFile(configFile);
+            content.packageManager = value;
+            await helpers.serializeJsonFile(configFile, content);
+            if (commit) await helpers.commitFile('.mdb', 'Add settings to .mdb config file');
+
+        } else {
+
+            await helpers.saveMdbConfig(configFile, JSON.stringify({ packageManager: value }), commit);
+        }
+    }
+    catch (err) {
+
+        console.error(err)
     }
 };
 
-const chosePackageManager = async () => {
+const selectPackageManager = async () => {
 
     const choices = [PackageManagers.YARN, PackageManagers.NPM];
 
@@ -49,14 +62,14 @@ const chosePackageManager = async () => {
     return result.name;
 };
 
-const loadPackageManager = async () => {
+const loadPackageManager = async (save = true, commit = false) => {
 
     let manager = await readDefaultManager();
 
     if (!manager) {
 
-        manager = await chosePackageManager();
-        saveDefaultManager(manager);
+        manager = await selectPackageManager();
+        if (save) await saveDefaultManager(manager, commit);
     }
 
     switch (manager) {

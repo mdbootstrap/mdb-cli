@@ -18,6 +18,7 @@ class UnpublishHandler {
             method: 'DELETE'
         };
         this.authHandler = authHandler;
+        this.args = [];
 
         this.setAuthHeader();
     }
@@ -28,12 +29,23 @@ class UnpublishHandler {
         this.options.headers = this.authHandler.headers;
     }
 
+    setArgs(args) {
+
+        this.args = args;
+    }
+
     getResult() {
 
         return this.result;
     }
 
     async askForProjectName() {
+
+        if (this.args.length > 0) {
+
+            this.projectName = this.args[0];
+            return Promise.resolve();
+        }
 
         const prompt = require('inquirer').createPromptModule();
 

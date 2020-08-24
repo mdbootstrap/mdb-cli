@@ -6,7 +6,7 @@ const CliStatus = require('../models/cli-status');
 
 module.exports = {
 
-    createPackageJson(packageManeger, directoryPath) {
+    createPackageJson(packageManager, directoryPath) {
 
         const packageJsonPath = path.join(directoryPath, 'package.json');
         const successStatus = { 'Status': CliStatus.SUCCESS, 'Message': 'package.json created.' };
@@ -22,20 +22,27 @@ module.exports = {
 
                     const { showConfirmationPrompt } = require('./show-confirmation-prompt');
 
-                    showConfirmationPrompt('Missing package.json file. Create?').then((confirmed) => {
+                    showConfirmationPrompt('Missing package.json file. Create?').then(async (confirmed) => {
 
                         if (confirmed) {
 
-                            const init = packageManeger.init(directoryPath);
+                            if (packageManager === null) {
+
+                                const loadPackageManager = require('../utils/managers/load-package-manager');
+
+                                packageManager = await loadPackageManager();
+                            }
+
+                            const init = packageManager.init(directoryPath);
 
                             init.on('error', (error) => reject(error));
 
                             init.on('exit', (code) => code === CliStatus.SUCCESS ?
-                                resolve(successStatus) : reject({ 'Status': code, 'Message': 'Problem with npm initialization' }));
+                                resolve(successStatus) : reject({ 'Status': code, 'Message': 'Problem with project initialization' }));
 
                         } else {
 
-                            reject({ 'Status': CliStatus.SUCCESS, 'Message': 'package.json not created.' });
+                            reject({ 'Status': CliStatus.ERROR, 'Message': 'package.json not created.' });
                         }
                     });
                 }

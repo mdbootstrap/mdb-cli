@@ -98,6 +98,15 @@ describe('Handler: set-name', () => {
         expect(handler.name === newProjectName, 'handler.name should have the same name as expectedResult');
     });
 
+    it('should askForNewProjectName() return expected result if name is set in args', async () => {
+
+        handler.args = [newProjectName];
+
+        expect(handler.name !== newProjectName, 'handler.name should have different name from expectedResult');
+        await handler.askForNewProjectName();
+        expect(handler.name === newProjectName, 'handler.name should have the same name as expectedResult');
+    });
+
     describe('Method: setName', () => {
 
         it('should reject if names are the same', async () => {
