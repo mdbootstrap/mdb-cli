@@ -15,6 +15,7 @@ class SetNameCommand extends Command {
 
     execute() {
 
+        this.handler.setArgs(this.args);
         return this.handler.askForNewProjectName()
             .then(() => this.handler.setName())
             .then(() => this.print())

@@ -13,7 +13,7 @@ class VersionHandler {
 
     async loadPackageManager() {
 
-        this.packageManager = await loadPackageManager();
+        this.packageManager = await loadPackageManager(false);
     }
 
     printVersion() {

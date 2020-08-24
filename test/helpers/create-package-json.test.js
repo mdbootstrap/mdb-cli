@@ -1,12 +1,13 @@
 'use strict';
 
-const { createPackageJson } = require('../../helpers/create-package-json');
-const fs = require('fs');
-const path = require('path');
 const ShowConfirmationPrompt = require('../../helpers/show-confirmation-prompt');
 const PackageManager = require('../../utils/managers/npm-package-manager');
-const childProcess = require('child_process');
+const { createPackageJson } = require('../../helpers/create-package-json');
 const sandbox = require('sinon').createSandbox();
+const childProcess = require('child_process');
+const helpers = require('../../helpers');
+const path = require('path');
+const fs = require('fs');
 
 describe('Helper: create package json', () => {
 
@@ -66,21 +67,42 @@ describe('Helper: create package json', () => {
             done();
         });
 
-        it('should not call spawn if user do not want to create package.json', (done) => {
+        it('should call showConfirmationPrompt if path do not exist and load package manager', (done) => {
+
+            const fakeReturnedStream = { on: sandbox.stub() };
+            fakeReturnedStream.on.withArgs('exit').yields(0);
+            existsStub.yields(false);
+            showConfirmationPromptStub.resolves(true);
+            spawnStub.returns(fakeReturnedStream);
+            sandbox.stub(helpers, 'deserializeJsonFile').resolves({ packageManager: 'npm' });
+            spawnStub.on = sandbox.stub();
+
+            createPackageJson(null, fakePath).then(result => {
+                
+                expect(result).to.be.deep.equal({ Status: 0, Message: 'package.json created.' });
+                expect(showConfirmationPromptStub.calledAfter(existsStub)).to.be.true;
+
+                done();
+            });
+        });
+
+        it('should not call spawn if user do not want to create package.json', async () => {
 
             existsStub.yields(false);
             showConfirmationPromptStub.resolves(false);
 
-            createPackageJson(manager, fakePath).catch((err) => {
+            try {
+
+                await createPackageJson(manager, fakePath);
+            }
+            catch (err) {
 
                 expect(spawnStub.calledAfter(showConfirmationPromptStub)).to.be.false;
                 expect(err).to.have.property('Status');
-                expect(err.Status).to.be.equal(0);
+                expect(err.Status).to.be.equal(400);
                 expect(err).to.have.property('Message');
                 expect(err.Message).to.be.equal('package.json not created.');
-
-                done();
-            });
+            }
         });
 
         it('should call spawn if user want to create package.json', async () => {
@@ -205,7 +227,7 @@ describe('Helper: create package json', () => {
             it('should reject if status code is not equal 0', async () => {
 
                 const fakeCode = 1;
-                const expectedResult = { Status: fakeCode, Message: 'Problem with npm initialization' };
+                const expectedResult = { Status: fakeCode, Message: 'Problem with project initialization' };
                 const fakeReturnedStream = { on: sandbox.stub() };
                 fakeReturnedStream.on.withArgs('exit').yields(fakeCode);
                 existsStub.yields(false);

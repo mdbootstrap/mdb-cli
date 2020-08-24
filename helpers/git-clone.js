@@ -22,11 +22,12 @@ module.exports = {
             });
             gitClone.on('error', reject);
             gitClone.on('exit', (code) => {
+                
                 const result = [{ 'Status': code }];
 
                 if (code === CliStatus.SUCCESS) {
 
-                    result[0].Message = 'Initialization completed.';
+                    result[0].Message = 'Success.';
                     resolve(result);
                 } else {
 

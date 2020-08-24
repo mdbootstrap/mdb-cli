@@ -38,7 +38,7 @@ describe('Helper: git clone', () => {
         it('should resolve on code equal 0', async () => {
 
             const code = CliStatus.SUCCESS;
-            const expectedResult = [{ 'Status': code, 'Message': 'Initialization completed.' }];
+            const expectedResult = [{ Status: code, Message: 'Success.' }];
             fakeReturnedStream.on.withArgs('exit').yields(code);
             spawnStub.returns(fakeReturnedStream);
 
@@ -100,21 +100,21 @@ describe('Helper: git clone', () => {
 
             await gitClone();
 
-            expect(spawnStub.calledWith('git', [ 'clone', undefined ])).to.be.true;
+            expect(spawnStub.calledWith('git', ['clone', undefined])).to.be.true;
         });
 
         it('should call spawn with fake url', async () => {
 
             await gitClone(fakeUrl);
 
-            expect(spawnStub.calledWith('git', [ 'clone', fakeUrl ])).to.be.true;
+            expect(spawnStub.calledWith('git', ['clone', fakeUrl])).to.be.true;
         });
 
         it('should call spawn with fake project name', async () => {
 
             await gitClone(fakeUrl, fakeProjectName);
 
-            expect(spawnStub.calledWith('git', [ 'clone', fakeUrl, fakeProjectName ])).to.be.true;
+            expect(spawnStub.calledWith('git', ['clone', fakeUrl, fakeProjectName])).to.be.true;
         });
 
         it('should have option { shell: true } on windows', async () => {
@@ -123,7 +123,7 @@ describe('Helper: git clone', () => {
 
             await gitClone(fakeUrl, fakeProjectName);
 
-            expect(spawnStub.calledWith('git', [ 'clone', fakeUrl, fakeProjectName ], { shell: true })).to.be.true;
+            expect(spawnStub.calledWith('git', ['clone', fakeUrl, fakeProjectName], { shell: true })).to.be.true;
 
             isWinStub.reset();
             isWinStub.restore();
@@ -157,13 +157,16 @@ describe('Helper: git clone', () => {
 
         it('should print sterr', async () => {
 
-            fakeReturnedStream.on.withArgs('exit').yields(0);
+            fakeReturnedStream.on.withArgs('exit').yields(1);
             fakeReturnedStream.stderr.on.withArgs('data').yields(fakeData);
             spawnStub.returns(fakeReturnedStream);
 
-            await gitClone();
-
-            expect(console.log.calledWithExactly(fakeData)).to.be.true;
+            try {
+                await gitClone();
+            }
+            catch (e) {
+                expect(console.log.calledWithExactly(fakeData)).to.be.true;
+            }
         });
     });
 });

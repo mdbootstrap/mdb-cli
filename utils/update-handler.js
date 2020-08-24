@@ -15,7 +15,7 @@ class UpdateHandler {
 
     async loadPackageManager() {
 
-        this.packageManager = await loadPackageManager();
+        this.packageManager = await loadPackageManager(false);
     }
 
     update() {

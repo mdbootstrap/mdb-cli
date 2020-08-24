@@ -62,6 +62,16 @@ describe('Handler: Init', () => {
         expect(initHandler.args.blank).to.be.equal(true);
     });
 
+    it('should set handler args without blank flag', () => {
+
+        const fakeProjectName = 'fake-project-name';
+
+        initHandler.setArgs(['-n', fakeProjectName]);
+
+        expect(initHandler.args.projectName).to.be.equal(fakeProjectName);
+        expect(initHandler.args.blank).to.be.equal(false);
+    });
+
     it('should load package manager', async () => {
 
         sandbox.stub(helpers, 'deserializeJsonFile').resolves({ packageManager: 'npm' });
@@ -69,6 +79,29 @@ describe('Handler: Init', () => {
         await initHandler.loadPackageManager();
 
         expect(initHandler.packageManager).to.be.an.instanceOf(PackageManager);
+    });
+
+    it('should addJenkinsfile call createJenkinsfile helper', async () => {
+
+        const fakeCwd = 'fake/dierctory/path';
+        const createJenkinsfileStub = sandbox.stub(helpers, 'createJenkinsfile');
+        sandbox.stub(initHandler, 'projectRoot').value(fakeCwd);
+
+        await initHandler.addJenkinsfile();
+
+        sandbox.assert.calledOnce(createJenkinsfileStub);
+        sandbox.assert.calledWith(createJenkinsfileStub, fakeCwd);
+    });
+
+
+    it('should getResult return handler result', () => {
+
+        const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Success' };
+        sandbox.stub(initHandler, 'result').value([expectedResult]);
+
+        const result = initHandler.getResult();
+
+        expect(result).to.deep.include(expectedResult);
     });
 
     describe('Method: saveMetadata', () => {

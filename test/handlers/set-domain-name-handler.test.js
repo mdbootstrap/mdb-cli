@@ -96,6 +96,15 @@ describe('Handler: set-domain-name', () => {
         expect(handler.name === newDomainName, 'handler.name should have the same name as expectedResult');
     });
 
+    it('should askForDomainName() return expected result if name is set in args', async () => {
+
+        handler.args = [newDomainName];
+
+        expect(handler.name !== newDomainName, 'handler.name should have different name from expectedResult');
+        await handler.askForDomainName();
+        expect(handler.name === newDomainName, 'handler.name should have the same name as expectedResult');
+    });
+
     describe('Method: setDomainName', () => {
 
         it('should change project domain name', async () => {

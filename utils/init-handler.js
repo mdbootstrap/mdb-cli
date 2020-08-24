@@ -5,7 +5,7 @@ const HttpWrapper = require('../utils/http-wrapper');
 const { parseArgs } = require('../helpers/parse-args');
 const loadPackageManager = require('./managers/load-package-manager');
 const CliStatus = require('../models/cli-status');
-const helpers = require('../helpers/');
+const helpers = require('../helpers');
 const config = require('../config');
 const inquirer = require('inquirer');
 const path = require('path');
@@ -192,6 +192,11 @@ class InitHandler {
                 resolve({ Status: CliStatus.SUCCESS, Message: `Project ${this.projectName} successfully created` }) :
                 reject({ Status: code, Message: 'Problem with npm initialization' }));
         });
+    }
+
+    addJenkinsfile() {
+
+        return helpers.createJenkinsfile(this.projectRoot);
     }
 
     _download() {

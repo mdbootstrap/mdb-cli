@@ -17,10 +17,11 @@ class PublishCommand extends Command {
 
     execute() {
 
-        return this.handler.loadPackageManager()
+        this.handler.setArgs(this.args);
+        return this.handler.handlePublishArgs()
+            .then(() => this.handler.loadPackageManager())
+            .then(() => this.handler.runTests())
             .then(() => this.handler.setProjectName())
-            .then(() => this.handler.setPackageName())
-            .then(() => this.handler.buildProject())
             .then(() => this.handler.publish())
             .then(() => this.print())
             .catch(e => this.catchError(e));

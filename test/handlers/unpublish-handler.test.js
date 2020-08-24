@@ -82,6 +82,16 @@ describe('Handler: unpublish', () => {
         expect(promptStub.called === true, 'promptStub.called should be called');
     });
 
+    it('should askForProjectName() resolve if project name is set in args', async () => {
+
+        const expectedResult = 'stub';
+        sandbox.stub(handler, 'args').value(expectedResult);
+
+        expect(handler.name !== expectedResult, 'handler.name should have different name from expectedResult');
+        await handler.askForProjectName();
+        expect(handler.name === expectedResult, 'handler.name shold have the same name as expectedResult');
+    });
+
     it('should askForProjectName() return expected result', async () => {
 
         const inquirer = require('inquirer');

@@ -20,6 +20,11 @@ class NpmPackageManager extends PackageManager {
         return childProcess.spawn('npm', ['run', 'build'], { cwd, stdio: 'inherit', ...(this.isWindows && { shell: true }) });
     }
 
+    test() {
+
+        return childProcess.spawn('npm', ['run', 'test'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+    }
+
     update() {
 
         return childProcess.spawn('npm', ['i', '-g', 'mdb-cli'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });

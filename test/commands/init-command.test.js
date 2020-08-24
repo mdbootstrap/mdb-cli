@@ -1,31 +1,36 @@
 'use strict';
 
+const InitCommand = require('../../commands/init-command');
 const AuthHandler = require('../../utils/auth-handler');
+const InitHandler = require('../../utils/init-handler');
+const Command = require('../../commands/command');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: init', () => {
 
-    let authHandler;
-    let command;
-    let InitCommand;
-    const fakeReturnedPromise = {
+    const fakeError = 'fakeErr';
 
-        then(cb) {
-
-            return cb();
-        },
-        catch() {
-
-            return this;
-        }
-    };
+    let authHandler,
+        command,
+        setArgsStub,
+        getAvailableOptionsStub,
+        showUserPromptStub,
+        initProjectStub,
+        addJenkinsfileStub,
+        printStub,
+        catchErrorStub;
 
     beforeEach(() => {
 
-        InitCommand = require('../../commands/init-command');
         authHandler = new AuthHandler(false);
-
         command = new InitCommand(authHandler);
+        setArgsStub = sandbox.stub(command.handler, 'setArgs');
+        getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions');
+        showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt');
+        initProjectStub = sandbox.stub(command.handler, 'initProject');
+        addJenkinsfileStub = sandbox.stub(command.handler, 'addJenkinsfile');
+        printStub = sandbox.stub(Command.prototype, 'print');
+        catchErrorStub = sandbox.stub(Command.prototype, 'catchError');
     });
 
     afterEach(() => {
@@ -49,109 +54,40 @@ describe('Command: init', () => {
         expect(command).to.have.property('authHandler');
     });
 
-    it('should have SetNameHandler handler', () => {
-
-        const InitHandler = require('../../utils/init-handler');
+    it('should have InitHandler handler', () => {
 
         expect(command.handler).to.be.an.instanceOf(InitHandler);
     });
 
-    it('should call handler.setArgs', () => {
+    it('should call handler methods in expected order', async () => {
 
-        const fakeReturnedPromise = {
-
-            then() {
-
-                return this;
-            },
-            catch() {
-
-                return this;
-            }
-        };
-
-        const handlerSpy = sandbox.spy(command.handler, 'setArgs');
-        sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        sandbox.stub(command.handler, 'showUserPrompt').returns(fakeReturnedPromise);
-        sandbox.stub(command.handler, 'initProject').returns(fakeReturnedPromise);
-
-        command.execute();
-
-        expect(handlerSpy.calledOnce).to.equal(true);
-    });
-
-    it('should call handler.getAvailableOptions', async () => {
-
-        sandbox.stub(command.handler, 'setArgs');
-        const getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions').resolves();
-        sandbox.stub(command.handler, 'showUserPrompt').resolves();
-        sandbox.stub(command.handler, 'initProject').resolves();
-        sandbox.stub(console, 'table');
+        getAvailableOptionsStub.resolves();
+        showUserPromptStub.resolves();
+        initProjectStub.resolves();
+        addJenkinsfileStub.resolves();
 
         await command.execute();
 
-        expect(getAvailableOptionsStub.calledOnce).to.equal(true);
+        sandbox.assert.callOrder(setArgsStub, getAvailableOptionsStub, showUserPromptStub, initProjectStub, addJenkinsfileStub, printStub);
+        sandbox.assert.notCalled(catchErrorStub);
     });
 
-    it('should call console.log on handler.getAvailableOptions reject', async () => {
+    it('should call handler methods in expected order if addJenkinsfileStub rejects', async () => {
 
-        sandbox.stub(command.handler, 'setArgs');
-        sandbox.stub(command.handler, 'getAvailableOptions').rejects('Fake error');
-        const consoleStub = sandbox.stub(console, 'log');
+        getAvailableOptionsStub.resolves();
+        showUserPromptStub.resolves();
+        initProjectStub.resolves();
+        addJenkinsfileStub.rejects(fakeError);
 
-        await command.execute();
+        try {
 
-        expect(consoleStub.calledOnce).to.equal(true);
-    });
+            await command.execute();
+        }
+        catch (err) {
 
-    it('should call handler.showUserPrompt', async () => {
-
-        sandbox.stub(command.handler, 'setArgs');
-        sandbox.stub(command.handler, 'getAvailableOptions').resolves();
-        const showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt').resolves();
-        sandbox.stub(command.handler, 'initProject').resolves();
-        sandbox.stub(console, 'table');
-
-        await command.execute();
-
-        expect(showUserPromptStub.calledOnce).to.equal(true);
-    });
-
-    it('should call console.log on handler.showUserPrompt reject', async () => {
-
-        sandbox.stub(command.handler, 'setArgs');
-        sandbox.stub(command.handler, 'getAvailableOptions').returns(fakeReturnedPromise);
-        sandbox.stub(command.handler, 'showUserPrompt').rejects('Fake error');
-        const consoleStub = sandbox.stub(console, 'log');
-
-        await command.execute();
-
-        expect(consoleStub.calledOnce).to.equal(true);
-    });
-
-    it('should call handler.initProject', async () => {
-
-        sandbox.stub(command.handler, 'setArgs');
-        sandbox.stub(command.handler, 'getAvailableOptions').resolves();
-        sandbox.stub(command.handler, 'showUserPrompt').resolves();
-        const initProjectStub = sandbox.stub(command.handler, 'initProject').resolves();
-        sandbox.stub(console, 'table');
-
-        await command.execute();
-
-        expect(initProjectStub.calledOnce).to.equal(true);
-    });
-
-    it('should call console.log on handler.initProject reject', async () => {
-
-        sandbox.stub(command.handler, 'setArgs');
-        sandbox.stub(command.handler, 'getAvailableOptions').resolves();
-        sandbox.stub(command.handler, 'showUserPrompt').resolves();
-        sandbox.stub(command.handler, 'initProject').rejects('Fake error');
-        const consoleStub = sandbox.stub(console, 'log');
-
-        await command.execute();
-
-        expect(consoleStub.calledOnce).to.equal(true);
+            sandbox.assert.callOrder(setArgsStub, getAvailableOptionsStub, showUserPromptStub, initProjectStub, addJenkinsfileStub, addJenkinsfileStub);
+            sandbox.assert.calledOnceWithExactly(catchErrorStub, fakeError);
+            sandbox.assert.notCalled(printStub);
+        }
     });
 });

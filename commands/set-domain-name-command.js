@@ -15,6 +15,7 @@ class SetDomainNameCommand extends Command {
 
     execute() {
 
+        this.handler.setArgs(this.args);
         return this.handler.askForDomainName()
             .then(() => this.handler.setDomainName())
             .then(() => this.print())

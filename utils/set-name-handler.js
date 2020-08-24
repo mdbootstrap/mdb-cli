@@ -13,8 +13,14 @@ class SetNameHandler {
         this.result = [];
         this.newName = '';
         this.oldName = '';
+        this.args = [];
 
         this.authHandler = authHandler;
+    }
+
+    setArgs(args) {
+
+        this.args = args;
     }
 
     getResult() {
@@ -22,10 +28,16 @@ class SetNameHandler {
         return this.result;
     }
 
-    askForNewProjectName() {
+    async askForNewProjectName() {
 
-        return helpers.showTextPrompt('Enter new project name', 'Project name must not be empty.')
-            .then(answer => this.newName = answer);
+        if (this.args.length > 0) {
+
+            this.newName = this.args[0];
+
+            return;
+        }
+
+        this.newName = await helpers.showTextPrompt('Enter new project name', 'Project name must not be empty.');
     }
 
     setName() {

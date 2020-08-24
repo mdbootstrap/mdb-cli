@@ -18,6 +18,7 @@ class RenameCommand extends Command {
 
     execute() {
 
+        this.setNameHandler.setArgs(this.args);
         return this.setNameHandler.askForNewProjectName()
             .then(() => this.setNameHandler.setName())
             .then(() => this.setNameHandler.removeProject())
