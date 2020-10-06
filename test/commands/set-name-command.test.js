@@ -1,6 +1,7 @@
 'use strict';
 
-const commandClass = require('../../commands/set-name-command');
+const SetNameCommand = require('../../commands/set-name-command');
+const SetNameHandler = require('../../utils/set-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
@@ -15,7 +16,7 @@ describe('Command: set-name', () => {
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
-        command = new commandClass(authHandler);
+        command = new SetNameCommand(authHandler);
         consTabStub = sandbox.stub(console, 'table');
         consLogStub = sandbox.stub(console, 'log');
     });
@@ -31,7 +32,7 @@ describe('Command: set-name', () => {
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        command = new commandClass();
+        command = new SetNameCommand();
 
         expect(command).to.have.property('handler');
     });
@@ -42,8 +43,6 @@ describe('Command: set-name', () => {
     });
 
     it('should have SetNameHandler handler', () => {
-
-        const SetNameHandler = require('../../utils/set-name-handler');
 
         expect(command.handler).to.be.an.instanceOf(SetNameHandler);
     });
@@ -87,14 +86,14 @@ describe('Command: set-name', () => {
         chai.assert.isTrue(consTabStub.called, 'console.table not called on handler.askForNewProjectName reject');
     });
 
-    it('should call handler.setName after handler.askForNewProjectName', async () => {
+    it('should call handler.setName after handler.askForProjectName', async () => {
 
-        sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
+        const askStub = sandbox.stub(command.handler, 'askForNewProjectName').resolves(undefined);
         const setNameStub = sandbox.stub(command.handler, 'setName').resolves(undefined);
 
         await command.execute();
 
-        chai.assert.isTrue(setNameStub.called, 'handler.setName not called');
+        expect(setNameStub.calledAfter(askStub)).to.be.true;
     });
 
     it('should console.log on handler.setName rejected string', async () => {

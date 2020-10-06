@@ -170,53 +170,6 @@ describe('Command: rename', () => {
         });
     });
 
-    // describe('Should print handler result on reject', () => {
-
-    //     afterEach(async () => {
-
-    //         expect(command.printHandlerResult.called).to.be.false;
-
-    //         await command.execute();
-
-    //         expect(command.printHandlerResult.called).to.be.true;
-    //     });
-
-    //     it('should call log on setNameHandler.askForNewProjectName', async () => {
-
-    //         askForNewProjectNameStub.rejects(['fake error']);
-    //     });
-
-    //     it('should call log on setNameHandler.setName', () => {
-
-    //         askForNewProjectNameStub.resolves();
-    //         setNameStub.rejects(['fake error']);
-    //     });
-
-    //     it('should call log on publishHandler.setProjectName', () => {
-
-    //         askForNewProjectNameStub.resolves();
-    //         setNameStub.resolves();
-    //         setProjectNameStub.rejects(['fake error']);
-    //     });
-
-    //     it('should call log on publishHandler.buildProject', () => {
-
-    //         askForNewProjectNameStub.resolves();
-    //         setNameStub.resolves();
-    //         setProjectNameStub.resolves();
-    //         buildProjectStub.rejects(['fake error']);
-    //     });
-
-    //     it('should call log on publishHandler.publish', () => {
-
-    //         askForNewProjectNameStub.resolves();
-    //         setNameStub.resolves();
-    //         setProjectNameStub.resolves();
-    //         buildProjectStub.resolves();
-    //         publishStub.rejects(['fake error']);
-    //     });
-    // });
-
     it('should printHandlerResult print expected results', async () => {
 
         askForNewProjectNameStub.resolves();

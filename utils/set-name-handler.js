@@ -1,18 +1,23 @@
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const config = require('../config');
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
-const helpers = require('../helpers/');
+const helpers = require('../helpers');
+const loadPackageManager = require('./managers/load-package-manager');
 
 class SetNameHandler {
 
     constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
+        this.cwd = process.cwd();
         this.newName = '';
         this.oldName = '';
+        this.packageManager = null;
         this.args = [];
 
         this.authHandler = authHandler;
@@ -28,6 +33,13 @@ class SetNameHandler {
         return this.result;
     }
 
+    async loadPackageManager() {
+
+        const gitPath = path.join(this.cwd, '.git');
+
+        this.packageManager = await loadPackageManager(true, fs.existsSync(gitPath));
+    }
+
     async askForNewProjectName() {
 
         if (this.args.length > 0) {
@@ -40,40 +52,56 @@ class SetNameHandler {
         this.newName = await helpers.showTextPrompt('Enter new project name', 'Project name must not be empty.');
     }
 
-    setName() {
+    async setName() {
 
-        return new Promise((resolve, reject) => {
+        const packageJsonPath = path.join(this.cwd, 'package.json');
+        let packageJson = {};
 
-            const fileName = 'package.json';
+        try {
 
-            helpers.deserializeJsonFile(fileName).then(fileContent => {
+            packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+            this.oldName = packageJson.name;
 
-                this.oldName = fileContent.name;
+            if (this.newName === this.oldName) {
 
-                if (this.newName === this.oldName) {
+                this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' }];
+                return Promise.reject(this.result);
+            }
 
-                    reject([{ 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' }]);
-                }
+            packageJson.name = this.newName;
 
-                fileContent.name = this.newName;
+        } catch (e) {
 
-                helpers.serializeJsonFile(fileName, fileContent).then(() => {
+            return this.handleMissingPackageJson();
+        }
 
-                    this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${this.oldName} to ${this.newName}.` }];
-                    resolve();
+        try {
 
-                }).catch(e => {
+            await helpers.serializeJsonFile(packageJsonPath, packageJson);
 
-                    console.log(e);
-                    reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
-                });
+        } catch (e) {
 
-            }).catch(e => {
+            this.result = [{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Problem with saving package.json' }];
+            return Promise.reject(this.result);
+        }
 
-                console.log(e);
-                reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }]);
+        this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Project name has been successfully changed from ${this.oldName} to ${this.newName}.` }];
+    }
+
+    handleMissingPackageJson() {
+
+        return this.loadPackageManager()
+            .then(() => helpers.createPackageJson(this.packageManager, this.cwd))
+            .then(msg => this.result.push(msg))
+            .then(() => this.setName())
+            .catch(err => {
+
+                this.result.push(err);
+                this.result.push({ 'Status': CliStatus.ERROR, 'Message': 'Missing package.json file.' });
+
+                console.table(this.result);
+                process.exit(1);
             });
-        });
     }
 
     removeProject() {

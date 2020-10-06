@@ -1,6 +1,7 @@
 'use strict';
 
 const config = require('../config');
+const packageJson = require('../package.json');
 const http = config.env === 'dev' ? require('http') : require('https');
 
 class HttpWrapper {
@@ -11,6 +12,9 @@ class HttpWrapper {
 
         delete options.data;
         this._options = options;
+
+        if (this._options.headers) this._options.headers['x-mdb-cli-version'] = packageJson.version;
+        else this._options.headers = { 'x-mdb-cli-version': packageJson.version };
     }
 
     createRequest(callback) {

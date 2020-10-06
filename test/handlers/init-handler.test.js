@@ -12,6 +12,7 @@ const inquirer = require('inquirer');
 const fse = require('fs-extra');
 const path = require('path');
 const fs = require('fs');
+const { expect } = require('chai');
 
 describe('Handler: Init', () => {
 
@@ -280,7 +281,7 @@ describe('Handler: Init', () => {
             expect(initHandler.projectRoot).to.equal('fake/path/angular-ui-kit');
         });
 
-        it('should set project name if specyfied', () => {
+        it('should set project name if specified', () => {
 
             const fakeProject = { productId: 345, productTitle: 'MDB Pro (Angular version)', productSlug: 'angular-ui-kit', available: true };
             initHandler.cwd = 'fake/path';
@@ -416,6 +417,7 @@ describe('Handler: Init', () => {
             sandbox.stub(helpers, 'eraseProjectDirectories').resolves();
             sandbox.stub(initHandler, 'askForProjectName').resolves();
             sandbox.stub(initHandler, 'createDirectory').resolves();
+            sandbox.stub(initHandler, 'saveMetadata').resolves();
             sandbox.stub(initHandler, 'loadPackageManager').resolves();
         });
 
@@ -428,11 +430,11 @@ describe('Handler: Init', () => {
         it('should return an expected result', async () => {
 
             const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Project created' };
-            sandbox.stub(initHandler, 'createPackageJson').resolves(expectedResult);
+            sandbox.stub(initHandler, 'createPackageJson').resolves();
 
-            await initHandler._initEmptyProject();
+            const result = await initHandler._initEmptyProject();
 
-            expect(initHandler.result).to.deep.include(expectedResult);
+            expect(result).to.be.equal(undefined);
         });
 
         it('should return an expected result if error', async () => {
@@ -561,7 +563,7 @@ describe('Handler: Init', () => {
             }
             catch (err) {
 
-                expect(err).to.deep.include({ Status: code, Message: 'Problem with npm initialization' });
+                expect(err).to.deep.include({ Status: code, Message: 'Problem with project initialization' });
             }
         });
 
@@ -573,9 +575,9 @@ describe('Handler: Init', () => {
             initHandler.packageManager = new NpmPackageManager();
             sandbox.stub(initHandler.packageManager, 'init').returns(fakeReturnedStream);
 
-            const result = await initHandler.createPackageJson();
+            await initHandler.createPackageJson();
 
-            expect(result).to.deep.include({ 'Status': code, Message: 'Project fakeName successfully created' });
+            expect(initHandler.result).to.deep.include({ 'Status': code, Message: 'Project fakeName successfully created' });
         });
     });
 
@@ -588,6 +590,68 @@ describe('Handler: Init', () => {
             await initHandler.notifyServer();
 
             expect(postStub.calledOnce).to.be.true;
+        });
+    });
+
+    describe('Method: _checkProjectNameExists', () => {
+
+        const projectRoot = 'fake/cwd/fakeProjectName';
+        const newProjectName = 'newProjectName';
+        const projectName = 'fakeProjectName';
+        const processCwd = 'fake/cwd';
+
+        let existsSyncStub, showConfirmationPromptStub, showTextPromptStub, checkSpy;
+
+        beforeEach(() => {
+
+            sandbox.stub(initHandler, 'projectRoot').value(projectRoot);
+            sandbox.stub(initHandler, 'projectName').value(projectName);
+            sandbox.stub(initHandler, 'cwd').value(processCwd);
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            showConfirmationPromptStub = sandbox.stub(helpers, 'showConfirmationPrompt');
+            showTextPromptStub = sandbox.stub(helpers, 'showTextPrompt');
+            checkSpy = sandbox.spy(initHandler, '_checkProjectNameExists');
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should resolve if folder with given name does not exist', async () => {
+
+            existsSyncStub.withArgs(projectRoot).returns(false);
+
+            await initHandler._checkProjectNameExists();
+
+            sandbox.assert.notCalled(showConfirmationPromptStub);
+            sandbox.assert.notCalled(showTextPromptStub);
+            sandbox.assert.calledOnce(checkSpy);
+        });
+
+        it('should ask for rename if folder with given name exists', async () => {
+
+            existsSyncStub.withArgs(projectRoot).returns(true);
+            showConfirmationPromptStub.resolves(false);
+            
+            await initHandler._checkProjectNameExists();
+
+            sandbox.assert.calledOnce(showConfirmationPromptStub);
+            sandbox.assert.notCalled(showTextPromptStub);
+            sandbox.assert.calledOnce(checkSpy);
+        });
+
+        it('should ask for new project name if folder with given name exists', async () => {
+
+            existsSyncStub.withArgs(projectRoot).returns(true);
+            showConfirmationPromptStub.resolves(true);
+            showTextPromptStub.resolves(newProjectName);
+            
+            await initHandler._checkProjectNameExists();
+
+            expect(initHandler.projectName).to.be.equal(newProjectName);
+            sandbox.assert.calledTwice(checkSpy);
         });
     });
 });

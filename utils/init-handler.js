@@ -90,7 +90,7 @@ class InitHandler {
             short: row.productSlug,
             value: row.productSlug
         }));
-        choices.push({ name: 'Blank projct', short: 'blank', value: 'blank' });
+        choices.push({ name: 'Blank project', short: 'blank', value: 'blank' });
 
         return inquirer.createPromptModule()([
             {
@@ -123,74 +123,75 @@ class InitHandler {
         }
     }
 
-    _setProjectInfo(project) {
-
-        const { productSlug } = project;
-        this.isFreePackage = project.productId === null;
-
-        this.projectSlug = productSlug;
-
-        this.projectName = this.args.projectName ? this.args.projectName : this.projectSlug;
-        this.projectRoot = path.join(this.cwd, this.projectName);
-    }
-
     _initEmptyProject() {
 
         return this.askForProjectName()
             .then(() => helpers.eraseProjectDirectories(this.projectSlug, this.projectName))
             .then(() => this.createDirectory())
-            .then(() => this.loadPackageManager())
+            .then(() => this.loadPackageManager(this.projectRoot))
             .then(() => this.createPackageJson())
-            .then(res => this.result = [res])
+            .then(() => this.saveMetadata())
             .catch(err => this.result = [err]);
     }
 
-    askForProjectName() {
+    async askForProjectName() {
 
         if (this.args.projectName) {
 
             this.projectName = this.args.projectName;
-            return Promise.resolve();
+
+            return;
         }
 
-        return helpers.showTextPrompt('Enter project name', 'Project name must not be empty.')
-            .then(answer => this.projectName = answer);
+        this.projectName = await helpers.showTextPrompt('Enter project name', 'Project name must not be empty.');
+
+        this.projectRoot = path.join(this.cwd, this.projectName);
+
+
+        await this._checkProjectNameExists();
     }
 
     createDirectory() {
 
-        const dirPath = path.join(this.cwd, this.projectName);
-
         return new Promise((resolve, reject) => {
 
-            fs.mkdir(dirPath, err => {
-    
+            fs.mkdir(this.projectRoot, err => {
+
                 if (err) {
-    
+
                     return reject({ Status: CliStatus.ERROR, Message: `Error: ${err}` });
                 }
-    
+
                 resolve();
             });
         });
     }
 
-    async loadPackageManager() {
+    async loadPackageManager(cwd) {
 
-        this.packageManager = await loadPackageManager();
+        this.packageManager = await loadPackageManager(true, false, cwd);
     }
 
     createPackageJson() {
 
         return new Promise((resolve, reject) => {
 
-            const init = this.packageManager.init(path.join(this.cwd, this.projectName));
+            const init = this.packageManager.init(this.projectRoot);
 
             init.on('error', (error) => reject({ Status: CliStatus.ERROR, Message: error.message }));
 
-            init.on('exit', (code) => code === CliStatus.SUCCESS ?
-                resolve({ Status: CliStatus.SUCCESS, Message: `Project ${this.projectName} successfully created` }) :
-                reject({ Status: code, Message: 'Problem with npm initialization' }));
+            init.on('exit', (code) => {
+
+                if (code === CliStatus.SUCCESS) {
+
+                    this.result.push({ Status: CliStatus.SUCCESS, Message: `Project ${this.projectName} successfully created` });
+                    resolve();
+
+                } else {
+
+                    reject({ Status: code, Message: 'Problem with project initialization' })
+                }
+            });
         });
     }
 
@@ -226,6 +227,8 @@ class InitHandler {
 
         if (projectSlug === 'blank') {
 
+            this.projectSlug = projectSlug;
+
             this.args.blank = true;
 
             return Promise.resolve();
@@ -241,25 +244,63 @@ class InitHandler {
         }
 
         this._setProjectInfo(project);
+
+        return this._checkProjectNameExists();
     }
 
-    saveMetadata() {
+    _setProjectInfo(project) {
+
+        const { productSlug } = project;
+        this.isFreePackage = project.productId === null;
+
+        this.projectSlug = productSlug;
+
+        this.projectName = this.args.projectName ? this.args.projectName : this.projectSlug;
+        this.projectRoot = path.join(this.cwd, this.projectName);
+    }
+
+    async _checkProjectNameExists() {
+
+        if (fs.existsSync(this.projectRoot)) {
+
+            const confirmed = await helpers.showConfirmationPrompt(`Folder ${this.projectName} already exists, do you want to rename project you are creating now?`, true);
+
+            if (confirmed) {
+
+                this.projectName = await helpers.showTextPrompt('Enter new project name', 'Project name must not be empty.');
+
+                this.projectRoot = path.join(this.cwd, this.projectName);
+
+                await this._checkProjectNameExists();
+            }
+        }
+    }
+
+    async saveMetadata() {
 
         const metadataPath = path.join(this.projectRoot, '.mdb');
 
-        return new Promise((resolve) =>
+        let metadataFile = {};
+        try {
 
-            helpers.serializeJsonFile(metadataPath, { packageName: this.projectSlug })
-                .then(() => {
+            metadataFile = await helpers.deserializeJsonFile(metadataPath);
 
-                    this.result.push({ 'Status': CliStatus.SUCCESS, 'Message': 'Project metadata saved.' });
-                    resolve();
-                })
-                .catch(() => {
+        } catch (e) {
+            // it means the file cannot be accessed, so it will be created in the next try..catch
+        }
 
-                    this.result.push({ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Project metadata not saved.' });
-                    resolve();
-                }));
+        metadataFile.packageName = this.projectSlug;
+        metadataFile.projectName = this.projectName;
+
+        try {
+
+            await helpers.serializeJsonFile(metadataPath, metadataFile);
+
+            this.result.push({ 'Status': CliStatus.SUCCESS, 'Message': 'Project metadata saved.' });
+        } catch (err) {
+
+            this.result.push({ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Project metadata not saved.' });
+        }
     }
 
     notifyServer() {

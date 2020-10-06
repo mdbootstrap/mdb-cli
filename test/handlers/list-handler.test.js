@@ -29,7 +29,7 @@ describe('Handler: List', () => {
         expect(listHandler).to.have.property('authHeaders');
     });
 
-    it('should have assigned authHandler if not specyfied in constructor', (done) => {
+    it('should have assigned authHandler if not specified in constructor', (done) => {
 
         listHandler = new ListHandler();
 

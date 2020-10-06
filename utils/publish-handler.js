@@ -4,6 +4,7 @@ const fs = require('fs');
 const Ora = require('ora');
 const path = require('path');
 const atob = require('atob');
+const fse = require('fs-extra');
 const config = require('../config');
 const helpers = require('../helpers');
 const childProcess = require('child_process');
@@ -30,6 +31,7 @@ class PublishHandler {
         this.currentBranch = '';
         this.packageManager = null;
         this.isWindows = process.platform === 'win32';
+        this.backendTechnology = undefined;
 
         this.options = {
             port: config.port,
@@ -54,10 +56,19 @@ class PublishHandler {
         return this.result;
     }
 
-    setArgs(args) {
+    async setArgs(args) {
 
         this.useFtp = args.some(arg => arg === '--ftp');
         this.test = args.some(arg => ['-t', '--test'].includes(arg));
+        const backendTechnology = args.find(arg => ['-b', '--backend'].includes(arg.split('=')[0]));
+        this.backendTechnology = backendTechnology ? backendTechnology.split('=')[1] : undefined;
+
+        const technologies = config.backendTechnologies;
+
+        if (backendTechnology && !technologies.includes(this.backendTechnology)) {
+
+            return Promise.reject({ Status: CliStatus.CLI_ERROR, Message: `This technology is not supported. Allowed technologies: ${technologies.join(', ')}` });
+        }
     }
 
     handlePublishArgs() {
@@ -70,11 +81,22 @@ class PublishHandler {
     async getSavedSettings() {
 
         const settingsPath = path.join(this.cwd, '.mdb');
-        const settings = fs.existsSync(settingsPath) ? await helpers.deserializeJsonFile(settingsPath) : {};
 
-        if (settings.useGitlab) {
+        try {
 
-            this.useGitlab = true;
+            const settings = await helpers.deserializeJsonFile(settingsPath);
+
+            if (settings.useGitlab) {
+
+                this.useGitlab = true;
+            }
+
+        } catch (err) {
+
+            if (err.toString().toLowerCase().indexOf('unexpected token') !== -1) {
+
+                return Promise.reject({ Status: CliStatus.CLI_ERROR, Message: '.mdb file is invalid. Please remove it and try again.' });
+            }
         }
     }
 
@@ -115,6 +137,10 @@ class PublishHandler {
 
     publish() {
 
+        if (this.backendTechnology) {
+            console.log('\n\x1b[34m%s\x1b[0m', 'Note:', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The real port that your app is available at, will be provided to you after successful publish.\n');
+        }
+
         return this.useFtp ? this.uploadToFtp() : this.useGitlabPipeline();
     }
 
@@ -146,11 +172,11 @@ class PublishHandler {
 
                 if (data.indexOf('nothing to commit, working tree clean') !== -1) {
 
-                    return resolve({ Status: 0, Message: 'OK' });
+                    return resolve({ Status: CliStatus.SUCCESS, Message: 'OK' });
 
                 }
 
-                return reject({ Status: 1, Message: 'You have uncommited changes in your project, please commit and try again.' });
+                return reject({ Status: CliStatus.CLI_ERROR, Message: 'You have uncommited changes in your project, please commit and try again.' });
             });
 
             gitStatus.stderr.on('data', (data) => {
@@ -257,13 +283,13 @@ class PublishHandler {
 
             gitPull.stdout.on('data', (data) => {
 
-                result = `\n${data}`
+                result = `\n${data}`;
                 console.log(result);
             });
 
             gitPull.stderr.on('data', (data) => {
 
-                result = `\n${data}`
+                result = `\n${data}`;
                 console.error(result);
             });
 
@@ -366,12 +392,19 @@ class PublishHandler {
 
     async loadPackageManager() {
 
-        this.packageManager = await loadPackageManager(true, !this.useFtp);
+        if (this.isBackendOneOf('php')) return;
+
+        if (this.packageManager === null) {
+
+            this.packageManager = await loadPackageManager(true, !this.useFtp);
+        }
     }
 
-    runTests() {
+    async runTests() {
 
         if (this.test) {
+
+            await this.loadPackageManager();
 
             return new Promise((resolve, reject) => {
 
@@ -403,13 +436,54 @@ class PublishHandler {
 
         } catch (e) {
 
-            if (e.code && e.code === 'ENOENT') {
+            if (e.code && e.code === 'ENOENT' && !this.isBackendOneOf('php')) {
 
                 return this.handleMissingPackageJson();
+            }
+            else if (this.isBackendOneOf('php')) {
+
+                await this.setPhpProjectName();
+
+                return;
             }
 
             this.result = [{ Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with reading project name: ${e}` }];
             return Promise.reject(this.result);
+        }
+    }
+
+    isBackendOneOf(tech) {
+
+        return !!this.backendTechnology && this.backendTechnology.includes(tech);
+    }
+
+    async setPhpProjectName() {
+
+        const metadataPath = path.join(this.cwd, '.mdb');
+        const metadataExists = fs.existsSync(metadataPath);
+
+        const projectMetadata = metadataExists ? await helpers.deserializeJsonFile(metadataPath) : {};
+
+        if (projectMetadata.projectName) {
+
+            this.projectName = projectMetadata.projectName;
+
+            return;
+        }
+
+        const name = await helpers.showTextPrompt('Enter project name', 'Project name must not be empty.');
+
+        this.projectName = name;
+
+        if (metadataExists) {
+
+            projectMetadata.projectName = name;
+
+            await helpers.serializeJsonFile(metadataPath, projectMetadata);
+        }
+        else {
+
+            fs.writeFileSync(metadataPath, JSON.stringify({ projectName: name }), 'utf8');
         }
     }
 
@@ -426,14 +500,14 @@ class PublishHandler {
 
             this.packageName = '';
         }
-
-        return Promise.resolve();
     }
 
     async buildProject() {
 
+        const distPath = path.join(this.cwd, 'dist');
+        const buildPath = path.join(this.cwd, 'build');
         const packageJsonPath = path.join(this.cwd, 'package.json');
-        let packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+        let packageJson = fs.existsSync(packageJsonPath) ? await helpers.deserializeJsonFile(packageJsonPath) : {};
 
         if (packageJson.scripts && packageJson.scripts.build) {
 
@@ -441,20 +515,25 @@ class PublishHandler {
             const isReact = packageJson.dependencies && !!packageJson.dependencies.react;
             const isVue = packageJson.dependencies && !!packageJson.dependencies.vue;
 
+            await this.loadPackageManager();
+
             if (isAngular) {
 
                 const angularJsonPath = path.join(this.cwd, 'angular.json');
                 const angularJson = await helpers.deserializeJsonFile(angularJsonPath);
-                const angularFolder = path.join('dist', angularJson.defaultProject);
 
                 await helpers.buildProject(this.packageManager);
 
-                this.cwd = path.join(this.cwd, angularFolder);
-
-                const indexPath = path.join(this.cwd, 'index.html');
+                const angularFolder = path.join('dist', angularJson.defaultProject);
+                const indexPath = path.join(this.cwd, angularFolder, 'index.html');
                 let indexHtml = fs.readFileSync(indexPath, 'utf8');
                 indexHtml = indexHtml.replace(/<base href="\/">/g, '<base href=".">');
                 fs.writeFileSync(indexPath, indexHtml, 'utf8');
+
+                const toRename = path.join(this.cwd, angularFolder);
+
+                fse.moveSync(toRename, buildPath, { overwrite: true });
+                fse.moveSync(buildPath, distPath, { overwrite: true });
 
             } else if (isReact) {
 
@@ -479,7 +558,6 @@ class PublishHandler {
                 if (fs.existsSync(appJsPath)) {
 
                     let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                    appJsFile = fs.readFileSync(appJsPath, 'utf8');
                     const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}'`, 'g');
                     appJsFile = appJsFile.replace(regex, '<Router');
                     fs.writeFileSync(appJsPath, appJsFile, 'utf8');
@@ -488,8 +566,6 @@ class PublishHandler {
                 packageJson = await helpers.deserializeJsonFile(packageJsonPath);
                 delete packageJson.homepage;
                 await helpers.serializeJsonFile('package.json', packageJson);
-
-                this.cwd = path.join(this.cwd, 'build');
 
             } else if (isVue) {
 
@@ -504,27 +580,21 @@ class PublishHandler {
 
                 await helpers.buildProject(this.packageManager);
 
-                this.cwd = path.join(this.cwd, 'dist');
-
             } else {
 
                 await helpers.buildProject(this.packageManager);
 
-                const distPath = path.join(this.cwd, 'dist');
-                const buildPath = path.join(this.cwd, 'build');
                 const warning = `
 This is not MDB JARV project and there is no guarantee that it will work properly after publishing.
 In case of problems, please write to our support https://mdbootstrap.com/support/
 `;
                 console.log('\x1b[36m%s\x1b[0m', warning);
 
-                if (fs.existsSync(distPath)) this.cwd = distPath;
-                else if (fs.existsSync(buildPath)) this.cwd = buildPath;
-                else return Promise.reject({ Status: CliStatus.ERROR, Message: 'Build folder not found.' });
+                if (!fs.existsSync(distPath) && !fs.existsSync(buildPath)) {
+                    return Promise.reject({ Status: CliStatus.ERROR, Message: 'Build folder not found.' });
+                }
             }
         }
-
-        return Promise.resolve();
     }
 
     uploadFiles() {
@@ -539,6 +609,7 @@ In case of problems, please write to our support https://mdbootstrap.com/support
 
         return new Promise((resolve, reject) => {
 
+            if (this.backendTechnology) this.options.headers['x-mdb-cli-backend-technology'] = this.backendTechnology;
             this.options.headers['x-mdb-cli-project-name'] = this.projectName;
             this.options.headers['x-mdb-cli-package-name'] = this.packageName;
             this.options.headers['x-mdb-cli-domain-name'] = this.domainName;
@@ -588,7 +659,10 @@ In case of problems, please write to our support https://mdbootstrap.com/support
 
             archive.pipe(request);
 
-            archive.directory(this.cwd, this.projectName);
+            archive.glob('**', {
+                cwd: this.cwd,
+                ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**']
+            });
 
             archive.finalize();
         });
@@ -602,7 +676,8 @@ In case of problems, please write to our support https://mdbootstrap.com/support
 
     handleMissingPackageJson() {
 
-        return helpers.createPackageJson(this.packageManager, this.cwd)
+        return this.loadPackageManager()
+            .then(() => helpers.createPackageJson(this.packageManager, this.cwd))
             .then(msg => this.result.push(msg))
             .then(() => this.setProjectName())
             .catch(err => {

@@ -1,26 +1,19 @@
 'use strict';
 
-const AuthHandler = require('./auth-handler');
-const loadPackageManager = require('./managers/load-package-manager');
+const AuthHandler = require('../utils/auth-handler');
+const { version } = require('../package.json');
 
 class VersionHandler {
 
     constructor(authHandler = new AuthHandler(false)) {
 
         this.authHandler = authHandler;
-        this.packageManager = null;
+        this.result = version;
     }
 
-    async loadPackageManager() {
+    getResult() {
 
-        this.packageManager = await loadPackageManager(false);
-    }
-
-    printVersion() {
-
-        const info = this.packageManager.info();
-
-        info.on('error', err => { throw new Error(err.message); });
+        return this.result;
     }
 }
 

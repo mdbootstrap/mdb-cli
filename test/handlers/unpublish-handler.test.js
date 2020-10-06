@@ -1,20 +1,25 @@
 'use strict';
 
-const handlerClass = require('../../utils/unpublish-handler');
+const UnpublishHandler = require('../../utils/unpublish-handler');
+const HttpWrapper = require('../../utils/http-wrapper');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
+const helpers = require('../../helpers');
+const config = require('../../config');
+const inquirer = require('inquirer');
 
 describe('Handler: unpublish', () => {
 
-    let authHandler;
-    let handler;
+    const fakeName = 'fakeProjectName';
+
+    let authHandler, handler;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
 
-        handler = new handlerClass(authHandler);
+        handler = new UnpublishHandler(authHandler);
 
         sandbox.stub(console, 'log');
     });
@@ -55,7 +60,7 @@ describe('Handler: unpublish', () => {
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        handler = new handlerClass();
+        handler = new UnpublishHandler();
 
         expect(handler.authHandler).to.be.an.instanceOf(AuthHandler);
     });
@@ -71,9 +76,18 @@ describe('Handler: unpublish', () => {
         chai.assert.deepEqual(actualResult[0], expectedResult[0], 'getResult() returns invalid result');
     });
 
+    it('should set handler args', () => {
+
+        const expectedResult = ['fakeArg'];
+
+        expect(handler.args !== expectedResult, 'handler.args should have different args from expectedResult');
+        handler.setArgs(expectedResult);
+        expect(handler.args === expectedResult, 'handler.args shold have the same args as expectedResult');
+    });
+
     it('should createPromptModule() be invoked in askForProjectName() invoke', async () => {
 
-        const inquirer = require('inquirer');
+        sandbox.stub(handler, 'projects').value({ name: 'fakeProjectName' });
         const promptStub = sandbox.stub().resolves({ name: 'stub' });
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
 
@@ -82,9 +96,46 @@ describe('Handler: unpublish', () => {
         expect(promptStub.called === true, 'promptStub.called should be called');
     });
 
+    it('should fetch user projects and assign to projects', async () => {
+
+        const fakeResult = [{ projectId: 1, userNicename: 'fakeUser', projectName: fakeName, domainName: null, publishDate: '2020-07-07T12:29:51.000Z', editDate: '2020-07-07T12:29:51.000Z', repoUrl: 'fakeUrl', status: 'backend' }];
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves(fakeResult);
+        const expectedResult = { name: fakeName };
+
+        await handler.fetchProjects();
+
+        expect(handler.projects).to.deep.include(expectedResult);
+    });
+
+    it('should fetch user projects, parse and assign to projects', async () => {
+
+        const fakeResult = '[{"projectId":1,"userNicename":"fakeUser","projectName":"fakeProjectName","domainName":null,"publishDate":"2020-07-07T12:29:51.000Z","editDate":"2020-07-07T12:29:51.000Z","repoUrl":"fakeUrl","status":"published"}]';
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves(fakeResult);
+        const expectedResult = { name: fakeName };
+
+        await handler.fetchProjects();
+
+        expect(handler.projects).to.deep.include(expectedResult);
+    });
+
+    it('should askForProjectName() reject if user not have any projects', async () => {
+
+        const expectedResult = { Status: 404, Message: 'You do not have any projects yet.' };
+
+        try {
+
+            await handler.askForProjectName();
+        }
+        catch (err) {
+
+            expect(err).to.deep.include(expectedResult);
+        }
+    });
+
     it('should askForProjectName() resolve if project name is set in args', async () => {
 
         const expectedResult = 'stub';
+        sandbox.stub(handler, 'projects').value({ name: 'fakeProjectName' });
         sandbox.stub(handler, 'args').value(expectedResult);
 
         expect(handler.name !== expectedResult, 'handler.name should have different name from expectedResult');
@@ -94,7 +145,7 @@ describe('Handler: unpublish', () => {
 
     it('should askForProjectName() return expected result', async () => {
 
-        const inquirer = require('inquirer');
+        sandbox.stub(handler, 'projects').value({ name: 'fakeProjectName' });
         const expectedResult = 'stub';
 
         const promptStub = sandbox.stub().resolves({ name: expectedResult });
@@ -105,6 +156,36 @@ describe('Handler: unpublish', () => {
         expect(handler.name === expectedResult, 'handler.name shold have the same name as expectedResult');
     });
 
+    it('should confirmSelection() resolve if names are the same', async () => {
+
+        sandbox.stub(handler, 'projectName').value(fakeName);
+        sandbox.stub(helpers, 'showTextPrompt').resolves(fakeName);
+
+        try {
+
+            await handler.confirmSelection();
+        }
+        catch (err) {
+
+            expect(err).to.be.undefined;
+        }
+    });
+
+    it('should confirmSelection() reject if names are not the same', async () => {
+
+        sandbox.stub(handler, 'projectName').value(fakeName);
+        sandbox.stub(helpers, 'showTextPrompt').resolves(fakeName + '123');
+
+        try {
+
+            await handler.confirmSelection();
+        }
+        catch (err) {
+
+            expect(err).to.be.deep.eq({ Status: 1, Message: 'The names do not match.' });
+        }
+    });
+
     it('should unpublish() return a promise', () => {
 
         expect(handler.unpublish()).to.be.a('promise');
@@ -112,8 +193,6 @@ describe('Handler: unpublish', () => {
 
     describe('Unpublish method', () => {
 
-        const HttpWrapper = require('../../utils/http-wrapper');
-        const config = require('../../config/');
         const fakePort = 0;
         const fakeHost = 'fakeHost';
 

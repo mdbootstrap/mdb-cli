@@ -101,7 +101,7 @@ describe('Handler: Get', () => {
             try {
 
                 await handler.askForProjectName();
-            } 
+            }
             catch (err) {
 
                 expect(err).to.deep.include(expectedResult);
@@ -132,7 +132,7 @@ describe('Handler: Get', () => {
         });
     });
 
-    describe('Method: cloneRepository', () => {
+    describe('Method: getUserProject', () => {
 
         const fakeName = 'fakeProjectName';
 
@@ -147,7 +147,7 @@ describe('Handler: Get', () => {
             sandbox.stub(handler, 'options').value([{ name: fakeName, repoUrl: 'fake.repo.url' }]);
             sandbox.stub(helpers, 'gitClone').resolves([expectedResult]);
 
-            await handler.cloneRepository();
+            await handler.getUserProject();
 
             expect(handler.result).to.deep.include(expectedResult);
         });
@@ -160,27 +160,22 @@ describe('Handler: Get', () => {
 
             try {
 
-                await handler.cloneRepository();
-            } 
+                await handler.getUserProject();
+            }
             catch (err) {
 
                 expect(err).to.deep.include(expectedResult);
             }
         });
 
-        it('should reject if repository does not exist', async () => {
+        it('should call downloadUserProject if repository does not exist', async () => {
 
-            const expectedResult = { Status: CliStatus.NOT_FOUND, Message: 'Repository for this project does not exist. Please add repository to be able to clone the project' };
             sandbox.stub(handler, 'options').value([{ name: fakeName, repoUrl: null }]);
+            const downloadUserProjectStub = sandbox.stub(helpers, 'downloadUserProject');
 
-            try {
+            await handler.getUserProject();
 
-                await handler.cloneRepository();
-            } 
-            catch (err) {
-
-                expect(err).to.deep.include(expectedResult);
-            }
+            sandbox.assert.calledOnce(downloadUserProjectStub);
         });
 
         it('should reject if project does not exist', async () => {
@@ -190,8 +185,8 @@ describe('Handler: Get', () => {
 
             try {
 
-                await handler.cloneRepository();
-            } 
+                await handler.getUserProject();
+            }
             catch (err) {
 
                 expect(err).to.deep.include(expectedResult);

@@ -17,6 +17,7 @@ class ProjectsCommand extends Command {
 
     execute() {
 
+        this.handler.setArgs(this.args);
         return this.handler.fetchProjects()
             .then(() => this.print())
             .catch(e => this.catchError(e));

@@ -17,13 +17,16 @@ class CommandParser {
             'orders',
             'projects',
             'publish',
+            'register',
             'rename',
             'set-domain-name',
             'set-name',
             'unpublish',
             'unset-domain-name',
             'update',
-            'version'
+            'version',
+            'kill',
+            'info'
         ];
     }
 

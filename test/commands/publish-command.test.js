@@ -1,9 +1,9 @@
 'use strict';
 
-const commandClass = require('../../commands/publish-command');
+const PublishCommand = require('../../commands/publish-command');
+const PublishHandler = require('../../utils/publish-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const sandbox = require('sinon').createSandbox();
-const chai = require('chai');
 
 describe('Command: publish', () => {
 
@@ -12,9 +12,8 @@ describe('Command: publish', () => {
         setArgsStub,
         handlePublishArgsStub,
         loadPackageManagerStub,
+        runTestsStub,
         setProjectNameStub,
-        setPackageNameStub,
-        buildProjectStub,
         publishStub,
         printStub,
         catchErrorStub;
@@ -22,10 +21,10 @@ describe('Command: publish', () => {
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
-        command = new commandClass(authHandler);
+        command = new PublishCommand(authHandler);
         setArgsStub = sandbox.stub(command.handler, 'setArgs');
         handlePublishArgsStub = sandbox.stub(command.handler, 'handlePublishArgs');
-        loadPackageManagerStub = sandbox.stub(command.handler, 'loadPackageManager');
+        runTestsStub = sandbox.stub(command.handler, 'runTests');
         setProjectNameStub = sandbox.stub(command.handler, 'setProjectName');
         publishStub = sandbox.stub(command.handler, 'publish');
         printStub = sandbox.stub(command, 'print');
@@ -43,7 +42,7 @@ describe('Command: publish', () => {
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        command = new commandClass();
+        command = new PublishCommand();
 
         expect(command).to.have.property('authHandler');
     });
@@ -51,45 +50,36 @@ describe('Command: publish', () => {
     it('should have assigned handler', () => {
 
         expect(command).to.have.property('handler');
-    });
-
-    it('should have PublishHandler handler', () => {
-
-        const PublishHandler = require('../../utils/publish-handler');
-
         expect(command.handler).to.be.an.instanceOf(PublishHandler);
     });
 
     it('should call handler methods in expected order and print result', async () => {
 
+        setArgsStub.resolves();
         handlePublishArgsStub.resolves();
-        loadPackageManagerStub.resolves();
+        runTestsStub.resolves();
         setProjectNameStub.resolves();
         publishStub.resolves();
 
         await command.execute();
 
-        expect(loadPackageManagerStub.calledBefore(setProjectNameStub)).to.be.true;
-        expect(setProjectNameStub.calledBefore(publishStub)).to.be.true;
-        expect(publishStub.calledBefore(printStub)).to.be.true;
-        expect(catchErrorStub.notCalled).to.be.true;
+        sandbox.assert.callOrder(setArgsStub, handlePublishArgsStub, runTestsStub, setProjectNameStub, publishStub, printStub);
+        sandbox.assert.notCalled(catchErrorStub);
     });
 
     it('should call catchError if any of methods rejects', async () => {
 
         const fakeError = 'fakeError';
+        setArgsStub.resolves();
         handlePublishArgsStub.resolves();
-        loadPackageManagerStub.resolves();
+        runTestsStub.resolves();
         setProjectNameStub.resolves();
         publishStub.rejects(fakeError);
 
         await command.execute();
 
-        expect(loadPackageManagerStub.calledBefore(setProjectNameStub)).to.be.true;
-        expect(setProjectNameStub.calledBefore(publishStub)).to.be.true;
-        expect(publishStub.calledBefore(catchErrorStub)).to.be.true;
-        expect(printStub.notCalled).to.be.true;
+        sandbox.assert.callOrder(setArgsStub, handlePublishArgsStub, runTestsStub, setProjectNameStub, publishStub, catchErrorStub);
         expect(catchErrorStub.calledWith(fakeError));
-        expect(catchErrorStub.calledAfter(publishStub)).to.be.true;
+        sandbox.assert.notCalled(printStub);
     });
 });

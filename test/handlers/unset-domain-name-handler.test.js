@@ -126,7 +126,7 @@ describe('Handler: unset-domain-name', () => {
         }
     });
 
-    it('should reject when no domain name specyfied', async () => {
+    it('should reject when no domain name specified', async () => {
 
         const deserializer = require('../../helpers/deserialize-object-from-file');
         const expectedResults = { Status: 404, Message: 'No domain name' };

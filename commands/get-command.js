@@ -18,8 +18,7 @@ class GetCommand extends Command {
         this.handler.setArgs(this.args);
         return this.handler.fetchProjects()
             .then(() => this.handler.askForProjectName())
-            .then(() => this.handler.cloneRepository())
-            .then(() => this.handler.getResult())
+            .then(() => this.handler.getUserProject())
             .then(() => this.print())
             .catch(e => this.catchError(e));
     }

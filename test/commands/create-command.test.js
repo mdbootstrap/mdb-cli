@@ -2,7 +2,7 @@
 
 const CreateCommand = require('../../commands/create-command.js');
 const AuthHandler = require('../../utils/auth-handler');
-const Command = require('../../commands/command.js');
+const Command = require('../../commands/command');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: Create', () => {
@@ -14,6 +14,7 @@ describe('Command: Create', () => {
         getProjectNameStub,
         addJenkinsfileStub,
         createStub,
+        pushToGitlabStub,
         printStub,
         catchErrorStub;
 
@@ -24,6 +25,7 @@ describe('Command: Create', () => {
         getProjectNameStub = sandbox.stub(command.handler, 'getProjectName');
         addJenkinsfileStub = sandbox.stub(command.handler, 'addJenkinsfile');
         createStub = sandbox.stub(command.handler, 'create');
+        pushToGitlabStub = sandbox.stub(command.handler, 'pushToGitlab');
         printStub = sandbox.stub(Command.prototype, 'print');
         catchErrorStub = sandbox.stub(Command.prototype, 'catchError');
     });
@@ -54,10 +56,11 @@ describe('Command: Create', () => {
         getProjectNameStub.resolves();
         addJenkinsfileStub.resolves();
         createStub.resolves();
+        pushToGitlabStub.resolves();
 
         await command.execute();
 
-        sandbox.assert.callOrder(getProjectNameStub, addJenkinsfileStub, createStub, printStub);
+        sandbox.assert.callOrder(getProjectNameStub, addJenkinsfileStub, createStub, pushToGitlabStub, printStub);
     });
 
     it('should call catchError if create method rejects', async () => {
@@ -74,6 +77,7 @@ describe('Command: Create', () => {
 
             sandbox.assert.callOrder(getProjectNameStub, addJenkinsfileStub, createStub, catchErrorStub);
             sandbox.assert.calledOnceWithExactly(catchErrorStub, fakeError);
+            sandbox.assert.notCalled(pushToGitlabStub);
             sandbox.assert.notCalled(printStub);
         }
     });

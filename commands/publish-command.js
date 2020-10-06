@@ -17,9 +17,8 @@ class PublishCommand extends Command {
 
     execute() {
 
-        this.handler.setArgs(this.args);
-        return this.handler.handlePublishArgs()
-            .then(() => this.handler.loadPackageManager())
+        return this.handler.setArgs(this.args)
+            .then(() => this.handler.handlePublishArgs())
             .then(() => this.handler.runTests())
             .then(() => this.handler.setProjectName())
             .then(() => this.handler.publish())

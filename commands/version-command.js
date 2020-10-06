@@ -9,14 +9,12 @@ class VersionCommand extends Command {
     constructor(authHandler = new AuthHandler(false)) {
 
         super(authHandler);
-        this.handler = new VersionHandler(authHandler);
+        this.handler = new VersionHandler();
     }
 
     execute() {
 
-        this.handler.loadPackageManager()
-            .then(() => this.handler.printVersion())
-            .catch(e => this.catchError(e));
+        this.print();
     }
 }
 

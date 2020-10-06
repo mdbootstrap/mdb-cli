@@ -1,21 +1,16 @@
 'use strict';
 
-const NpmPackageManager = require('../../utils/managers/npm-package-manager');
-const PackageManager = require('../../utils/managers/package-manager');
-const PackageManagers = require('../../models/package-managers');
 const VersionHandler = require('../../utils/version-handler');
-const AuthHandler = require('../../utils/auth-handler');
 const sandbox = require('sinon').createSandbox();
-const helpers = require('../../helpers');
+const { version } = require('../../package.json');
 
 describe('Handlers: Version', () => {
 
-    let authHandler, handler;
+    let handler;
 
     beforeEach(() => {
 
-        authHandler = new AuthHandler(false);
-        handler = new VersionHandler(authHandler);
+        handler = new VersionHandler();
     });
 
     afterEach(() => {
@@ -24,39 +19,15 @@ describe('Handlers: Version', () => {
         sandbox.restore();
     });
 
-    it('should have assigned authHandler', () => {
+    it('should have assigned result', () => {
 
-        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
-        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
-
-        handler = new VersionHandler();
-
-        expect(handler).to.have.property('authHandler');
+        expect(handler.result).to.be.eq(version);
     });
 
-    it('should load package manager', async () => {
+    it('should return expected result', () => {
 
-        sandbox.stub(helpers, 'deserializeJsonFile').resolves({ packageManager: PackageManagers.NPM });
+        const result = handler.getResult();
 
-        await handler.loadPackageManager();
-
-        expect(handler.packageManager).to.be.an.instanceOf(PackageManager);
-    });
-
-    it('should reject if error', async () => {
-
-        const fakeError = new Error('fakeError');
-        handler.packageManager = new NpmPackageManager();
-        const fakeReturnedStream = { on(event = 'error', cb) { if (event === 'error') cb(fakeError); } };
-        sandbox.stub(handler.packageManager, 'info').returns(fakeReturnedStream);
-
-        try{
-
-            await handler.printVersion();
-        } 
-        catch(err) {
-
-            expect(err.message).to.be.equal(fakeError.message);
-        }
+        expect(result).to.be.eq(version);
     });
 });

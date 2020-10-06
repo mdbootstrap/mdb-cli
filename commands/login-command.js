@@ -24,7 +24,7 @@ class LoginCommand extends Command {
                 
                 this.print();
             })
-            .catch(this.catchError);
+            .catch(e => this.catchError(e));
     }
 }
 
