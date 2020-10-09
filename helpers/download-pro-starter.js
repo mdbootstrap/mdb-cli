@@ -67,23 +67,22 @@ module.exports = {
 
                 try {
 
-                    readStream.pipe(unzip.Extract({ path: path })).on('close', () => {
+                    const tmpFolder = Path.join(path, 'tmp-mdb-projects-downloads-dir');
 
-                        if (packageName !== projectName) {
+                    readStream.pipe(unzip.Extract({ path: tmpFolder })).on('close', () => {
 
-                            const toRename = Path.join(path, packageName);
-                            const destination = Path.join(path, projectName);
+                        const toRename = Path.join(tmpFolder, packageName);
+                        const destination = Path.join(path, projectName);
 
-                            fs.rename(toRename, destination, (err) => {
+                        fs.rename(toRename, destination, (err) => {
 
-                                if (err) reject(err);
-                                else resolve(result);
-                            });
-                        } else {
+                            if (err) reject(err);
+                            else resolve(result);
+                        });
 
-                            resolve(result);
-                        }
+                        fs.rmdirSync(tmpFolder, { recursive: true });
                     });
+
                 } catch (e) {
 
                     result = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Error initializing your project' };

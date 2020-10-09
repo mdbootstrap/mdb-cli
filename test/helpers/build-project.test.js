@@ -116,7 +116,7 @@ describe('Helper: buildProject', () => {
         expect(result).to.include({ 'Status': CliStatus.SUCCESS, 'Message': 'Success' })
     });
 
-    it('should assign directoryPath to process.cwd() if not specyfied', (done) => {
+    it('should assign directoryPath to process.cwd() if not specified', (done) => {
 
         const processCwdSpy = sandbox.spy(process, 'cwd');
         const fakeReturnedStream = { on: (event, cb) => cb() };

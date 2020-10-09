@@ -12,6 +12,7 @@ class ProjectsHandler {
         this.result = [];
         this.authHeaders = {};
         this.authHandler = authHandler;
+        this.backend = false;
 
         this.setAuthHeader();
     }
@@ -27,7 +28,12 @@ class ProjectsHandler {
         return this.result;
     }
 
-    fetchProjects() {
+    setArgs(args) {
+
+        this.backend = args.some(arg => ['-b', '--backend'].includes(arg));
+    }
+
+    async fetchProjects() {
 
         const options = {
             port: config.port,
@@ -39,19 +45,44 @@ class ProjectsHandler {
 
         const http = new HttpWrapper(options);
 
-        return http.get().then((projects) => {
-            projects = typeof projects === 'string' ? JSON.parse(projects) : projects;
-            this.result = projects.map((project) => ({
-                'Project Name': project.projectName,
-                'Project URL': `https://mdbgo.dev/${project.userNicename}/${project.projectName}/`,
-                'Project Domain': project.domainName ? project.domainName : '-',
-                'Project Published': project.status === ProjectStatus.PUBLISHED ? new Date(project.publishDate).toLocaleString() : '-',
-                'Project Edited': new Date(project.editDate).toLocaleString(),
-                'Project Repo' : project.repoUrl ? project.repoUrl : '-'
-            }));
-        });
+        let projects = await http.get();
+        projects = typeof projects === 'string' ? JSON.parse(projects) : projects;
+
+        if (this.backend) {
+
+            const backendProjects = projects.filter(p => p.status === ProjectStatus.BACKEND);
+
+            if (backendProjects.length) {
+
+                return this.result = backendProjects.map(p => ({
+                    'Project Name': p.projectName,
+                    'Published': new Date(p.publishDate).toLocaleString(),
+                    'Edited': new Date(p.editDate).toLocaleString(),
+                    'Repo': p.repoUrl ? p.repoUrl : '-'
+                }));
+            }
+
+            this.result = [{ Status: 0, Message: 'You do not have any backend projects yet.' }];
+
+        } else {
+
+            const frontendProjects = projects.filter(p => p.status !== ProjectStatus.BACKEND);
+
+            if (frontendProjects.length) {
+
+                return this.result = frontendProjects.map(p => ({
+                    'Project Name': p.projectName,
+                    'Project URL': `https://mdbgo.dev/${p.userNicename}/${p.projectName}/`,
+                    'Domain': p.domainName ? p.domainName : '-',
+                    'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
+                    'Edited': new Date(p.editDate).toLocaleString(),
+                    'Repo': p.repoUrl ? p.repoUrl : '-'
+                }));
+            }
+
+            this.result = [{ Status: 0, Message: 'You do not have any projects yet.' }];
+        }
     }
 }
-
 
 module.exports = ProjectsHandler;

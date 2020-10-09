@@ -60,7 +60,7 @@ describe('Utils: loadPackageManager', () => {
         expect(result).to.be.an.instanceOf(YarnPackageManager);
     });
 
-    it('should ask about and save package manager if not specyfied', async () => {
+    it('should ask about and save package manager if not specified', async () => {
 
         deserializeJsonFileStub.resolves({ name: 'abc' });
         promptStub.resolves({ name: PackageManagers.YARN })
@@ -73,13 +73,14 @@ describe('Utils: loadPackageManager', () => {
         expect(result).to.be.an.instanceOf(YarnPackageManager);
     });
 
-    it('should ask about and save package manager if not specyfied and .mdb file does not exist', async () => {
+    it('should ask about and save package manager if not specified and .mdb file does not exist', async () => {
 
         deserializeJsonFileStub.rejects();
         promptStub.resolves({ name: PackageManagers.YARN })
         inquirerStub.returns(promptStub);
         existsSyncStub.onFirstCall().returns(false);
-        existsSyncStub.onSecondCall().returns(true);
+        existsSyncStub.onSecondCall().returns(false);
+        existsSyncStub.onThirdCall().returns(true);
         saveMdbConfigStub.resolves();
 
         const result = await loadPackageManager();
@@ -138,6 +139,22 @@ describe('Utils: loadPackageManager', () => {
 
             expect(err).to.be.eq(fakeError);
             sandbox.assert.calledOnce(errStub);
+        }
+    });
+
+    it('should reject if the .mdb file is invalid', async () => {
+
+        const expectedResult = { Status: 1, Message: '.mdb file is invalid. Please remove it and try again.' };
+        deserializeJsonFileStub.rejects('Unexpected token');
+        existsSyncStub.returns(true);
+
+        try {
+
+            await loadPackageManager();
+        }
+        catch (err) {
+
+            expect(err).to.be.deep.equal(expectedResult);
         }
     });
 });

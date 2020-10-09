@@ -8,6 +8,7 @@ const { eraseProjectDirectories } = require('./erase-project-directories');
 const { createPackageJson } = require('./create-package-json');
 const { deserializeJsonFile } = require('./deserialize-object-from-file');
 const { downloadProStarter } = require('./download-pro-starter');
+const { downloadUserProject } = require('./download-user-project');
 const { fetchProducts } = require('./fetch-products');
 const { getPackageName } = require('./get-project-name');
 const { getSorted } = require('./get-sorted-products');
@@ -29,6 +30,7 @@ module.exports = {
     serializeJsonFile,
     deserializeJsonFile,
     downloadProStarter,
+    downloadUserProject,
     fetchProducts,
     getPackageName,
     getSorted,

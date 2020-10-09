@@ -4,7 +4,10 @@ const config = require('../config');
 const AuthHandler = require('./auth-handler');
 const HttpWrapper = require('../utils/http-wrapper');
 const CliStatus = require('../models/cli-status');
+const childProcess = require('child_process');
 const helpers = require('../helpers');
+const path = require('path');
+const fs = require('fs');
 
 class CreateHandler {
 
@@ -14,6 +17,7 @@ class CreateHandler {
         this.name = '';
         this.cwd = process.cwd();
         this.authHandler = authHandler;
+        this.gitlabUrl = '';
 
         this.options = {
             port: config.port,
@@ -66,15 +70,57 @@ class CreateHandler {
 
             const { name, url, webhook, saved, pipeline } = result;
 
+            this.gitlabUrl = url;
+
             if (webhook === false) this.result.push({ Status: CliStatus.ERROR, Message: 'Gitlab webhook not added. Please write to our support https://mdbootstrap.com/support/' });
             if (saved === false) this.result.push({ Status: CliStatus.ERROR, Message: 'Project data not saved. Please write to our support https://mdbootstrap.com/support/' });
             if (pipeline === false) this.result.push({ Status: CliStatus.ERROR, Message: 'Jenkins pipeline not created. Please write to our support https://mdbootstrap.com/support/' });
 
-            console.log('\nRun the following commands to init repository and add remote URL\n');
-            console.log('\x1b[36m%s\x1b[0m', '  git init');
-            console.log('\x1b[36m%s\x1b[0m', '  git remote add origin ' + url + '\n');
+            this.result.push({ Status: CliStatus.HTTP_SUCCESS, Message: `Project ${name} successfully created. Repository url: ${url} ` });
+        });
+    }
 
-            this.result.push({ Status: CliStatus.HTTP_SUCCESS, Message: `Project ${name} successfully created. Repository url: ${url}` });
+    pushToGitlab() {
+
+        const gitConfigPath = path.join(this.cwd, '.git', 'config');
+
+        return new Promise((resolve, reject) => {
+
+            if (fs.existsSync(gitConfigPath)) {
+
+                childProcess.exec(`git remote set-url origin ${this.gitlabUrl} && git push -u origin master`, (err) => {
+    
+                    if (err && err.message && err.message.toLowerCase().indexOf('authentication failed') !== -1) {
+
+                        console.log('\n\x1b[31m%s\x1b[0m', 'Note:', 'There were some authentication problems. Please make sure you provided correct username and password. If you are certain that the credentials are correct and still see this message, please log into your MDB Go GitLab account to activate it here: https://git.mdbgo.com/. Once you do that run the following command:\n');
+                        console.log('\x1b[36m%s\x1b[0m', '\tgit push -u origin master\n\n');
+
+                        return resolve();
+                    } else if (err) {
+
+                        return reject(err.message);
+                    }
+
+                    resolve();
+                });
+            } else {
+
+                childProcess.exec(`git init && git remote add origin ${this.gitlabUrl} && git add . && git commit -m "Initial commit" && git push -u origin master`, (err) => {
+
+                    if (err && err.message && err.message.toLowerCase().indexOf('authentication failed') !== -1) {
+
+                        console.log('\n\x1b[31m%s\x1b[0m', 'Note:', 'There were some authentication problems. Please make sure you provided correct username and password. If you are certain that the credentials are correct and still see this message, please log into your MDB Go GitLab account to activate it here: https://git.mdbgo.com/. Once you do that run the following command:\n');
+                        console.log('\x1b[36m%s\x1b[0m', '\tgit push -u origin master\n\n');
+
+                        return resolve();
+                    } else if (err) {
+
+                        return reject(err.message);
+                    }
+
+                    resolve();
+                });
+            }
         });
     }
 }

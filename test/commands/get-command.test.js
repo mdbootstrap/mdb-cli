@@ -12,7 +12,7 @@ describe('Command: Get', () => {
         setArgsStub,
         fetchProjectsStub,
         askForProjectNameStub,
-        cloneRepositoryStub,
+        getUserProjectStub,
         getResultStub,
         printStub,
         catchErrorStub;
@@ -24,7 +24,7 @@ describe('Command: Get', () => {
         setArgsStub = sandbox.stub(command.handler, 'setArgs');
         fetchProjectsStub = sandbox.stub(command.handler, 'fetchProjects');
         askForProjectNameStub = sandbox.stub(command.handler, 'askForProjectName');
-        cloneRepositoryStub = sandbox.stub(command.handler, 'cloneRepository');
+        getUserProjectStub = sandbox.stub(command.handler, 'getUserProject');
         getResultStub = sandbox.stub(command.handler, 'getResult');
         printStub = sandbox.stub(command, 'print');
         catchErrorStub = sandbox.stub(command, 'catchError');
@@ -55,16 +55,12 @@ describe('Command: Get', () => {
 
         fetchProjectsStub.resolves();
         askForProjectNameStub.resolves();
-        cloneRepositoryStub.resolves();
+        getUserProjectStub.resolves();
 
         await command.execute();
 
-        expect(setArgsStub.calledBefore(fetchProjectsStub)).to.be.true;
-        expect(fetchProjectsStub.calledBefore(askForProjectNameStub)).to.be.true;
-        expect(askForProjectNameStub.calledBefore(cloneRepositoryStub)).to.be.true;
-        expect(cloneRepositoryStub.calledBefore(getResultStub)).to.be.true;
-        expect(getResultStub.calledBefore(printStub)).to.be.true;
-        expect(catchErrorStub.notCalled).to.be.true;
+        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, getUserProjectStub, printStub);
+        sandbox.assert.notCalled(catchErrorStub);
     });
 
     it('should catch error if fetchProjects() rejects', async () => {
@@ -73,12 +69,11 @@ describe('Command: Get', () => {
 
         await command.execute();
 
-        expect(setArgsStub.calledBefore(fetchProjectsStub)).to.be.true;
-        expect(fetchProjectsStub.called).to.be.true;
-        expect(askForProjectNameStub.notCalled).to.be.true;
-        expect(cloneRepositoryStub.notCalled).to.be.true;
-        expect(getResultStub.notCalled).to.be.true;
-        expect(catchErrorStub.calledAfter(fetchProjectsStub)).to.be.true;
+        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, catchErrorStub);
+        sandbox.assert.notCalled(askForProjectNameStub);
+        sandbox.assert.notCalled(getUserProjectStub);
+        sandbox.assert.notCalled(getResultStub);
+        sandbox.assert.notCalled(printStub);
     });
 
     it('should catch error if askForProjectName() rejects', async () => {
@@ -88,27 +83,22 @@ describe('Command: Get', () => {
 
         await command.execute();
 
-        expect(setArgsStub.calledBefore(fetchProjectsStub)).to.be.true;
-        expect(fetchProjectsStub.calledBefore(askForProjectNameStub)).to.be.true;
-        expect(askForProjectNameStub.called).to.be.true;
-        expect(cloneRepositoryStub.notCalled).to.be.true;
-        expect(getResultStub.notCalled).to.be.true;
-        expect(catchErrorStub.calledAfter(askForProjectNameStub)).to.be.true;
+        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, catchErrorStub);
+        sandbox.assert.notCalled(getUserProjectStub);
+        sandbox.assert.notCalled(getResultStub);
+        sandbox.assert.notCalled(printStub);
     });
 
-    it('should catch error if cloneRepository() rejects', async () => {
+    it('should catch error if getUserProject() rejects', async () => {
 
         fetchProjectsStub.resolves();
         askForProjectNameStub.resolves();
-        cloneRepositoryStub.rejects('fakeError');
+        getUserProjectStub.rejects('fakeError');
 
         await command.execute();
 
-        expect(setArgsStub.calledBefore(fetchProjectsStub)).to.be.true;
-        expect(fetchProjectsStub.calledBefore(askForProjectNameStub)).to.be.true;
-        expect(askForProjectNameStub.calledBefore(cloneRepositoryStub)).to.be.true;
-        expect(cloneRepositoryStub.called).to.be.true;
-        expect(getResultStub.notCalled).to.be.true;
-        expect(catchErrorStub.calledAfter(cloneRepositoryStub)).to.be.true;
+        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, getUserProjectStub, catchErrorStub);
+        sandbox.assert.notCalled(getResultStub);
+        sandbox.assert.notCalled(printStub);
     });
 });

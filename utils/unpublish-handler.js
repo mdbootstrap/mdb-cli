@@ -1,8 +1,10 @@
 'use strict';
 
+const config = require('../config');
+const inquirer = require('inquirer');
+const helpers = require('../helpers');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
-const config = require('../config');
 const HttpWrapper = require('../utils/http-wrapper');
 
 class UnpublishHandler {
@@ -10,12 +12,12 @@ class UnpublishHandler {
     constructor(authHandler = new AuthHandler()) {
 
         this.result = [];
+        this.projects = [];
         this.projectName = '';
         this.options = {
             port: config.port,
             hostname: config.host,
-            path: '',
-            method: 'DELETE'
+            path: '/project'
         };
         this.authHandler = authHandler;
         this.args = [];
@@ -39,47 +41,61 @@ class UnpublishHandler {
         return this.result;
     }
 
+    async fetchProjects() {
+
+        const http = new HttpWrapper(this.options);
+
+        let projects = await http.get();
+        projects = typeof projects === 'string' ? JSON.parse(projects) : projects;
+
+        this.projects = projects.map(p => ({ name: p.projectName }));
+    }
+
     async askForProjectName() {
+
+        if (this.projects.length === 0) {
+
+            return Promise.reject([{ Status: CliStatus.NOT_FOUND, Message: 'You do not have any projects yet.' }]);
+        }
 
         if (this.args.length > 0) {
 
             this.projectName = this.args[0];
-            return Promise.resolve();
+
+            return;
         }
 
-        const prompt = require('inquirer').createPromptModule();
+        const select = await inquirer.createPromptModule()([{ type: 'list', name: 'name', message: 'Choose project', choices: this.projects }]);
 
-        const answers = await prompt([
-            {
-                type: 'text',
-                message: 'Enter project name',
-                name: 'name',
-                validate: (value_1) => {
-                    /* istanbul ignore next */
-                    const valid = Boolean(value_1);
-                    /* istanbul ignore next */
-                    return valid || 'Project name must not be empty.';
-                }
-            }
-        ]);
-        this.projectName = answers.name;
+        this.projectName = select.name;
     }
 
-    unpublish() {
+    async confirmSelection() {
+
+        const name = await helpers.showTextPrompt('This operation cannot be undone. Confirm deleting selected project by typing its name:', 'Project name must not be empty.');
+
+        if (name !== this.projectName) {
+            
+            return Promise.reject({ Status: CliStatus.CLI_ERROR, Message: 'The names do not match.' });
+        }
+    }
+
+    async unpublish() {
 
         console.log(`Unpublishing project ${this.projectName}...`);
 
         this.options.path = `/project/unpublish/${this.projectName}`;
         const http = new HttpWrapper(this.options);
-        return http.delete()
-            .then((result) => {
 
-                this.result = [{ 'Status': CliStatus.HTTP_SUCCESS, 'Message': result }];
-            })
-            .catch((err) => {
+        try {
 
-                this.result = [{ 'Status': err.statusCode, 'Message': err.message }];
-            });
+            const result = await http.delete();
+            this.result = [{ 'Status': CliStatus.HTTP_SUCCESS, 'Message': result }];
+        }
+        catch (err) {
+
+            this.result = [{ 'Status': err.statusCode, 'Message': err.message }];
+        }
     }
 }
 

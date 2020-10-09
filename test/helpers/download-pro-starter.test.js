@@ -148,7 +148,7 @@ describe('Helper: download pro starter', () => {
 
             it('should call path.join', () => {
 
-                expect(joinStub.calledTwice).to.be.true;
+                expect(joinStub.callCount).to.be.equal(3);
             });
 
             it('should call fs.rename', () => {
@@ -297,16 +297,14 @@ describe('Helper: download pro starter', () => {
 
             it('should call path.join with packageName', () => {
 
-                expectedArgs = [fakePath, fakePackageName];
+                expectedArgs = [fakePath, 'tmp-mdb-projects-downloads-dir'];
 
                 expect(joinStub.firstCall.args).to.be.deep.equal(expectedArgs);
             });
 
             it('should call path.join with projectName', () => {
 
-                expectedArgs = [fakePath, fakeProjectName];
-
-                expect(joinStub.secondCall.args).to.be.deep.equal(expectedArgs);
+                expect(joinStub.secondCall.args[1]).to.be.equal(fakePackageName);
             });
 
             it('should call fs.rename', () => {

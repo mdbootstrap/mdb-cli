@@ -11,6 +11,7 @@ const childProcess = require('child_process');
 const helpers = require('../../helpers');
 const config = require('../../config');
 const inquirer = require('inquirer');
+const fse = require('fs-extra');
 const path = require('path');
 const fs = require('fs');
 
@@ -34,7 +35,6 @@ describe('Handler: publish', () => {
 
         authHandler = new AuthHandler(false);
         publishHandler = new PublishHandler(authHandler);
-        publishHandler.packageManager = fakeManager;
         publishHandler.cwd = fakeCwd;
     });
 
@@ -44,7 +44,7 @@ describe('Handler: publish', () => {
         sandbox.restore();
     });
 
-    it('should have assigned authHandler if not specyfied in constructor', () => {
+    it('should have assigned authHandler if not specified in constructor', () => {
 
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
@@ -65,41 +65,83 @@ describe('Handler: publish', () => {
 
     describe('Method: setArgs', () => {
 
-        it('should setArgs set useFtp property when --ftp flag is present', () => {
+        beforeEach(() => sandbox.stub(config, 'backendTechnologies').value(['node']));
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should set useFtp property when --ftp flag is present', async () => {
 
             const fakeArgs = ['--ftp'];
 
-            publishHandler.setArgs(fakeArgs);
+            await publishHandler.setArgs(fakeArgs);
 
             expect(publishHandler.useFtp).to.be.equal(true);
         });
 
-        it('should setArgs set test property when --test flag is present', () => {
+        it('should set test property when --test flag is present', async () => {
 
             const fakeArgs = ['--test'];
 
-            publishHandler.setArgs(fakeArgs);
+            await publishHandler.setArgs(fakeArgs);
 
             expect(publishHandler.test).to.be.equal(true);
         });
 
-        it('should setArgs set test property when -t flag is present', () => {
+        it('should set test property when -t flag is present', async () => {
 
             const fakeArgs = ['-t'];
 
-            publishHandler.setArgs(fakeArgs);
+            await publishHandler.setArgs(fakeArgs);
 
             expect(publishHandler.test).to.be.equal(true);
         });
 
-        it('should setArgs not set properties when flags are not present', () => {
+        it('should not set properties when flags are not present', async () => {
 
             const fakeArgs = ['--abc'];
 
-            publishHandler.setArgs(fakeArgs);
+            await publishHandler.setArgs(fakeArgs);
 
             expect(publishHandler.test).to.be.equal(false);
             expect(publishHandler.useFtp).to.be.equal(false);
+            expect(publishHandler.backendTechnology).to.be.equal(undefined);
+        });
+
+        it('should set backendTechnology property when -b flag is present', async () => {
+
+            const fakeArgs = ['-b=node'];
+
+            await publishHandler.setArgs(fakeArgs);
+
+            expect(publishHandler.backendTechnology).to.be.equal('node');
+        });
+
+        it('should set backendTechnology property when --backend flag is present', async () => {
+
+            const fakeArgs = ['--backend=node'];
+
+            await publishHandler.setArgs(fakeArgs);
+
+            expect(publishHandler.backendTechnology).to.be.equal('node');
+        });
+
+        it('should reject if technology is not supported', async () => {
+
+            const fakeArgs = ['-b=php'];
+
+            try {
+
+                await publishHandler.setArgs(fakeArgs);
+            }
+            catch (err) {
+
+                expect(publishHandler.backendTechnology).to.be.equal('php');
+                expect(err).to.deep.eq({ Status: 1, Message: 'This technology is not supported. Allowed technologies: node' });
+            }
         });
     });
 
@@ -128,6 +170,18 @@ describe('Handler: publish', () => {
     });
 
     describe('Method: publish', () => {
+
+        it('should publish method call console.log informing about required port 3000', async () => {
+
+            sandbox.stub(publishHandler, 'useFtp').value(true);
+            sandbox.stub(publishHandler, 'backendTechnology').value('fakeBackend');
+            sandbox.stub(publishHandler, 'uploadToFtp');
+            const consoleStub = sandbox.spy(console, 'log');
+
+            await publishHandler.publish();
+
+            expect(consoleStub.calledWith(sandbox.match.any, 'Note:', sandbox.match(/3000/))).to.be.true;
+        });
 
         it('should publish method call uploadToFtp when useFtp is equal true', async () => {
 
@@ -664,7 +718,7 @@ describe('Handler: publish', () => {
 
     describe('Method: getSavedSettings', () => {
 
-        it('should getSavedSettings read .mdb file and set useGitlab if settings have been saved', async () => {
+        it('should read .mdb file and set useGitlab if settings have been saved', async () => {
 
             sandbox.stub(fs, 'existsSync').returns(true);
             sandbox.stub(path, 'join').returns('fake/path');
@@ -675,7 +729,7 @@ describe('Handler: publish', () => {
             expect(publishHandler.useGitlab).to.be.equal(true);
         });
 
-        it('should getSavedSettings read .mdb file and set useGitlab if settings have not been saved', async () => {
+        it('should read .mdb file and set useGitlab if settings have not been saved', async () => {
 
             sandbox.stub(fs, 'existsSync').returns(true);
             sandbox.stub(path, 'join').returns('fake/path');
@@ -686,7 +740,7 @@ describe('Handler: publish', () => {
             expect(publishHandler.useGitlab).to.be.equal(false);
         });
 
-        it('should getSavedSettings set useGitlab to false when .mdb file is missing', async () => {
+        it('should set useGitlab to false when .mdb file is missing', async () => {
 
             sandbox.stub(fs, 'existsSync').returns(false);
             sandbox.stub(path, 'join').returns('fake/path');
@@ -694,6 +748,22 @@ describe('Handler: publish', () => {
             await publishHandler.getSavedSettings();
 
             expect(publishHandler.useGitlab).to.be.equal(false);
+        });
+
+        it('should reject if .mdb file is invalid', async () => {
+
+            sandbox.stub(path, 'join').returns('fake/path');
+            sandbox.stub(helpers, 'deserializeJsonFile').rejects('Unexpected token');
+            const expectedResult = { Status: 1, Message: '.mdb file is invalid. Please remove it and try again.' };
+
+            try {
+
+                await publishHandler.getSavedSettings();
+            }
+            catch (err) {
+
+                expect(err).to.deep.equal(expectedResult);
+            }
         });
     });
 
@@ -880,6 +950,7 @@ describe('Handler: publish', () => {
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
         sandbox.stub(helpers, 'deserializeJsonFile').rejects('fakeError');
         sandbox.stub(publishHandler, 'useFtp').value(true);
+        sandbox.stub(publishHandler, 'test').value(true);
         sandbox.stub(helpers, 'saveMdbConfig').resolves();
 
         await publishHandler.loadPackageManager();
@@ -901,6 +972,7 @@ describe('Handler: publish', () => {
         it('should reject if error', async () => {
 
             sandbox.stub(publishHandler, 'test').value(true);
+            sandbox.stub(publishHandler, 'loadPackageManager').resolves();
             sandbox.stub(publishHandler, 'packageManager').value({ test() { } })
             const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(CliStatus.ERROR); } };
             sandbox.stub(publishHandler.packageManager, 'test').returns(fakeReturnedStream);
@@ -918,6 +990,7 @@ describe('Handler: publish', () => {
         it('should resolve if no errors', async () => {
 
             sandbox.stub(publishHandler, 'test').value(true);
+            sandbox.stub(publishHandler, 'loadPackageManager').resolves();
             sandbox.stub(publishHandler, 'packageManager').value({ test() { } })
             const fakeReturnedStream = { on(event = 'exit', cb) { if (event === 'exit') cb(CliStatus.SUCCESS); } };
             sandbox.stub(publishHandler.packageManager, 'test').returns(fakeReturnedStream);
@@ -979,6 +1052,19 @@ describe('Handler: publish', () => {
             expect(handleMissingPackageJsonStub.called).to.be.true;
         });
 
+        it('should call setPhpProjectName() if it is a php project', async () => {
+
+            const err = new Error('ENOENT');
+            err.code = 'ENOENT';
+            deserializeJsonFileStub.rejects(err);
+            sandbox.stub(publishHandler, 'backendTechnology').value('php7');
+            const setPhpProjectNameStub = sandbox.stub(publishHandler, 'setPhpProjectName');
+
+            await publishHandler.setProjectName();
+
+            sandbox.assert.calledOnce(setPhpProjectNameStub);
+        });
+
         it('should not call handleMissingPackageJson() if error code is diffrent from ENOENT', async () => {
 
             const err = new Error('Fake Err');
@@ -996,6 +1082,64 @@ describe('Handler: publish', () => {
                 expect(handleMissingPackageJsonStub.called).to.be.false;
                 expect(err).to.deep.include(expectedResult);
             }
+        });
+    });
+
+    describe('Method: setPhpProjectName', () => {
+
+        let existsSyncStub,
+            deserializeJsonFileStub,
+            serializeJsonFileStub,
+            showTextPromptStub,
+            writeFileSyncStub;
+
+        beforeEach(() => {
+
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
+            serializeJsonFileStub = sandbox.stub(helpers, 'serializeJsonFile');
+            showTextPromptStub = sandbox.stub(helpers, 'showTextPrompt');
+            writeFileSyncStub = sandbox.stub(fs, 'writeFileSync');
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should set php project name if defined in .mdb file', async () => {
+
+            existsSyncStub.returns(true);
+            deserializeJsonFileStub.resolves({ projectName: fakeProjectName });
+
+            await publishHandler.setPhpProjectName();
+
+            expect(publishHandler.projectName).to.be.eq(fakeProjectName);
+        });
+
+        it('should set php project name if not defined in .mdb file', async () => {
+
+            existsSyncStub.returns(true);
+            deserializeJsonFileStub.resolves({});
+            showTextPromptStub.resolves(fakeProjectName);
+            serializeJsonFileStub.resolves();
+
+            await publishHandler.setPhpProjectName();
+
+            expect(publishHandler.projectName).to.be.eq(fakeProjectName);
+            sandbox.assert.calledOnce(serializeJsonFileStub);
+        });
+
+        it('should set php project name if .mdb file does not exist', async () => {
+
+            existsSyncStub.returns(false);
+            showTextPromptStub.resolves(fakeProjectName);
+
+            await publishHandler.setPhpProjectName();
+
+            expect(publishHandler.projectName).to.be.eq(fakeProjectName);
+            sandbox.assert.calledOnce(writeFileSyncStub);
         });
     });
 
@@ -1034,6 +1178,8 @@ describe('Handler: publish', () => {
         it('should handle missing package.json', async () => {
 
             const fakeMessage = { 'Status': CliStatus.SUCCESS, 'Message': 'Fake message' };
+            sandbox.stub(publishHandler, 'loadPackageManager').resolves();
+            sandbox.stub(publishHandler, 'packageManager').value(fakeManager);
             const createPackageJsonStub = sandbox.stub(helpers, 'createPackageJson').resolves(fakeMessage);
             const setNameStub = sandbox.stub(publishHandler, 'setProjectName').resolves();
 
@@ -1046,6 +1192,7 @@ describe('Handler: publish', () => {
 
         it('should send error message and call process.exit if package.json not created', async () => {
 
+            sandbox.stub(publishHandler, 'loadPackageManager').resolves();
             const fakeMessage = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': 'Fake error message' };
             const expectedResult = { 'Status': CliStatus.ERROR, 'Message': 'Missing package.json file.' }
             const createPackageJsonStub = sandbox.stub(helpers, 'createPackageJson').rejects(fakeMessage);
@@ -1073,6 +1220,8 @@ describe('Handler: publish', () => {
 
         const distPath = 'fake/cwd/dist';
         const buildPath = 'fake/cwd/build';
+        const packageJsonPath = 'fake/cwd/package.json';
+
 
         let consoleLogStub,
             existsSyncStub,
@@ -1084,6 +1233,7 @@ describe('Handler: publish', () => {
 
             consoleLogStub = sandbox.stub(console, 'log');
             existsSyncStub = sandbox.stub(fs, 'existsSync');
+            sandbox.stub(publishHandler, 'loadPackageManager').resolves();
             buildProjectStub = sandbox.stub(helpers, 'buildProject');
             deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
             serializeJsonFileStub = sandbox.stub(helpers, 'serializeJsonFile');
@@ -1095,7 +1245,7 @@ describe('Handler: publish', () => {
             sandbox.restore();
         });
 
-        it('should resolve if no build script specyfied', async () => {
+        it('should resolve if no build script specified', async () => {
 
             deserializeJsonFileStub.resolves({ scripts: {} });
 
@@ -1128,14 +1278,16 @@ describe('Handler: publish', () => {
             sandbox.stub(publishHandler, 'cwd').value(fakeCwd);
             joinStub.withArgs(fakeCwd, 'dist').returns(distPath);
             joinStub.withArgs(fakeCwd, 'build').returns(buildPath);
+            joinStub.withArgs(fakeCwd, 'package.json').returns(packageJsonPath);
             deserializeJsonFileStub.resolves({ scripts: { build: 'fake build script' }, dependencies: {} });
+            existsSyncStub.withArgs(packageJsonPath).returns(true);
             existsSyncStub.withArgs(distPath).returns(false);
             existsSyncStub.withArgs(buildPath).returns(true);
 
             await publishHandler.buildProject();
 
             expect(buildProjectStub.called).to.be.true;
-            expect(publishHandler.cwd).to.be.equal(buildPath);
+            expect(publishHandler.cwd).to.be.equal(fakeCwd);
             expect(consoleLogStub.called).to.be.true;
         });
 
@@ -1145,14 +1297,16 @@ describe('Handler: publish', () => {
             sandbox.stub(publishHandler, 'cwd').value(fakeCwd);
             joinStub.withArgs(fakeCwd, 'dist').returns(distPath);
             joinStub.withArgs(fakeCwd, 'build').returns(buildPath);
+            joinStub.withArgs(fakeCwd, 'package.json').returns(packageJsonPath);
             deserializeJsonFileStub.resolves({ scripts: { build: 'fake build script' }, dependencies: {} });
+            existsSyncStub.withArgs(packageJsonPath).returns(true);
             existsSyncStub.withArgs(distPath).returns(true);
             existsSyncStub.withArgs(buildPath).returns(false);
 
             await publishHandler.buildProject();
 
             expect(buildProjectStub.called).to.be.true;
-            expect(publishHandler.cwd).to.be.equal(distPath);
+            expect(publishHandler.cwd).to.be.equal(fakeCwd);
             expect(consoleLogStub.called).to.be.true;
         });
 
@@ -1160,6 +1314,7 @@ describe('Handler: publish', () => {
 
             const readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
             const writeFileStub = sandbox.stub(fs, 'writeFileSync');
+            const moveSyncStub = sandbox.stub(fse, 'moveSync');
             deserializeJsonFileStub.resolves({
                 defaultProject: fakeProjectName,
                 scripts: { build: 'build' },
@@ -1168,12 +1323,14 @@ describe('Handler: publish', () => {
             buildProjectStub.resolves();
             publishHandler.cwd = fakeCwd;
             publishHandler.projectName = fakeProjectName;
+            existsSyncStub.returns(true);
 
             await publishHandler.buildProject();
 
             expect(readFileStub.calledOnce).to.be.true;
             expect(writeFileStub.calledOnce).to.be.true;
-            expect(publishHandler.cwd).to.be.equal('fake/cwd/dist/fakeProjectName');
+            expect(moveSyncStub.calledTwice).to.be.true;
+            expect(publishHandler.cwd).to.be.equal(fakeCwd);
         });
 
         it('should recognize and build Vue project if config file exists', async () => {
@@ -1190,12 +1347,13 @@ describe('Handler: publish', () => {
             await publishHandler.buildProject();
 
             expect(buildProjectStub.calledOnce).to.be.true;
-            expect(publishHandler.cwd).to.be.equal('fake/cwd/dist');
+            expect(publishHandler.cwd).to.be.equal(fakeCwd);
         });
 
         it('should recognize Vue project and add config file if not exists', async () => {
 
-            existsSyncStub.returns(false);
+            existsSyncStub.onFirstCall().returns(true);
+            existsSyncStub.onSecondCall().returns(false);
             const writeFileStub = sandbox.stub(fs, 'writeFileSync');
             deserializeJsonFileStub.resolves({
                 scripts: { build: 'build' },
@@ -1230,9 +1388,9 @@ describe('Handler: publish', () => {
 
             expect(buildProjectStub.calledOnce).to.be.true;
             expect(serializeJsonFileStub.callCount).to.equal(2);
-            expect(readFileStub.callCount).to.equal(3);
+            expect(readFileStub.callCount).to.equal(2);
             expect(writeFileStub.callCount).to.equal(2);
-            expect(publishHandler.cwd).to.be.equal('fake/cwd/build');
+            expect(publishHandler.cwd).to.be.equal(fakeCwd);
         });
 
         it('should recognize and build React typescript project', async () => {
@@ -1242,7 +1400,8 @@ describe('Handler: publish', () => {
                 scripts: { build: 'build' },
                 dependencies: { 'react': '7.5.4' }
             });
-            existsSyncStub.returns(false);
+            existsSyncStub.onFirstCall().returns(true);
+            existsSyncStub.onSecondCall().returns(false);
             serializeJsonFileStub.resolves();
             buildProjectStub.resolves();
             publishHandler.cwd = fakeCwd;
@@ -1253,7 +1412,7 @@ describe('Handler: publish', () => {
 
             expect(buildProjectStub.calledOnce).to.be.true;
             expect(serializeJsonFileStub.callCount).to.equal(2);
-            expect(publishHandler.cwd).to.be.equal('fake/cwd/build');
+            expect(publishHandler.cwd).to.be.equal(fakeCwd);
         });
     });
 
@@ -1261,7 +1420,7 @@ describe('Handler: publish', () => {
 
         beforeEach(() => sandbox.stub(console, 'log'));
 
-        it('should publish project using archiver nd return expected result after unsuccessful publication', async () => {
+        it('should publish project using archiver and return expected result after unsuccessful publication', async () => {
 
             const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
             const responseOnStub = sandbox.stub();
@@ -1279,11 +1438,13 @@ describe('Handler: publish', () => {
             archiveOnStub.withArgs('warning').yields('fake warning');
 
             const finalizeStub = sandbox.stub();
+            const globStub = sandbox.stub();
             const directoryStub = sandbox.stub();
             const pipeStub = sandbox.stub();
             const archiveProject = {
                 on: archiveOnStub,
                 pipe: pipeStub,
+                glob: globStub,
                 directory: directoryStub,
                 finalize: finalizeStub,
                 pointer: sandbox.stub().returns(123)
@@ -1291,14 +1452,16 @@ describe('Handler: publish', () => {
             const createRequestStub = sandbox.stub(HttpWrapper.prototype, 'createRequest').returns(fakeRequest).yields(fakeResponse);
             sandbox.stub(ArchiverWrapper, 'archiveProject').returns(archiveProject);
             publishHandler.cwd = fakeCwd;
+            publishHandler.backendTechnology = 'node';
             publishHandler.projectName = fakeProjectName;
+            const globOptions = { cwd: fakeCwd, ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**'] };
 
             await publishHandler.uploadFiles();
 
             expect(createRequestStub.calledOnce).to.be.true;
             expect(finalizeStub.calledOnce).to.be.true;
             expect(pipeStub.calledWith(fakeRequest)).to.be.true;
-            expect(directoryStub.calledWith(fakeCwd, fakeProjectName)).to.be.true;
+            expect(globStub.calledWith('**', globOptions)).to.be.true;
             expect(publishHandler.result).to.deep.include({ 'Status': 123, 'Message': 'fakeMessage' });
         });
 
@@ -1320,11 +1483,13 @@ describe('Handler: publish', () => {
             archiveOnStub.withArgs('warning').yields('fake warning');
 
             const finalizeStub = sandbox.stub();
+            const globStub = sandbox.stub();
             const directoryStub = sandbox.stub();
             const pipeStub = sandbox.stub();
             const archiveProject = {
                 on: archiveOnStub,
                 pipe: pipeStub,
+                glob: globStub,
                 directory: directoryStub,
                 finalize: finalizeStub,
                 pointer: sandbox.stub().returns(123)
@@ -1333,13 +1498,14 @@ describe('Handler: publish', () => {
             sandbox.stub(ArchiverWrapper, 'archiveProject').returns(archiveProject);
             publishHandler.cwd = fakeCwd;
             publishHandler.projectName = fakeProjectName;
+            const globOptions = { cwd: fakeCwd, ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**'] };
 
             await publishHandler.uploadFiles();
 
             expect(createRequestStub.calledOnce).to.be.true;
             expect(finalizeStub.calledOnce).to.be.true;
             expect(pipeStub.calledWith(fakeRequest)).to.be.true;
-            expect(directoryStub.calledWith(fakeCwd, fakeProjectName)).to.be.true;
+            expect(globStub.calledWith('**', globOptions)).to.be.true;
             expect(publishHandler.result).to.deep.include({ Status: CliStatus.SUCCESS, Message: 'Sent 0.000 Mb' });
         });
     });

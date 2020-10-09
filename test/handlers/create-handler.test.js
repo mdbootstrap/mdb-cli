@@ -1,10 +1,13 @@
 'use strict';
 
 const CreateHandler = require('../../utils/create-handler');
+const HttpWrapper = require('../../utils/http-wrapper');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
-const helpers = require('../../helpers');
 const sandbox = require('sinon').createSandbox();
+const helpers = require('../../helpers');
+const cp = require('child_process');
+const fs = require('fs');
 
 describe('Handler: Create', () => {
 
@@ -68,12 +71,12 @@ describe('Handler: Create', () => {
 
             await handler.getProjectName();
 
-        } catch(err) {
-            
+        } catch (err) {
+
             expect(logStub.calledOnce).to.be.true;
             expect(err).to.deep.include({ Status: CliStatus.ERROR, Message: 'Problem with reading package.json' });
         }
-        
+
     });
 
     it('should addJenkinsfile call createJenkinsfile helper', async () => {
@@ -90,33 +93,100 @@ describe('Handler: Create', () => {
 
     it('should create() request the server and return expected result', async () => {
 
-        const HttpWrapper = require('../../utils/http-wrapper');
         const fakeResult = { name: 'fakeName', url: 'http://fake/repo.url', saved: true, webhook: true, pipeline: true };
         sandbox.stub(HttpWrapper.prototype, 'post').resolves(fakeResult);
-        const expectedResult = { Status: CliStatus.HTTP_SUCCESS, Message: 'Project fakeName successfully created. Repository url: http://fake/repo.url' };
-        const logStub = sandbox.stub(console, 'log');
+        const expectedResult = { Status: CliStatus.HTTP_SUCCESS, Message: 'Project fakeName successfully created. Repository url: http://fake/repo.url ' };
 
         await handler.create();
 
-        expect(logStub.callCount).to.be.equal(3);
         expect(handler.result).to.deep.include(expectedResult);
     });
 
     it('should create() method request the server and return and parse expected result', async () => {
 
-        const HttpWrapper = require('../../utils/http-wrapper');
         const fakeResult = '{"name":"fakeName","url":"http://fake/repo.url","saved":false,"webhook":false,"pipeline":false}';
-        const res1 = { Status: CliStatus.HTTP_SUCCESS, Message: 'Project fakeName successfully created. Repository url: http://fake/repo.url' };
+        const res1 = { Status: CliStatus.HTTP_SUCCESS, Message: 'Project fakeName successfully created. Repository url: http://fake/repo.url ' };
         const res2 = { Status: CliStatus.ERROR, Message: 'Project data not saved. Please write to our support https://mdbootstrap.com/support/' };
         const res3 = { Status: CliStatus.ERROR, Message: 'Jenkins pipeline not created. Please write to our support https://mdbootstrap.com/support/' };
         sandbox.stub(HttpWrapper.prototype, 'post').resolves(fakeResult);
-        const logStub = sandbox.stub(console, 'log');
 
         await handler.create();
 
-        expect(logStub.callCount).to.be.equal(3);
         expect(handler.result).to.deep.include(res1);
         expect(handler.result).to.deep.include(res2);
         expect(handler.result).to.deep.include(res3);
+    });
+
+    describe('Method: pushToGitlab', () => {
+
+        const fakeError = new Error('fakeError');
+        const fakeGutlabUrl = 'http://fake/repo.url';
+
+        let existsSyncStub, execStub;
+
+        beforeEach(() => {
+
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            execStub = sandbox.stub(cp, 'exec');
+            sandbox.stub(handler, 'gitlabUrl').value(fakeGutlabUrl);
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should add remote and push to gitlab', async () => {
+
+            existsSyncStub.returns(true);
+            execStub.yields(undefined);
+
+            await handler.pushToGitlab();
+
+            sandbox.assert.calledWith(execStub, `git remote set-url origin ${fakeGutlabUrl} && git push -u origin master`);
+        });
+
+        it('should try to add remote and reject if error', async () => {
+
+            existsSyncStub.returns(true);
+            execStub.yields(fakeError);
+
+            try {
+
+                await handler.pushToGitlab();
+            }
+            catch (err) {
+
+                sandbox.assert.calledWith(execStub, `git remote set-url origin ${fakeGutlabUrl} && git push -u origin master`);
+                expect(err).to.be.equal('fakeError');
+            }
+        });
+
+        it('should init repo and push to gitlab', async () => {
+
+            existsSyncStub.returns(false);
+            execStub.yields(undefined);
+
+            await handler.pushToGitlab();
+
+            sandbox.assert.calledWith(execStub, `git init && git remote add origin ${fakeGutlabUrl} && git add . && git commit -m "Initial commit" && git push -u origin master`);
+        });
+
+        it('should try to init repository and reject if error', async () => {
+
+            existsSyncStub.returns(false);
+            execStub.yields(fakeError);
+
+            try {
+
+                await handler.pushToGitlab();
+            }
+            catch (err) {
+
+                sandbox.assert.calledWith(execStub, `git init && git remote add origin ${fakeGutlabUrl} && git add . && git commit -m "Initial commit" && git push -u origin master`);
+                expect(err).to.be.equal('fakeError');
+            }
+        });
     });
 });

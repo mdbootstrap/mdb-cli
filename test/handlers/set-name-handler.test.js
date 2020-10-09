@@ -3,6 +3,7 @@
 const SetNameHandler = require('../../utils/set-name-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const HttpWrapper = require('../../utils/http-wrapper');
+const PackageManager = require('../../utils/managers/package-manager');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
@@ -111,6 +112,7 @@ describe('Handler: set-name', () => {
 
         it('should reject if names are the same', async () => {
 
+            sandbox.stub(handler, 'handleMissingPackageJson').resolves(undefined);
             sandbox.stub(handler, 'newName').value(oldProjectName);
             deserializeJsonFileStub.resolves({ name: oldProjectName });
             const expectedResult = { 'Status': CliStatus.SUCCESS, 'Message': 'Project names are the same.' };
@@ -129,6 +131,7 @@ describe('Handler: set-name', () => {
 
         it('should change project name', async () => {
 
+            sandbox.stub(handler, 'handleMissingPackageJson').resolves(undefined);
             sandbox.stub(handler, 'newName').value(newProjectName);
             const expectedResults = { Status: CliStatus.SUCCESS, Message: `Project name has been successfully changed from ${oldProjectName} to ${newProjectName}.` };
             deserializeJsonFileStub.resolves({ name: oldProjectName });
@@ -146,10 +149,10 @@ describe('Handler: set-name', () => {
             }
         });
 
-        it('should return expected result if problem with file deserialization', async () => {
+        it('should call handleMissingPackageJson if package.json does not exist', async () => {
 
-            const expectedResults = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` };
             deserializeJsonFileStub.rejects(fakeError);
+            const handleStub = sandbox.stub(handler, 'handleMissingPackageJson').resolves(undefined);
 
             try {
 
@@ -157,7 +160,7 @@ describe('Handler: set-name', () => {
             }
             catch (err) {
 
-                expect(err).to.deep.include(expectedResults);
+                expect(handleStub.called).to.be.true;
             }
         });
 
@@ -188,5 +191,116 @@ describe('Handler: set-name', () => {
         await handler.removeProject();
 
         expect(deleteStub.calledOnce).to.be.true;
+    });
+
+    describe('Method: loadPackageManager', async () => {
+
+        it('should call helpers.loadPackageManager', async () => {
+
+            deserializeJsonFileStub.resolves({ packageManager: 'npm' });
+
+            await handler.loadPackageManager();
+
+            expect(handler.packageManager).to.be.instanceOf(PackageManager); // shallow comparison intentionally
+        });
+    });
+
+    describe('Method: handleMissingPackageJson', () => {
+
+        beforeEach(() => {
+
+            sandbox.stub(handler, 'loadPackageManager').resolves();
+        });
+
+        afterEach(() => {
+
+            sandbox.reset();
+            sandbox.restore();
+        });
+
+        it('should call helpers.createPackageJson', async () => {
+
+            const successStatus = { 'Status': CliStatus.SUCCESS, 'Message': 'package.json created.' };
+            const createStub = sandbox.stub(helpers, 'createPackageJson').resolves(successStatus);
+            sandbox.stub(handler, 'setName').resolves();
+
+            await handler.handleMissingPackageJson();
+
+            expect(createStub.called).to.be.true;
+        });
+
+        it('should update result on successful package.json creation', async () => {
+
+            const successStatus = { 'Status': CliStatus.SUCCESS, 'Message': 'package.json created.' };
+            sandbox.stub(helpers, 'createPackageJson').resolves(successStatus);
+            sandbox.stub(handler, 'setName').resolves();
+
+            handler.result = [];
+
+            await handler.handleMissingPackageJson();
+
+            expect(handler.result.length).to.be.equal(1);
+            expect(handler.result[0]).to.be.deep.equal(successStatus);
+        });
+
+        it('should call handler.setName on successful package.json creation', async () => {
+
+            const successStatus = { 'Status': CliStatus.SUCCESS, 'Message': 'package.json created.' };
+            sandbox.stub(helpers, 'createPackageJson').resolves(successStatus);
+            const setNameStub = sandbox.stub(handler, 'setName').resolves();
+
+            await handler.handleMissingPackageJson();
+
+            expect(setNameStub.called).to.be.true;
+        });
+
+        it('should update result on error', async () => {
+
+            const expectedResults = { 'Status': CliStatus.ERROR, 'Message': 'package.json not created.' };
+            sandbox.stub(helpers, 'createPackageJson').rejects(fakeError);
+            sandbox.stub(process, 'exit');
+
+            handler.result = [];
+
+            try {
+                await handler.handleMissingPackageJson();
+            } catch (e) {
+
+                expect(handler.result.length).to.be.equal(2);
+                expect(handler.result[1]).to.be.deep.equal(expectedResults);
+            }
+        });
+
+        it('should call console.table', async () => {
+
+            sandbox.stub(helpers, 'createPackageJson').rejects(fakeError);
+            sandbox.stub(process, 'exit');
+            const consoleStub = sandbox.stub(console, 'table');
+
+            handler.result = [];
+
+            try {
+                await handler.handleMissingPackageJson();
+            } catch (e) {
+
+                expect(consoleStub.calledOnce).to.be.true;
+            }
+        });
+
+        it('should call process.exit', async () => {
+
+            sandbox.stub(helpers, 'createPackageJson').rejects(fakeError);
+            sandbox.stub(console, 'table');
+            const processStub = sandbox.stub(process, 'exit');
+
+            handler.result = [];
+
+            try {
+                await handler.handleMissingPackageJson();
+            } catch (e) {
+
+                expect(processStub.calledOnce).to.be.true;
+            }
+        });
     });
 });

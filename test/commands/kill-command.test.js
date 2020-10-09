@@ -1,12 +1,12 @@
 'use strict';
 
-const UnpublishCommand = require('../../commands/unpublish-command');
-const UnpublishHandler = require('../../utils/unpublish-handler');
-const Command = require('../../commands/command');
+const KillCommand = require('../../commands/kill-command.js');
+const KillHandler = require('../../utils/kill-handler');
 const AuthHandler = require('../../utils/auth-handler');
+const Command = require('../../commands/command');
 const sandbox = require('sinon').createSandbox();
 
-describe('Command: unpublish', () => {
+describe('Command: Kill', () => {
 
     const fakeError = 'fakeError';
 
@@ -15,20 +15,18 @@ describe('Command: unpublish', () => {
         setArgsStub,
         fetchProjectsStub,
         askForProjectNameStub,
-        confirmSelectionStub,
-        unpublishStub,
+        killStub,
         printStub,
         catchErrorStub;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
-        command = new UnpublishCommand(authHandler);
-        setArgsStub = sandbox.stub(UnpublishHandler.prototype, 'setArgs');
-        fetchProjectsStub = sandbox.stub(UnpublishHandler.prototype, 'fetchProjects');
-        askForProjectNameStub = sandbox.stub(UnpublishHandler.prototype, 'askForProjectName');
-        confirmSelectionStub = sandbox.stub(UnpublishHandler.prototype, 'confirmSelection');
-        unpublishStub = sandbox.stub(UnpublishHandler.prototype, 'unpublish');
+        command = new KillCommand(authHandler);
+        setArgsStub = sandbox.stub(KillHandler.prototype, 'setArgs');
+        fetchProjectsStub = sandbox.stub(KillHandler.prototype, 'fetchProjects');
+        askForProjectNameStub = sandbox.stub(KillHandler.prototype, 'askForProjectName');
+        killStub = sandbox.stub(KillHandler.prototype, 'kill');
         printStub = sandbox.stub(Command.prototype, 'print');
         catchErrorStub = sandbox.stub(Command.prototype, 'catchError');
     });
@@ -39,36 +37,35 @@ describe('Command: unpublish', () => {
         sandbox.restore();
     });
 
-    it('should have assigned handler', () => {
-
-        expect(command).to.have.property('handler');
-        expect(command.handler).to.be.an.instanceOf(UnpublishHandler);
-    });
-
-    it('should have assigned authHandler even though it is not specified', () => {
+    it('should have assigned authHandler', () => {
 
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        command = new UnpublishCommand();
+        command = new KillCommand();
 
         expect(command).to.have.property('authHandler');
+    });
+
+    it('should have assigned handler', () => {
+
+        expect(command).to.have.property('handler');
+        expect(command.handler).to.be.an.instanceOf(KillHandler);
     });
 
     it('should call handler methods in expected order', async () => {
 
         fetchProjectsStub.resolves();
         askForProjectNameStub.resolves();
-        confirmSelectionStub.resolves();
-        unpublishStub.resolves();
+        killStub.resolves();
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, confirmSelectionStub, unpublishStub, printStub);
+        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, killStub, printStub);
         sandbox.assert.notCalled(catchErrorStub);
     });
 
-    it('should catch error if fetchProjects() method rejects', async () => {
+    it('should call catch error if fetchProjects rejects', async () => {
 
         fetchProjectsStub.rejects(fakeError);
 
@@ -76,11 +73,11 @@ describe('Command: unpublish', () => {
 
         sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, catchErrorStub);
         sandbox.assert.notCalled(askForProjectNameStub);
-        sandbox.assert.notCalled(unpublishStub);
         sandbox.assert.notCalled(printStub);
+        sandbox.assert.notCalled(killStub);
     });
 
-    it('should catch error if askForProjectName() method rejects', async () => {
+    it('should call catch error if askForProjectName rejects', async () => {
 
         fetchProjectsStub.resolves();
         askForProjectNameStub.rejects(fakeError);
@@ -88,19 +85,19 @@ describe('Command: unpublish', () => {
         await command.execute();
 
         sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, catchErrorStub);
-        sandbox.assert.notCalled(unpublishStub);
         sandbox.assert.notCalled(printStub);
+        sandbox.assert.notCalled(killStub);
     });
 
-    it('should catch error if unpublish() method rejects', async () => {
+    it('should call catch error if kill rejects', async () => {
 
         fetchProjectsStub.resolves();
         askForProjectNameStub.resolves();
-        unpublishStub.rejects(fakeError);
+        killStub.rejects(fakeError);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, unpublishStub, catchErrorStub);
+        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, killStub, catchErrorStub);
         sandbox.assert.notCalled(printStub);
     });
 });

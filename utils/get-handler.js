@@ -14,10 +14,12 @@ class GetHandler {
         this.args = [];
         this.authHeaders = {};
         this.authHandler = authHandler;
-        this.options = [];
-        this.result = [];
-        this.repoUrl = null;
+        this.cwd = process.cwd();
         this.name = '';
+        this.options = [];
+        this.repoUrl = null;
+        this.result = [];
+        this.force = false;
 
         this.setAuthHeader();
     }
@@ -29,7 +31,9 @@ class GetHandler {
 
     setArgs(args) {
 
-        this.args = args;
+        this.force = args.some(arg => arg === '--force');
+
+        this.args = args.filter(arg => arg !== '--force');
     }
 
     getResult() {
@@ -73,7 +77,7 @@ class GetHandler {
             .then(select => this.name = select.name);
     }
 
-    cloneRepository() {
+    async getUserProject() {
 
         const project = this.options.find(o => o.name === this.name);
 
@@ -86,10 +90,14 @@ class GetHandler {
 
         if (!this.repoUrl) {
 
-            return Promise.reject([{ Status: CliStatus.NOT_FOUND, Message: 'Repository for this project does not exist. Please add repository to be able to clone the project' }]);
+            console.log('Downloading...')
+
+            this.result = await helpers.downloadUserProject(this.name, this.authHeaders, this.cwd, this.force);
+
+            return;
         }
 
-        return helpers.gitClone(this.repoUrl).then(res => this.result = res);
+        this.result = await helpers.gitClone(this.repoUrl);
     }
 }
 

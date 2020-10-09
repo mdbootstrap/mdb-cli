@@ -18,6 +18,7 @@ class CreateCommand extends Command {
         return this.handler.getProjectName()
             .then(() => this.handler.addJenkinsfile())
             .then(() => this.handler.create())
+            .then(() => this.handler.pushToGitlab())
             .then(() => this.print())
             .catch((e) => this.catchError(e));
     }

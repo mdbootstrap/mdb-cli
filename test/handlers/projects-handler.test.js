@@ -46,10 +46,10 @@ describe('Handler: Projects', () => {
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbgo.dev/fakeNicename/fakeProjectName/',
-            'Project Domain': 'fakeDomainName',
-            'Project Published': '-',
-            'Project Edited': new Date(projects[0].editDate).toLocaleString(),
-            'Project Repo': 'https://gitlab.com/fakeUsername/fakeProjectName/'
+            'Domain': 'fakeDomainName',
+            'Published': '-',
+            'Edited': new Date(projects[0].editDate).toLocaleString(),
+            'Repo': 'https://gitlab.com/fakeUsername/fakeProjectName/'
         }];
         sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
         projectsHandler = new ProjectsHandler();
@@ -76,10 +76,10 @@ describe('Handler: Projects', () => {
         const formatedResult = [{
             'Project Name': 'fakeProjectName',
             'Project URL': 'https://mdbgo.dev/fakeNicename/fakeProjectName/',
-            'Project Domain': '-',
-            'Project Published': new Date(projectsJson[0].publishDate).toLocaleString(),
-            'Project Edited': new Date(projectsJson[0].editDate).toLocaleString(),
-            'Project Repo': '-'
+            'Domain': '-',
+            'Published': new Date(projectsJson[0].publishDate).toLocaleString(),
+            'Edited': new Date(projectsJson[0].editDate).toLocaleString(),
+            'Repo': '-'
         }];
         sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
         const parseSpy = sandbox.spy(JSON, 'parse');
@@ -93,4 +93,106 @@ describe('Handler: Projects', () => {
         expect(result).to.be.deep.equal(formatedResult);
         expect(parseSpy.calledOnce).to.be.true;
     });
+
+    it('should return expected result if user does not have any projects yet', async () => {
+
+        const projects = [];
+        const expectedResult = [{ Status: 0, Message: 'You do not have any projects yet.' }];
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
+        projectsHandler = new ProjectsHandler();
+
+        await projectsHandler.fetchProjects();
+
+        const result = projectsHandler.getResult();
+
+        expect(result).to.be.an('Array');
+        expect(result).to.be.deep.equal(expectedResult);
+    });
+
+    it('should return expected result if user does not have any backend projects yet', async () => {
+
+        const projects = [{
+            projectId: 123,
+            userNicename: 'fakeNicename',
+            projectName: 'fakeProjectName',
+            domainName: 'fakeDomainName',
+            publishDate: '2019-06-24T06:49:53.000Z',
+            editDate: '2019-06-24T06:49:53.000Z',
+            repoUrl: 'https://gitlab.com/fakeUsername/fakeProjectName/',
+            status: 'created'
+        }];
+        const expectedResult = [{ Status: 0, Message: 'You do not have any backend projects yet.' }];
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
+        projectsHandler = new ProjectsHandler();
+        projectsHandler.backend = true;
+
+        await projectsHandler.fetchProjects();
+
+        const result = projectsHandler.getResult();
+
+        expect(result).to.be.an('Array');
+        expect(result).to.be.deep.equal(expectedResult);
+    });
+
+    it('should fetch user backend projects and return expected result', async () => {
+
+        const projects = [{
+            projectId: 123,
+            userNicename: 'fakeNicename',
+            projectName: 'fakeProjectName',
+            domainName: 'fakeDomainName',
+            publishDate: '2019-06-24T06:49:53.000Z',
+            editDate: '2019-06-24T06:49:53.000Z',
+            repoUrl: null,
+            status: 'backend'
+        }];
+        const formatedResult = [{
+            'Project Name': 'fakeProjectName',
+            'Published': new Date(projects[0].publishDate).toLocaleString(),
+            'Edited': new Date(projects[0].editDate).toLocaleString(),
+            'Repo': '-'
+        }];
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
+        projectsHandler = new ProjectsHandler();
+        projectsHandler.backend = true;
+
+        await projectsHandler.fetchProjects();
+
+        const result = projectsHandler.getResult();
+
+        expect(result).to.be.an('Array');
+        expect(result).to.be.deep.equal(formatedResult);
+    });
+
+    it('should fetch user backend projects, parse to JSON and return expected result', async () => {
+
+        const projects = `[{
+            "projectId":123,
+            "userNicename":"fakeNicename",
+            "projectName":"fakeProjectName",
+            "publishDate":"2019-06-24T06:49:53.000Z",
+            "editDate":"2019-06-24T06:49:53.000Z",
+            "repoUrl":"https://gitlab.com/fakeUsername/fakeProjectName/",
+            "status":"backend"
+        }]`;
+        const projectsJson = JSON.parse(projects);
+        const formatedResult = [{
+            'Project Name': 'fakeProjectName',
+            'Published': new Date(projectsJson[0].publishDate).toLocaleString(),
+            'Edited': new Date(projectsJson[0].editDate).toLocaleString(),
+            'Repo': 'https://gitlab.com/fakeUsername/fakeProjectName/'
+        }];
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves(projects);
+        const parseSpy = sandbox.spy(JSON, 'parse');
+        projectsHandler = new ProjectsHandler();
+        projectsHandler.backend = true;
+
+        await projectsHandler.fetchProjects();
+
+        const result = projectsHandler.getResult();
+
+        expect(result).to.be.an('Array');
+        expect(result).to.be.deep.equal(formatedResult);
+        expect(parseSpy.calledOnce).to.be.true;
+    })
 });
