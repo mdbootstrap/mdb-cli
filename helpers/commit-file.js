@@ -17,7 +17,8 @@ module.exports = {
 
                 if (code === CliStatus.SUCCESS) {
 
-                    const gitCommit = childProcess.spawn('git', ['commit', '-m', message], { stdio: 'inherit', ...isWindows && { shell: true } });
+                    const commitMsg = isWindows ? `"${message}"` : message;
+                    const gitCommit = childProcess.spawn('git', ['commit', '-m', commitMsg], { stdio: 'inherit', ...isWindows && { shell: true } });
 
                     gitCommit.on('exit', code => code === CliStatus.SUCCESS ? resolve() : reject(code));
 
