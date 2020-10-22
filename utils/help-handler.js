@@ -31,7 +31,12 @@ class HelpHandler {
             { 'Command': 'update', 'Description': 'update mdb-cli to the latest version' },
             { 'Command': 'version (-v)', 'Description': 'print mdb-cli version' },
             { 'Command': 'kill', 'Description': 'kill backend project' },
-            { 'Command': 'info', 'Description': 'print info about backend project' }
+            { 'Command': 'info', 'Description': 'print info about backend project' },
+            { 'Command': 'logs', 'Description': 'print backend project logs' },
+            { 'Command': 'db-list', 'Description': 'list all your databases' },
+            { 'Command': 'db-info', 'Description': 'print database connection string' },
+            { 'Command': 'db-create', 'Description': 'create new database' },
+            { 'Command': 'db-delete', 'Description': 'delete database and database user' }
         ];
     }
 

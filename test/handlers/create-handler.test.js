@@ -11,8 +11,8 @@ const fs = require('fs');
 
 describe('Handler: Create', () => {
 
-    let authHandler;
-    let handler;
+    let authHandler,
+        handler;
 
     beforeEach(() => {
 
@@ -122,19 +122,14 @@ describe('Handler: Create', () => {
         const fakeError = new Error('fakeError');
         const fakeGutlabUrl = 'http://fake/repo.url';
 
-        let existsSyncStub, execStub;
+        let existsSyncStub, execStub, logStub;
 
         beforeEach(() => {
 
             existsSyncStub = sandbox.stub(fs, 'existsSync');
             execStub = sandbox.stub(cp, 'exec');
+            logStub = sandbox.stub(console, 'log');
             sandbox.stub(handler, 'gitlabUrl').value(fakeGutlabUrl);
-        });
-
-        afterEach(() => {
-
-            sandbox.reset();
-            sandbox.restore();
         });
 
         it('should add remote and push to gitlab', async () => {
@@ -163,6 +158,17 @@ describe('Handler: Create', () => {
             }
         });
 
+        it('should try to add remote and and resolve if authentication failed', async () => {
+
+            existsSyncStub.returns(true);
+            execStub.yields(new Error('authentication failed'));
+
+            await handler.pushToGitlab();
+
+            sandbox.assert.calledTwice(logStub);
+            sandbox.assert.calledWith(execStub, `git remote set-url origin ${fakeGutlabUrl} && git push -u origin master`);
+        });
+
         it('should init repo and push to gitlab', async () => {
 
             existsSyncStub.returns(false);
@@ -187,6 +193,17 @@ describe('Handler: Create', () => {
                 sandbox.assert.calledWith(execStub, `git init && git remote add origin ${fakeGutlabUrl} && git add . && git commit -m "Initial commit" && git push -u origin master`);
                 expect(err).to.be.equal('fakeError');
             }
+        });
+
+        it('should try to init repository and resolve if authentication failed', async () => {
+
+            existsSyncStub.returns(false);
+            execStub.yields(new Error('authentication failed'));
+
+            await handler.pushToGitlab();
+
+            sandbox.assert.calledTwice(logStub);
+            sandbox.assert.calledWith(execStub, `git init && git remote add origin ${fakeGutlabUrl} && git add . && git commit -m "Initial commit" && git push -u origin master`);
         });
     });
 });

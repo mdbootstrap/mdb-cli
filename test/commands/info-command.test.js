@@ -1,6 +1,6 @@
 'use strict';
 
-const InfoCommand = require('../../commands/info-command.js');
+const InfoCommand = require('../../commands/info-command');
 const InfoHandler = require('../../utils/info-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const Command = require('../../commands/command');

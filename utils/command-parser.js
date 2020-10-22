@@ -26,7 +26,12 @@ class CommandParser {
             'update',
             'version',
             'kill',
-            'info'
+            'info',
+            'logs',
+            'db-list',
+            'db-info',
+            'db-create',
+            'db-delete'
         ];
     }
 

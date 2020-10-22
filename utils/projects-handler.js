@@ -54,12 +54,17 @@ class ProjectsHandler {
 
             if (backendProjects.length) {
 
-                return this.result = backendProjects.map(p => ({
-                    'Project Name': p.projectName,
-                    'Published': new Date(p.publishDate).toLocaleString(),
-                    'Edited': new Date(p.editDate).toLocaleString(),
-                    'Repo': p.repoUrl ? p.repoUrl : '-'
-                }));
+                return this.result = backendProjects.map(p => {
+                    const result = p.projectMeta.find(m => m.metaKey === '_backend_technology');
+                    const technology = result ? result.metaValue : undefined;
+                    return {
+                        'Project Name': p.projectName,
+                        'Published': new Date(p.publishDate).toLocaleString(),
+                        'Edited': new Date(p.editDate).toLocaleString(),
+                        'Technology': technology,
+                        'Repo': p.repoUrl ? p.repoUrl : '-'
+                    }
+                });
             }
 
             this.result = [{ Status: 0, Message: 'You do not have any backend projects yet.' }];
@@ -72,7 +77,7 @@ class ProjectsHandler {
 
                 return this.result = frontendProjects.map(p => ({
                     'Project Name': p.projectName,
-                    'Project URL': `https://mdbgo.dev/${p.userNicename}/${p.projectName}/`,
+                    'Project URL': `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`,
                     'Domain': p.domainName ? p.domainName : '-',
                     'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
                     'Edited': new Date(p.editDate).toLocaleString(),

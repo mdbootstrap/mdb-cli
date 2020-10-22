@@ -5,6 +5,7 @@ const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
+const fs = require('fs');
 
 describe('Handler: set-domain-name', () => {
 
@@ -15,6 +16,7 @@ describe('Handler: set-domain-name', () => {
 
     let authHandler,
         handler,
+        writeFileSyncStub,
         showTextPromptStub,
         serializeJsonFileStub,
         deserializeJsonFileStub;
@@ -23,10 +25,10 @@ describe('Handler: set-domain-name', () => {
 
         authHandler = new AuthHandler(false);
         handler = new SetDomainNameHandler(authHandler);
+        writeFileSyncStub = sandbox.stub(fs, 'writeFileSync');
         showTextPromptStub = sandbox.stub(helpers, 'showTextPrompt');
         serializeJsonFileStub = sandbox.stub(helpers, 'serializeJsonFile');
         deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
-        sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
@@ -45,14 +47,14 @@ describe('Handler: set-domain-name', () => {
         expect(handler.result).to.be.a('array');
     });
 
-    it('should have `name` property', () => {
+    it('should have `domainName` property', () => {
 
-        expect(handler).to.have.property('name');
+        expect(handler).to.have.property('domainName');
     });
 
-    it('should `name` be string', () => {
+    it('should `domainName` be string', () => {
 
-        expect(handler.name).to.be.a('string');
+        expect(handler.domainName).to.be.a('string');
     });
 
     it('should have `authHandler` property', () => {
@@ -109,21 +111,19 @@ describe('Handler: set-domain-name', () => {
 
         it('should change project domain name', async () => {
 
-            sandbox.stub(handler, 'name').value(newDomainName);
-            const expectedResult = { Status: CliStatus.SUCCESS, Message: `Domain name has been changed to ${newDomainName} successfully` };
+            sandbox.stub(handler, 'domainName').value(newDomainName);
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Domain name has been saved in package.json file' };
             deserializeJsonFileStub.resolves({ domainName: oldDomainName });
             serializeJsonFileStub.resolves();
 
             expect(handler.result).to.be.an('array').that.is.empty;
-
             await handler.setDomainName();
-
             expect(handler.result).to.deep.include(expectedResult);
         });
 
         it('should reject if old and new domain names are the same', async () => {
 
-            sandbox.stub(handler, 'name').value(oldDomainName);
+            sandbox.stub(handler, 'domainName').value(oldDomainName);
             const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Domain names are the same.' };
             deserializeJsonFileStub.resolves({ domainName: oldDomainName });
 
@@ -141,8 +141,23 @@ describe('Handler: set-domain-name', () => {
 
         it('should return expected result if problem with file deserialization', async () => {
 
-            const expectedResult = { Status: CliStatus.INTERNAL_SERVER_ERROR, Message: `Problem with reading ${fileName}` };
-            deserializeJsonFileStub.rejects(fakeError);
+            const expectedResult = { Status: CliStatus.CLI_ERROR, Message: 'Could not read `package.json` file.' };
+            deserializeJsonFileStub.rejects();
+
+            try {
+
+                await handler.setDomainName();
+            } catch (e) {
+
+                expect(e).to.deep.include(expectedResult);
+            }
+        });
+
+        it('should return expected result if problem with file serialization', async () => {
+
+            const expectedResult = { 'Status': CliStatus.CLI_ERROR, 'Message': 'Could not save `' + fileName + '` file.' };
+            deserializeJsonFileStub.resolves({ domainName: oldDomainName });
+            serializeJsonFileStub.rejects(fakeError);
 
             try {
 
@@ -154,17 +169,105 @@ describe('Handler: set-domain-name', () => {
             }
         });
 
-        it('should return expected result if problem with file serialization', async () => {
+        it('should handle missing `package.json` file', async () => {
 
-            const expectedResult = { 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` };
-            deserializeJsonFileStub.resolves({ domainName: oldDomainName });
-            serializeJsonFileStub.rejects(fakeError);
+            sandbox.stub(fs, 'existsSync').returns(false);
+            deserializeJsonFileStub.rejects({ code: 'ENOENT' });
+            const handleMissingPackageJsonStub = sandbox.stub(handler, 'handleMissingPackageJson');
+
+            await handler.setDomainName();
+
+            sandbox.assert.calledOnce(handleMissingPackageJsonStub);
+        });
+
+        it('should call saveInConfigFile() method if `index.php` file exists', async () => {
+
+            sandbox.stub(fs, 'existsSync').returns(true);
+            deserializeJsonFileStub.rejects({ code: 'ENOENT' });
+            const saveInConfigFileStub = sandbox.stub(handler, 'saveInConfigFile');
+
+            await handler.setDomainName();
+
+            sandbox.assert.calledOnce(saveInConfigFileStub);
+        });
+    });
+
+    describe('Method: handleMissingPackageJson', () => {
+
+        let createPackageJsonStub,
+            setDomainNameStub;
+
+        beforeEach(() => {
+
+            createPackageJsonStub = sandbox.stub(helpers, 'createPackageJson');
+            setDomainNameStub = sandbox.stub(handler, 'setDomainName');
+        });
+
+        it('should create `package.json` file and set domain name', async () => {
+
+            createPackageJsonStub.resolves();
+            setDomainNameStub.resolves();
+
+            await handler.handleMissingPackageJson();
+
+            sandbox.assert.callOrder(createPackageJsonStub, setDomainNameStub);
+        });
+    });
+
+    describe('Method: saveInConfigFile', () => {
+
+        beforeEach(() => {
+
+            sandbox.stub(handler, 'domainName').value(newDomainName);
+        });
+
+        it('should save domain name in `.mdb` file', async () => {
+
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Domain name has been saved in .mdb file' };
+            deserializeJsonFileStub.resolves({});
+            serializeJsonFileStub.resolves();
+
+            await handler.saveInConfigFile();
+
+            expect(handler.result).to.deep.include(expectedResult);
+        });
+
+        it('should save domain name in `.mdb` file if file does not exist', async () => {
+
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Domain name has been saved in .mdb file' };
+            deserializeJsonFileStub.rejects({ code: 'ENOENT' });
+            serializeJsonFileStub.rejects({ code: 'ENOENT' });
+            writeFileSyncStub.resolves();
+
+            await handler.saveInConfigFile();
+
+            expect(handler.result).to.deep.include(expectedResult);
+        });
+
+        it('should reject with expected result if problem with file deserialization', async () => {
+
+            const expectedResult = { Status: CliStatus.CLI_ERROR, Message: 'Could not read `.mdb` file.' };
+            deserializeJsonFileStub.rejects();
 
             try {
 
-                await handler.setDomainName();
+                await handler.saveInConfigFile();
+            } catch (e) {
+
+                expect(e).to.deep.include(expectedResult);
             }
-            catch (e) {
+        });
+
+        it('should reject with expected result if problem with file serialization', async () => {
+
+            const expectedResult = { Status: CliStatus.CLI_ERROR, Message: 'Could not save `.mdb` file.' };
+            deserializeJsonFileStub.resolves({});
+            serializeJsonFileStub.rejects();
+
+            try {
+
+                await handler.saveInConfigFile();
+            } catch (e) {
 
                 expect(e).to.deep.include(expectedResult);
             }

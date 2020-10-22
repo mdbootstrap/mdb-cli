@@ -7,14 +7,14 @@ const CliStatus = require('../models/cli-status');
 const HttpWrapper = require('../utils/http-wrapper');
 const ProjectStatus = require('../models/project-status');
 
-class InfoHandler {
+class LogsHandler {
 
     constructor(authHandler = new AuthHandler()) {
 
-        this.args = [];
         this.result = [];
         this.projects = [];
         this.projectName = '';
+        this.lines = undefined;
         this.authHandler = authHandler;
         this.options = {
             port: config.port,
@@ -42,7 +42,12 @@ class InfoHandler {
 
     setArgs(args) {
 
-        this.args = args;
+        const lines = args.find(arg => ['--lines', '--tail'].includes(arg.split('=')[0]));
+        this.lines = lines ? lines.split('=')[1] : undefined;
+        args = args.filter(arg => !['--lines', '--tail'].includes(arg.split('=')[0]));
+        if (args.length > 0) {
+            this.projectName = args[0];
+        }
     }
 
     async fetchProjects() {
@@ -59,12 +64,10 @@ class InfoHandler {
 
         if (this.projects.length === 0) {
 
-            return Promise.reject([{ Status: CliStatus.NOT_FOUND, Message: 'You do not have any backend projects yet.' }]);
+            return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'You do not have any backend projects yet.' }]);
         }
 
-        if (this.args.length > 0) {
-
-            this.projectName = this.args[0];
+        if (this.projectName) {
 
             return;
         }
@@ -74,9 +77,9 @@ class InfoHandler {
         this.projectName = select.name;
     }
 
-    async getInfo() {
+    async getLogs() {
 
-        this.options.path = `/project/info/${this.projectName}`;
+        this.options.path = this.lines ? `/project/logs/${this.projectName}?lines=${this.lines}` : `/project/logs/${this.projectName}`;
         const http = new HttpWrapper(this.options);
 
         const result = await http.get();
@@ -84,15 +87,10 @@ class InfoHandler {
         this.result = typeof result === 'string' ? JSON.parse(result) : result;
     }
 
-    printResult() {
+    print() {
 
-        const isUp = this.result.port;
-
-        console.log('\x1b[36m%s\x1b[0m', 'Status:', isUp ? 'running' : 'dead');
-        console.log('\x1b[36m%s\x1b[0m', isUp ? 'Started at:' : 'Killed at:', isUp ? this.result.startedAt : this.result.killedAt );
-        
-        isUp && console.log('\x1b[36m%s\x1b[0m', 'App URL:', `http://${config.projectsDomain}:${this.result.port}`);
+        console.log(this.result.logs);
     }
 }
 
-module.exports = InfoHandler;
+module.exports = LogsHandler;

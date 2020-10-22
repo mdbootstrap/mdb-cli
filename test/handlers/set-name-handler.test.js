@@ -8,6 +8,7 @@ const CliStatus = require('../../models/cli-status');
 const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
 const config = require('../../config');
+const fs = require('fs');
 
 describe('Handler: set-name', () => {
 
@@ -29,7 +30,6 @@ describe('Handler: set-name', () => {
         showTextPromptStub = sandbox.stub(helpers, 'showTextPrompt');
         serializeJsonFileStub = sandbox.stub(helpers, 'serializeJsonFile');
         deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
-        sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
@@ -129,13 +129,10 @@ describe('Handler: set-name', () => {
             }
         });
 
-        it('should change project name', async () => {
+        it('should reject if problem with `package.json` file deserialization', async () => {
 
-            sandbox.stub(handler, 'handleMissingPackageJson').resolves(undefined);
-            sandbox.stub(handler, 'newName').value(newProjectName);
-            const expectedResults = { Status: CliStatus.SUCCESS, Message: `Project name has been successfully changed from ${oldProjectName} to ${newProjectName}.` };
-            deserializeJsonFileStub.resolves({ name: oldProjectName });
-            serializeJsonFileStub.resolves();
+            deserializeJsonFileStub.rejects();
+            const expectedResult = { 'Status': CliStatus.CLI_ERROR, 'Message': 'Problem with `package.json` file deserialization.' };
 
             expect(handler.result).to.be.an('array').that.is.empty;
 
@@ -145,23 +142,43 @@ describe('Handler: set-name', () => {
             }
             catch (err) {
 
-                expect(err).to.deep.include(expectedResults);
+                expect(err).to.deep.include(expectedResult);
             }
         });
 
-        it('should call handleMissingPackageJson if package.json does not exist', async () => {
+        it('should change project name', async () => {
 
-            deserializeJsonFileStub.rejects(fakeError);
+            sandbox.stub(handler, 'handleMissingPackageJson').resolves(undefined);
+            sandbox.stub(handler, 'newName').value(newProjectName);
+            const expectedResults = { Status: CliStatus.SUCCESS, Message: `Project name has been successfully changed from ${oldProjectName} to ${newProjectName}.` };
+            deserializeJsonFileStub.resolves({ name: oldProjectName });
+            serializeJsonFileStub.resolves();
+
+            expect(handler.result).to.be.an('array').that.is.empty;
+            await handler.setName();
+            expect(handler.result).to.deep.include(expectedResults);
+        });
+
+        it('should call handleMissingPackageJson() if `package.json` does not exist', async () => {
+
+            sandbox.stub(fs, 'existsSync').returns(false);
+            deserializeJsonFileStub.rejects({ code: 'ENOENT' });
             const handleStub = sandbox.stub(handler, 'handleMissingPackageJson').resolves(undefined);
 
-            try {
+            await handler.setName();
 
-                await handler.setName();
-            }
-            catch (err) {
+            sandbox.assert.calledOnce(handleStub);
+        });
 
-                expect(handleStub.called).to.be.true;
-            }
+        it('should call saveInConfigFile() if `index.php` file exists', async () => {
+
+            sandbox.stub(fs, 'existsSync').returns(true);
+            deserializeJsonFileStub.rejects({ code: 'ENOENT' });
+            const saveInConfigFileStub = sandbox.stub(handler, 'saveInConfigFile').resolves(undefined);
+
+            await handler.setName();
+
+            sandbox.assert.calledOnce(saveInConfigFileStub);
         });
 
         it('should return expected result if problem with file serialization', async () => {
@@ -258,6 +275,7 @@ describe('Handler: set-name', () => {
 
             const expectedResults = { 'Status': CliStatus.ERROR, 'Message': 'package.json not created.' };
             sandbox.stub(helpers, 'createPackageJson').rejects(fakeError);
+            sandbox.stub(console, 'table');
             sandbox.stub(process, 'exit');
 
             handler.result = [];
@@ -300,6 +318,66 @@ describe('Handler: set-name', () => {
             } catch (e) {
 
                 expect(processStub.calledOnce).to.be.true;
+            }
+        });
+    });
+
+    describe('Method: saveInConfigFile', () => {
+
+        beforeEach(() => {
+
+            sandbox.stub(handler, 'newName').value(newProjectName);
+        });
+
+        it('should save domain name in `.mdb` file', async () => {
+
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Project name has been saved in .mdb file' };
+            deserializeJsonFileStub.resolves({});
+            serializeJsonFileStub.resolves();
+
+            await handler.saveInConfigFile();
+
+            expect(handler.result).to.deep.include(expectedResult);
+        });
+
+        it('should save domain name in `.mdb` file if file does not exist', async () => {
+
+            const expectedResult = { Status: CliStatus.SUCCESS, Message: 'Project name has been saved in .mdb file' };
+            deserializeJsonFileStub.rejects({ code: 'ENOENT' });
+            serializeJsonFileStub.rejects({ code: 'ENOENT' });
+            sandbox.stub(fs, 'writeFileSync').resolves();
+
+            await handler.saveInConfigFile();
+
+            expect(handler.result).to.deep.include(expectedResult);
+        });
+
+        it('should reject with expected result if problem with file deserialization', async () => {
+
+            const expectedResult = { Status: CliStatus.CLI_ERROR, Message: 'Problem with `.mdb` file deserialization.' };
+            deserializeJsonFileStub.rejects();
+
+            try {
+
+                await handler.saveInConfigFile();
+            } catch (e) {
+
+                expect(e).to.deep.include(expectedResult);
+            }
+        });
+
+        it('should reject with expected result if problem with file serialization', async () => {
+
+            const expectedResult = { Status: CliStatus.CLI_ERROR, Message: 'Problem with `.mdb` file serialization.' };
+            deserializeJsonFileStub.resolves({});
+            serializeJsonFileStub.rejects();
+
+            try {
+
+                await handler.saveInConfigFile();
+            } catch (e) {
+
+                expect(e).to.deep.include(expectedResult);
             }
         });
     });
