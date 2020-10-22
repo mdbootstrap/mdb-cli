@@ -1,6 +1,6 @@
 'use strict';
 
-const KillCommand = require('../../commands/kill-command.js');
+const KillCommand = require('../../commands/kill-command');
 const KillHandler = require('../../utils/kill-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const Command = require('../../commands/command');

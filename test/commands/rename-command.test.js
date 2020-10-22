@@ -1,36 +1,40 @@
 'use strict';
 
+const RenameCommand = require('../../commands/rename-command');
+const SetNameHandler = require('../../utils/set-name-handler');
+const PublishHandler = require('../../utils/publish-handler');
+const RenameHandler = require('../../utils/rename-handler');
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
-const commandClass = require('../../commands/rename-command');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: rename', () => {
 
-    let authHandler;
-    let command;
-    let askForNewProjectNameStub;
-    let setNameStub;
-    let removeProjectStub;
-    let setProjectNameStub;
-    let buildProjectStub;
-    let publishStub;
-    let consoleStub;
+    let authHandler,
+        command,
+        setArgsStub,
+        askForNewProjectNameStub,
+        setNameStub,
+        fetchProjectsStub,
+        checkProjectStatusStub,
+        getBackendTechnologyStub,
+        removeProjectStub,
+        setProjectNameStub,
+        publishStub;
 
     beforeEach(() => {
 
         authHandler = new AuthHandler(false);
-
-        command = new commandClass(authHandler);
-
+        command = new RenameCommand(authHandler);
+        setArgsStub = sandbox.stub(command.setNameHandler, 'setArgs');
         askForNewProjectNameStub = sandbox.stub(command.setNameHandler, 'askForNewProjectName');
         setNameStub = sandbox.stub(command.setNameHandler, 'setName');
+        fetchProjectsStub = sandbox.stub(command.handler, 'fetchProjects');
+        checkProjectStatusStub = sandbox.stub(command.handler, 'checkProjectStatus');
+        getBackendTechnologyStub = sandbox.stub(command.handler, 'getBackendTechnology');
         removeProjectStub = sandbox.stub(command.setNameHandler, 'removeProject');
         setProjectNameStub = sandbox.stub(command.publishHandler, 'setProjectName');
-        buildProjectStub = sandbox.stub(command.publishHandler, 'buildProject');
         publishStub = sandbox.stub(command.publishHandler, 'publish');
-        sandbox.stub(console, 'table');
-        consoleStub = sandbox.stub(console, 'log');
     });
 
     afterEach(() => {
@@ -39,170 +43,130 @@ describe('Command: rename', () => {
         sandbox.restore();
     });
 
-    it('should have SetNameHandler handler', () => {
-
-        const SetNameHandler = require('../../utils/set-name-handler');
-
-        expect(command.setNameHandler).to.be.an.instanceOf(SetNameHandler);
-    });
-
-    it('should have PublishHandler handler', () => {
-
-        const PublishHandler = require('../../utils/publish-handler');
-
-        expect(command.publishHandler).to.be.an.instanceOf(PublishHandler);
-    });
-
     it('should have assigned authHandler', () => {
 
         sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
         sandbox.stub(AuthHandler.prototype, 'checkForAuth');
 
-        command = new commandClass();
+        command = new RenameCommand();
 
         expect(command).to.have.property('authHandler');
     });
 
-    describe('Should call functions', () => {
+    it('should have assigned handler', () => {
 
-        beforeEach(() => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.resolves();
-            setProjectNameStub.resolves();
-            buildProjectStub.resolves();
-            publishStub.resolves();
-        });
-
-        it('should call setNameHandler.askForNewProjectName', async () => {
-
-            expect(askForNewProjectNameStub.called).to.be.false;
-
-            await command.execute();
-
-            expect(askForNewProjectNameStub.calledOnce).to.be.true;
-        });
-
-        it('should call setNameHandler.setName after setNameHandler.askForNewProjectName', async () => {
-
-            expect(setNameStub.called).to.be.false;
-
-            await command.execute();
-
-            expect(setNameStub.calledAfter(askForNewProjectNameStub)).to.be.true;
-        });
-
-        it('should call publishHandler.setProjectName after setNameHandler.setNameStub', async () => {
-
-            expect(setProjectNameStub.called).to.be.false;
-
-            await command.execute();
-
-            expect(setProjectNameStub.calledAfter(setNameStub)).to.be.true;
-        });
-
-        it('should call publishHandler.buildProject after publishHandler.setProjectName', async () => {
-
-            expect(buildProjectStub.called).to.be.false;
-
-            await command.execute();
-
-            expect(buildProjectStub.calledAfter(setNameStub)).to.be.true;
-        });
-
-        it('should call publishHandler.publish after publishHandler.buildProject', async () => {
-
-            expect(publishStub.called).to.be.false;
-
-            await command.execute();
-
-            expect(publishStub.calledAfter(buildProjectStub)).to.be.true;
-        });
+        expect(command).to.have.property('handler');
+        expect(command.handler).to.be.an.instanceOf(RenameHandler);
     });
 
-    describe('Should log on reject', () => {
+    it('should have SetNameHandler handler', () => {
 
-        beforeEach(() => {
-
-            // sandbox.spy(console, 'log');
-        });
-
-        afterEach(async () => {
-
-            await command.execute();
-
-            expect(consoleStub.called).to.be.true;
-        });
-
-        it('should call log on setNameHandler.askForNewProjectName', () => {
-
-            askForNewProjectNameStub.rejects('fake error');
-        });
-
-        it('should call log on setNameHandler.setName', () => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.rejects('fake error');
-        });
-
-        it('should call log on publishHandler.setProjectName', () => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.resolves();
-            setProjectNameStub.rejects('fake error');
-        });
-
-        it('should call log on publishHandler.buildProject', () => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.resolves();
-            setProjectNameStub.resolves();
-            buildProjectStub.rejects('fake error');
-        });
-
-        it('should call log on publishHandler.publish', () => {
-
-            askForNewProjectNameStub.resolves();
-            setNameStub.resolves();
-            setProjectNameStub.resolves();
-            buildProjectStub.resolves();
-            publishStub.rejects('fake error');
-        });
+        expect(command).to.have.property('setNameHandler');
+        expect(command.setNameHandler).to.be.an.instanceOf(SetNameHandler);
     });
 
-    it('should printHandlerResult print expected results', async () => {
+    it('should have PublishHandler handler', () => {
 
+        expect(command).to.have.property('publishHandler');
+        expect(command.publishHandler).to.be.an.instanceOf(PublishHandler);
+    });
+
+    it('should call handler methods in expected order', async () => {
+
+        const setHandlerArgsStub = sandbox.stub(command, 'setHandlerArgs').resolves();
+        const setBackendTechnologyStub = sandbox.stub(command, 'setBackendTechnology').resolves();
+        const printResultStub = sandbox.stub(command, 'printResult');
+        const catchErrorStub = sandbox.stub(command, 'catchError');
+        const revertNameChangeStub = sandbox.stub(command, 'revertNameChange');
         askForNewProjectNameStub.resolves();
         setNameStub.resolves();
+        fetchProjectsStub.resolves();
+        checkProjectStatusStub.resolves();
+        getBackendTechnologyStub.resolves();
         removeProjectStub.resolves();
         setProjectNameStub.resolves();
-        buildProjectStub.resolves();
         publishStub.resolves();
-        const setNameHandlerResult = ['Passed'];
-        const publishHandlerResult = ['Ok!'];
-        const expectedResult = [...setNameHandlerResult, ...publishHandlerResult];
-        sandbox.stub(command.setNameHandler, 'getResult').returns(setNameHandlerResult);
-        sandbox.stub(command.publishHandler, 'getResult').returns(publishHandlerResult);
 
         await command.execute();
 
-        expect(console.table.calledOnceWith(expectedResult)).to.be.true;
+        sandbox.assert.callOrder(
+            setArgsStub,
+            askForNewProjectNameStub,
+            setNameStub,
+            setHandlerArgsStub,
+            fetchProjectsStub,
+            checkProjectStatusStub,
+            getBackendTechnologyStub,
+            removeProjectStub,
+            setProjectNameStub,
+            setBackendTechnologyStub,
+            publishStub,
+            printResultStub
+        );
+        sandbox.assert.notCalled(catchErrorStub);
+        sandbox.assert.notCalled(revertNameChangeStub);
+    });
+
+    it('should call handler methods in expected order if error', async () => {
+
+        const setHandlerArgsStub = sandbox.stub(command, 'setHandlerArgs').resolves();
+        const setBackendTechnologyStub = sandbox.stub(command, 'setBackendTechnology').resolves();
+        const catchErrorStub = sandbox.stub(command, 'catchError');
+        const revertNameChangeStub = sandbox.stub(command, 'revertNameChange');
+        askForNewProjectNameStub.resolves();
+        setNameStub.resolves();
+        fetchProjectsStub.resolves();
+        checkProjectStatusStub.resolves();
+        getBackendTechnologyStub.resolves();
+        removeProjectStub.resolves();
+        setProjectNameStub.resolves();
+        publishStub.rejects();
+
+        await command.execute();
+
+        sandbox.assert.callOrder(
+            setArgsStub,
+            askForNewProjectNameStub,
+            setNameStub,
+            setHandlerArgsStub,
+            fetchProjectsStub,
+            checkProjectStatusStub,
+            getBackendTechnologyStub,
+            removeProjectStub,
+            setProjectNameStub,
+            setBackendTechnologyStub,
+            publishStub,
+            catchErrorStub,
+            revertNameChangeStub
+        );
     });
 
     it('should revert name change on reject if name changed', async () => {
 
-        askForNewProjectNameStub.rejects('fake error');
         setNameStub.resolves();
-
         const oldName = 'old';
         const newName = 'new';
         const setNameHandlerResult = [{ 'Status': CliStatus.SUCCESS, 'Message': `from ${oldName} to ${newName}` }];
         const expectedResult = { 'Status': CliStatus.SUCCESS, 'Message': 'Project name has been successfully recovered' };
-        sandbox.stub(command.setNameHandler, 'getResult').onCall(0).returns(setNameHandlerResult);
+        sandbox.stub(command.setNameHandler, 'getResult').returns(setNameHandlerResult);
+        sandbox.stub(command, 'printResult');
+        sandbox.stub(command, 'catchError');
 
-        await command.execute();
+        await command.revertNameChange();
 
-        expect(command.result[0]).to.be.deep.equal(expectedResult);
+        expect(command.result).to.deep.include(expectedResult);
+    });
+
+    it('should print result if name not changed', async () => {
+
+        const printResultStub = sandbox.stub(command, 'printResult');
+        const setNameHandlerResult = [{ 'Status': CliStatus.SUCCESS, 'Message': 'fake message' }];
+        command.setNameHandler.result = setNameHandlerResult;
+        sandbox.stub(console, 'log');
+
+        await command.revertNameChange();
+
+        sandbox.assert.calledOnce(printResultStub);
     });
 
     it('should print error if name not recovered', async () => {
@@ -214,13 +178,63 @@ describe('Command: rename', () => {
         command.setNameHandler.oldName = oldName;
         command.setNameHandler.newName = newName;
         setNameStub.rejects('fake error');
+        sandbox.stub(console, 'log');
 
         try {
 
             await command.revertNameChange();
-        } catch (err) {
+        } 
+        catch (err) {
 
             expect(console.log.called).to.be.true;
         }
+    });
+
+    it('should set rename handler arguments', async () => {
+
+        const oldName = 'oldName', newName = 'newName';
+        sandbox.stub(command.setNameHandler, 'oldName').value(oldName);
+        sandbox.stub(command.setNameHandler, 'newName').value(newName);
+
+        await command.setHandlerArgs();
+
+        expect(command.handler.oldName).to.be.eq(oldName);
+        expect(command.handler.newName).to.be.eq(newName);
+    });
+
+    it('should set backend technology if backend project', async () => {
+
+        const fakeTechnology = 'fakeTechnology';
+        sandbox.stub(command.handler, 'backend').value(true);
+        sandbox.stub(command.handler, 'technology').value(fakeTechnology);
+
+        await command.setBackendTechnology();
+
+        expect(command.publishHandler.backendTechnology).to.be.eq(fakeTechnology);
+    });
+
+    it('should not set backend technology if not backend project', async () => {
+
+        sandbox.stub(command.handler, 'backend').value(false);
+
+        await command.setBackendTechnology();
+
+        expect(command.publishHandler.backendTechnology).to.be.eq(undefined);
+    });
+
+    it('should set and print result', () => {
+
+        const setNameHandlerResult = ['Passed'];
+        const publishHandlerResult = ['Ok!'];
+        const commandResult = ['Fake result'];
+        const expectedResult = [...setNameHandlerResult, ...publishHandlerResult, ...commandResult];
+        sandbox.stub(command.setNameHandler, 'getResult').returns(setNameHandlerResult);
+        sandbox.stub(command.publishHandler, 'getResult').returns(publishHandlerResult);
+        sandbox.stub(command, 'result').value(commandResult);
+        const tableStub = sandbox.stub(console, 'table');
+
+        command.printResult();
+
+        sandbox.assert.calledWith(tableStub, expectedResult);
     });
 });

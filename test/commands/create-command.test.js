@@ -1,6 +1,6 @@
 'use strict';
 
-const CreateCommand = require('../../commands/create-command.js');
+const CreateCommand = require('../../commands/create-command');
 const AuthHandler = require('../../utils/auth-handler');
 const Command = require('../../commands/command');
 const sandbox = require('sinon').createSandbox();

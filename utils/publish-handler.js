@@ -25,7 +25,7 @@ class PublishHandler {
         this.last = 0;
         this.sent = 0;
         this.endMsg = '';
-        this.useFtp = false;
+        this.useFtp = true;
         this.test = false;
         this.useGitlab = false;
         this.currentBranch = '';
@@ -121,13 +121,14 @@ class PublishHandler {
 
         if (this.repoUrl) {
 
-            if (this.useGitlab) return;
+            if (this.useGitlab) return this.useFtp = false;
 
             const useGitlab = await helpers.showConfirmationPrompt(
                 'This project seems to be created on MDB Go GitLab server. Do you want to use our pipeline to publish your project now?'
             );
 
             if (useGitlab === false) this.useFtp = true;
+            else this.useFtp = false;
 
         } else {
 
@@ -464,6 +465,8 @@ class PublishHandler {
 
         const projectMetadata = metadataExists ? await helpers.deserializeJsonFile(metadataPath) : {};
 
+        if (projectMetadata.domainName) this.domainName = projectMetadata.domainName;
+
         if (projectMetadata.projectName) {
 
             this.projectName = projectMetadata.projectName;
@@ -550,7 +553,7 @@ class PublishHandler {
                     fs.writeFileSync(appJsPath, appJsFile, 'utf8');
                 }
 
-                packageJson.homepage = `${config.projectsDomain}/${username}/${packageJson.name}/`;
+                packageJson.homepage = `https://${config.projectsDomain}/${username}/${packageJson.name}/`;
                 await helpers.serializeJsonFile('package.json', packageJson);
 
                 await helpers.buildProject(this.packageManager);

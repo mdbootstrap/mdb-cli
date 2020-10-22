@@ -60,12 +60,12 @@ class Command {
         if (this.result) console.table(this.result);
     }
 
-    catchError(error) {
+    catchError(error, print = true) {
 
         if (Array.isArray(error)) {
 
             this.result = error;
-            this.print();
+            if (print) this.print();
 
         } else if (error && error.statusCode && error.message) {
 
@@ -79,12 +79,12 @@ class Command {
                 this.result.push({ Status: CliStatus.UNAUTHORIZED, Message: 'Please login first' });
             }
 
-            this.print();
+            if (print) this.print();
 
         } else if (error && error.Status && error.Message) {
 
             this.result.push(error);
-            this.print();
+            if (print) this.print();
 
         } else {
 

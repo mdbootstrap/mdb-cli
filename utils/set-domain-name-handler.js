@@ -3,14 +3,17 @@
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
 const helpers = require('../helpers/');
+const path = require('path');
+const fs = require('fs');
 
 class SetDomainNameHandler {
 
     constructor(authHandler = new AuthHandler()) {
 
-        this.result = [];
-        this.name = '';
         this.args = [];
+        this.cwd = process.cwd();
+        this.domainName = '';
+        this.result = [];
 
         this.authHandler = authHandler;
     }
@@ -29,48 +32,99 @@ class SetDomainNameHandler {
 
         if (this.args.length > 0) {
 
-            this.name = this.args[0];
+            this.domainName = this.args[0];
 
             return;
         }
 
-        this.name = await helpers.showTextPrompt('Enter domain name', 'Domain name must not be empty.');
+        this.domainName = await helpers.showTextPrompt('Enter domain name', 'Domain name must not be empty.');
     }
 
-    setDomainName() {
+    async setDomainName() {
 
-        return new Promise((resolve, reject) => {
+        const packageJsonPath = path.join(this.cwd, 'package.json');
+        let packageJson = {};
 
-            const fileName = 'package.json';
+        try {
 
-            helpers.deserializeJsonFile(fileName).then(fileContent => {
+            packageJson = await helpers.deserializeJsonFile(packageJsonPath);
 
-                if (fileContent.domainName && fileContent.domainName === this.name) {
+        } catch (e) {
 
-                    return reject([{ 'Status': CliStatus.SUCCESS, 'Message': 'Domain names are the same.' }]);
-                }
+            if (e.code === 'ENOENT') {
 
-                fileContent.domainName = this.name;
+                const indexPhpPath = path.join(this.cwd, 'index.php');
 
-                helpers.serializeJsonFile(fileName, fileContent).then(() => {
+                if (fs.existsSync(indexPhpPath)) return this.saveInConfigFile();
 
-                    this.result = [{ 'Status': CliStatus.SUCCESS, 'Message': `Domain name has been changed to ${this.name} successfully` }];
-                    resolve();
+                return this.handleMissingPackageJson();
+            }
 
-                }).catch(e => {
+            return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Could not read `package.json` file.' }]);
+        }
 
-                    console.log(e);
-                    return reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with saving ${fileName}` }]);
-                });
+        this.oldName = packageJson.domainName;
 
-            }).catch(e => {
+        if (this.domainName === this.oldName) {
 
-                console.log(e);
-                reject([{ 'Status': CliStatus.INTERNAL_SERVER_ERROR, 'Message': `Problem with reading ${fileName}` }]);
-            });
-        });
+            return Promise.reject([{ Status: CliStatus.SUCCESS, Message: 'Domain names are the same.' }]);
+        }
+
+        packageJson.domainName = this.domainName;
+
+        try {
+
+            await helpers.serializeJsonFile(packageJsonPath, packageJson);
+
+        } catch (e) {
+
+            return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Could not save `package.json` file.' }]);
+        }
+
+        this.result = [{ Status: CliStatus.SUCCESS, Message: 'Domain name has been saved in package.json file' }];
     }
 
+    handleMissingPackageJson() {
+
+        return helpers.createPackageJson(null, this.cwd).then(() => this.setDomainName());
+    }
+
+    async saveInConfigFile() {
+
+        const mdbFilePath = path.join(this.cwd, '.mdb');
+        let mdbFileContent = {};
+
+        try {
+
+            mdbFileContent = await helpers.deserializeJsonFile(mdbFilePath);
+            mdbFileContent.domainName = this.domainName;
+
+        } catch (e) {
+
+            if (e.code !== 'ENOENT') {
+
+                return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Could not read `.mdb` file.' }]);
+            }
+
+            mdbFileContent.domainName = this.domainName;
+        }
+
+        try {
+
+            await helpers.serializeJsonFile(mdbFilePath, mdbFileContent);
+
+        } catch (e) {
+
+            if (e.code !== 'ENOENT') {
+
+                return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Could not save `.mdb` file.' }]);
+            }
+
+            fs.writeFileSync(mdbFilePath, mdbFileContent, 'utf8');
+        }
+
+        this.result = [{ Status: CliStatus.SUCCESS, Message: 'Domain name has been saved in .mdb file' }];
+    }
 }
 
 module.exports = SetDomainNameHandler;

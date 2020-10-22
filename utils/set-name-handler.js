@@ -72,7 +72,17 @@ class SetNameHandler {
 
         } catch (e) {
 
-            return this.handleMissingPackageJson();
+            if (e.code === 'ENOENT') {
+
+                const indexPhpPath = path.join(this.cwd, 'index.php');
+
+                if (fs.existsSync(indexPhpPath)) return this.saveInConfigFile();
+
+                return this.handleMissingPackageJson();
+
+            }
+
+            return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Problem with `package.json` file deserialization.' }]);
         }
 
         try {
@@ -102,6 +112,43 @@ class SetNameHandler {
                 console.table(this.result);
                 process.exit(1);
             });
+    }
+
+    async saveInConfigFile() {
+
+        const mdbFilePath = path.join(this.cwd, '.mdb');
+        let mdbFileContent = {};
+
+        try {
+
+            mdbFileContent = await helpers.deserializeJsonFile(mdbFilePath);
+            mdbFileContent.name = this.newName;
+
+        } catch (e) {
+
+            if (e.code !== 'ENOENT') {
+
+                return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Problem with `.mdb` file deserialization.' }]);
+            }
+
+            mdbFileContent.name = this.newName;
+        }
+
+        try {
+
+            await helpers.serializeJsonFile(mdbFilePath, mdbFileContent);
+
+        } catch (e) {
+
+            if (e.code !== 'ENOENT') {
+
+                return Promise.reject([{ Status: CliStatus.CLI_ERROR, Message: 'Problem with `.mdb` file serialization.' }]);
+            }
+
+            fs.writeFileSync(mdbFilePath, mdbFileContent, 'utf8');
+        }
+
+        this.result = [{ Status: CliStatus.SUCCESS, Message: 'Project name has been saved in .mdb file' }];
     }
 
     removeProject() {

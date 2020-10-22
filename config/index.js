@@ -3,14 +3,16 @@
 const homedir = require('os').homedir();
 const env = process.env.NODE_ENV || 'prd';
 const gitlabUrl = process.env.GITLAB_URL || 'https://git.mdbgo.com';
-const projectsDomain = process.env.PROJECTS_DOMAIN || 'https://mdbgo.dev';
+const projectsDomain = process.env.PROJECTS_DOMAIN || 'mdbgo.io';
 const technologies = process.env.BACKEND_TECHNOLOGIES || 'node8,node10,node12,php7.2,php7.3,php7.4';
+const databases = process.env.DATABASES || 'mysql8,mongodb';
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = 0;
 process.env['NODE_NO_WARNINGS'] = 1;
 module.exports = {
     env,
     gitlabUrl,
     projectsDomain,
+    databases: databases.split(','),
     backendTechnologies: technologies.split(','),
     tokenFile: '/.auth',
     tokenDir: `${homedir}/.mdbcli`,
