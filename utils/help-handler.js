@@ -36,7 +36,9 @@ class HelpHandler {
             { 'Command': 'db-list', 'Description': 'list all your databases' },
             { 'Command': 'db-info', 'Description': 'print database connection string' },
             { 'Command': 'db-create', 'Description': 'create new database' },
-            { 'Command': 'db-delete', 'Description': 'delete database and database user' }
+            { 'Command': 'db-delete', 'Description': 'delete database and database user' },
+            { 'Command': 'wp-init', 'Description': 'initialize Wordpress instance' },
+            { 'Command': 'wp-download-theme', 'Description': 'download Wordpress theme' }
         ];
     }
 

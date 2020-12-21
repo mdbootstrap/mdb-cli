@@ -57,7 +57,7 @@ class LogsHandler {
         let projects = await http.get();
         projects = typeof projects === 'string' ? JSON.parse(projects) : projects;
 
-        this.projects = projects.filter(p => p.status === ProjectStatus.BACKEND).map(p => ({ name: p.projectName }));
+        this.projects = projects.filter(p => [ProjectStatus.BACKEND, ProjectStatus.WORDPRESS].includes(p.status)).map(p => ({ name: p.projectName }));
     }
 
     async askForProjectName() {

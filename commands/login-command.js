@@ -15,8 +15,9 @@ class LoginCommand extends Command {
 
     execute() {
 
-        return this.handler.askCredentials()
-            .then(() => this.handler.login())
+        this.handler.setArgs(this.args);
+        this.handler.setStrategy();
+        return this.handler.login()
             .then((response) => {
 
                 this.handler.parseResponse(response);

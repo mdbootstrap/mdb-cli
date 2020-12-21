@@ -65,7 +65,16 @@ describe('Handler: publish', () => {
 
     describe('Method: setArgs', () => {
 
-        beforeEach(() => sandbox.stub(config, 'backendTechnologies').value(['node']));
+        let existsSyncStub,
+        deserializeJsonFileStub;
+
+        beforeEach(() => {
+
+            sandbox.stub(config, 'backendTechnologies').value(['node']);
+            sandbox.stub(config, 'wpPageTypes').value(['sample']);
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
+        });
 
         afterEach(() => {
 
@@ -142,6 +151,46 @@ describe('Handler: publish', () => {
                 expect(publishHandler.backendTechnology).to.be.equal('php');
                 expect(err).to.deep.eq({ Status: 1, Message: 'This technology is not supported. Allowed technologies: node' });
             }
+        });
+
+        it('should set pageType property when --type flag is present', async () => {
+
+            const fakeArgs = ['--type=sample'];
+
+            await publishHandler.setArgs(fakeArgs);
+
+            expect(publishHandler.pageType).to.be.equal('sample');
+        });
+
+        it('should set pageType property when --type flag is present', async () => {
+
+            const fakeArgs = ['--type', 'sample'];
+
+            await publishHandler.setArgs(fakeArgs);
+
+            expect(publishHandler.pageType).to.be.equal('sample');
+        });
+
+        it('should read metadata and set pageType property', async () => {
+
+            existsSyncStub.returns(true);
+            deserializeJsonFileStub.resolves({ pageType: 'sample' });
+
+            await publishHandler.setArgs([]);
+
+            expect(publishHandler.pageType).to.be.equal('sample');
+        });
+
+        it('should create prompt and set pageType property', async () => {
+
+            existsSyncStub.returns(false);
+            sandbox.stub(publishHandler, 'wordpress').value(true);
+            const promptStub = sandbox.stub().resolves({ name: 'sample' });
+            sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
+
+            await publishHandler.setArgs([ '--wordpress' ]);
+            
+            expect(publishHandler.pageType).to.be.equal('sample');
         });
     });
 
@@ -1083,6 +1132,17 @@ describe('Handler: publish', () => {
                 expect(err).to.deep.include(expectedResult);
             }
         });
+
+        it('should set wordpress project name', async () => {
+
+            sandbox.stub(publishHandler, 'wordpress').value(true);
+            const setWpProjectNameStub = sandbox.stub(publishHandler, 'setWpProjectName').resolves();
+            const askWpCredentialsStub = sandbox.stub(publishHandler, 'askWpCredentials').resolves();
+
+            await publishHandler.setProjectName();
+
+            sandbox.assert.callOrder(setWpProjectNameStub, askWpCredentialsStub);
+        });
     });
 
     describe('Method: setPhpProjectName', () => {
@@ -1224,15 +1284,23 @@ describe('Handler: publish', () => {
 
 
         let consoleLogStub,
+            joinStub,
             existsSyncStub,
+            moveSyncStub,
+            readFileStub,
+            writeFileStub,
             buildProjectStub,
             deserializeJsonFileStub,
             serializeJsonFileStub;
 
         beforeEach(() => {
 
+            joinStub = sandbox.stub(path, 'join');
+            moveSyncStub = sandbox.stub(fse, 'moveSync');
             consoleLogStub = sandbox.stub(console, 'log');
             existsSyncStub = sandbox.stub(fs, 'existsSync');
+            readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
+            writeFileStub = sandbox.stub(fs, 'writeFileSync');
             sandbox.stub(publishHandler, 'loadPackageManager').resolves();
             buildProjectStub = sandbox.stub(helpers, 'buildProject');
             deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
@@ -1274,7 +1342,6 @@ describe('Handler: publish', () => {
 
         it('should run build and detect build folder', async () => {
 
-            const joinStub = sandbox.stub(path, 'join');
             sandbox.stub(publishHandler, 'cwd').value(fakeCwd);
             joinStub.withArgs(fakeCwd, 'dist').returns(distPath);
             joinStub.withArgs(fakeCwd, 'build').returns(buildPath);
@@ -1293,7 +1360,6 @@ describe('Handler: publish', () => {
 
         it('should run build and detect dist folder', async () => {
 
-            const joinStub = sandbox.stub(path, 'join');
             sandbox.stub(publishHandler, 'cwd').value(fakeCwd);
             joinStub.withArgs(fakeCwd, 'dist').returns(distPath);
             joinStub.withArgs(fakeCwd, 'build').returns(buildPath);
@@ -1312,9 +1378,6 @@ describe('Handler: publish', () => {
 
         it('should recognize and build Angular project', async () => {
 
-            const readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
-            const writeFileStub = sandbox.stub(fs, 'writeFileSync');
-            const moveSyncStub = sandbox.stub(fse, 'moveSync');
             deserializeJsonFileStub.resolves({
                 defaultProject: fakeProjectName,
                 scripts: { build: 'build' },
@@ -1354,7 +1417,6 @@ describe('Handler: publish', () => {
 
             existsSyncStub.onFirstCall().returns(true);
             existsSyncStub.onSecondCall().returns(false);
-            const writeFileStub = sandbox.stub(fs, 'writeFileSync');
             deserializeJsonFileStub.resolves({
                 scripts: { build: 'build' },
                 dependencies: { 'vue': '7.5.4' }
@@ -1371,8 +1433,6 @@ describe('Handler: publish', () => {
         it('should recognize and build React project', async () => {
 
             const fakeToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjEyMyIsIm5hbWUiOiJGYWtlTmFtZSIsImlzUHJvIjp0cnVlfQ.o0DZ3QXQn6mF8PEPikG27QBSuiiOJC5LktnaLzKtU8k';
-            const readFileStub = sandbox.stub(fs, 'readFileSync').returns('fake file content');
-            const writeFileStub = sandbox.stub(fs, 'writeFileSync');
             deserializeJsonFileStub.resolves({
                 scripts: { build: 'build' },
                 dependencies: { 'react': '7.5.4' }
@@ -1424,13 +1484,12 @@ describe('Handler: publish', () => {
 
             const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
             const responseOnStub = sandbox.stub();
-            responseOnStub.withArgs('data').yields('fake data');
+            responseOnStub.withArgs('data').yields('fakeMessage');
             responseOnStub.withArgs('end').yields(undefined);
             const fakeResponse = {
                 on: responseOnStub,
                 headers: fakeHeader,
-                statusCode: 123,
-                statusMessage: 'fakeMessage'
+                statusCode: 123
             };
             const archiveOnStub = sandbox.stub();
             archiveOnStub.withArgs('error').yields('fake err');
@@ -1454,7 +1513,7 @@ describe('Handler: publish', () => {
             publishHandler.cwd = fakeCwd;
             publishHandler.backendTechnology = 'node';
             publishHandler.projectName = fakeProjectName;
-            const globOptions = { cwd: fakeCwd, ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**'] };
+            const globOptions = { cwd: fakeCwd, ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**', '.mdb'], dot: true };
 
             await publishHandler.uploadFiles();
 
@@ -1462,6 +1521,7 @@ describe('Handler: publish', () => {
             expect(finalizeStub.calledOnce).to.be.true;
             expect(pipeStub.calledWith(fakeRequest)).to.be.true;
             expect(globStub.calledWith('**', globOptions)).to.be.true;
+            console.log(publishHandler)
             expect(publishHandler.result).to.deep.include({ 'Status': 123, 'Message': 'fakeMessage' });
         });
 
@@ -1469,13 +1529,12 @@ describe('Handler: publish', () => {
 
             const fakeRequest = { on: sandbox.stub(), write: sandbox.stub(), end: sandbox.stub() };
             const responseOnStub = sandbox.stub();
-            responseOnStub.withArgs('data').yields('fake data');
+            responseOnStub.withArgs('data').yields(JSON.stringify({ url: 'fake.url', message: 'fakeMessage' }));
             responseOnStub.withArgs('end').yields(undefined);
             const fakeResponse = {
                 on: responseOnStub,
                 headers: fakeHeader,
-                statusCode: CliStatus.HTTP_SUCCESS,
-                statusMessage: 'fakeMessage'
+                statusCode: CliStatus.HTTP_SUCCESS
             };
             const archiveOnStub = sandbox.stub();
             archiveOnStub.withArgs('error').yields('fake err');
@@ -1498,7 +1557,7 @@ describe('Handler: publish', () => {
             sandbox.stub(ArchiverWrapper, 'archiveProject').returns(archiveProject);
             publishHandler.cwd = fakeCwd;
             publishHandler.projectName = fakeProjectName;
-            const globOptions = { cwd: fakeCwd, ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**'] };
+            const globOptions = { cwd: fakeCwd, ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**', '.mdb'], dot: true };
 
             await publishHandler.uploadFiles();
 
@@ -1507,6 +1566,77 @@ describe('Handler: publish', () => {
             expect(pipeStub.calledWith(fakeRequest)).to.be.true;
             expect(globStub.calledWith('**', globOptions)).to.be.true;
             expect(publishHandler.result).to.deep.include({ Status: CliStatus.SUCCESS, Message: 'Sent 0.000 Mb' });
+        });
+    });
+
+    describe('Method: askWpCredentials', () => {
+
+        const pageType = 'fakePageType',
+            pageName = 'Fake page name',
+            username = 'fakeUsername',
+            password = 'fakePassword',
+            email = 'fake@email.com';
+
+        it('should get wordpress credentials and set in wpData property', async () => {
+
+            const expectedResult = { pageName, username, password, repeatPassword: password, email, pageType };
+            const promptStub = sandbox.stub().resolves({ pageName, username, password, repeatPassword: password, email });
+            const saveProjectMetadataStub = sandbox.stub(publishHandler, 'saveProjectMetadata').resolves();
+            sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
+            sandbox.stub(publishHandler, 'customWpInstalation').value(true);
+            sandbox.stub(publishHandler, 'pageType').value(pageType);
+
+            await publishHandler.askWpCredentials();
+
+            expect(publishHandler.wpData).to.deep.eq(expectedResult);
+            sandbox.assert.calledOnce(saveProjectMetadataStub);
+        });
+    });
+
+    describe('Method: createWpPage', () => {
+
+        it('should make a POST request to create wordpress instance', async () => {
+
+            const message = 'Success. Your app is running on http://mdbgo.io:32777';
+            const url = 'http://mdbgo.io:32777';
+            const result = JSON.stringify({ message, url });
+            sandbox.stub(HttpWrapper.prototype, 'post').resolves(result);
+            const expectedResult = { Status: 200, Message: message };
+
+            await publishHandler.createWpPage();
+
+            expect(publishHandler.result).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: setWpProjectName', () => {
+
+        let existsSyncStub, deserializeJsonFileStub;
+
+        beforeEach(() => {
+
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            deserializeJsonFileStub = sandbox.stub(helpers, 'deserializeJsonFile');
+        });
+
+        it('should set wordpress project name if defined in config', async () => {
+
+            existsSyncStub.returns(true);
+            deserializeJsonFileStub.resolves({ projectName: fakeProjectName, domainName: fakeDomainName });
+
+            await publishHandler.setWpProjectName();
+
+            expect(publishHandler.projectName).to.be.eq(fakeProjectName);
+            expect(publishHandler.domainName).to.be.eq(fakeDomainName);
+        });
+
+        it('should not set wordpress project name if no config file', async () => {
+
+            existsSyncStub.returns(false);
+
+            await publishHandler.setWpProjectName();
+
+            expect(publishHandler.projectName).to.be.eq('');
         });
     });
 

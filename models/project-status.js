@@ -3,5 +3,6 @@
 module.exports = {
     BACKEND: 'backend',
     CREATED: 'created',
-    PUBLISHED: 'published'
+    PUBLISHED: 'published',
+    WORDPRESS: 'wordpress'
 };

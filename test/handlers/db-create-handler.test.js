@@ -7,7 +7,6 @@ const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
 const config = require('../../config');
 const inquirer = require('inquirer');
-const { expect } = require('chai');
 
 describe('Handler: DbCreate', () => {
 
@@ -57,12 +56,11 @@ describe('Handler: DbCreate', () => {
         expect(result).to.deep.include(expectedResult);
     });
 
-    it('should setArgs reject if invalid values provided in args', async () => {
+    it('should setArgs show list if incorrect value provided in args', async () => {
 
         const database = 'mongodb';
         const promptStub = sandbox.stub().resolves({ name: database });
         sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
-        sandbox.stub(handler, 'database').value(database);
 
         await handler.setArgs(['--database=asdf']);
 
@@ -115,7 +113,6 @@ describe('Handler: DbCreate', () => {
         await handler.askCredentials();
 
         expect(handler.options.data).to.deep.eq(expectedResult);
-
     });
 
     it('should askCredentials() method reject if user does not want to create the database user', async () => {

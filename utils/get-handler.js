@@ -2,6 +2,7 @@
 
 const config = require('../config');
 const CliStatus = require('../models/cli-status');
+const ProjectStatus = require('../models/project-status');
 const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const helpers = require('../helpers');
@@ -20,6 +21,7 @@ class GetHandler {
         this.repoUrl = null;
         this.result = [];
         this.force = false;
+        this.wordpress = false;
 
         this.setAuthHeader();
     }
@@ -33,7 +35,9 @@ class GetHandler {
 
         this.force = args.some(arg => arg === '--force');
 
-        this.args = args.filter(arg => arg !== '--force');
+        this.wordpress = args.some(arg => arg === '--wordpress');
+
+        this.args = args.filter(arg => !['--force', '--wordpress'].includes(arg));
     }
 
     getResult() {
@@ -55,6 +59,7 @@ class GetHandler {
         return http.get().then((projects) => {
 
             projects = typeof projects === 'string' ? JSON.parse(projects) : projects;
+            projects = this.wordpress ? projects.filter(p => p.status === ProjectStatus.WORDPRESS) : projects.filter(p => p.status !== ProjectStatus.WORDPRESS);
             this.options = projects.map(p => ({ name: p.projectName, repoUrl: p.repoUrl }));
         });
     }

@@ -7,9 +7,8 @@ const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
 const config = require('../../config');
 const inquirer = require('inquirer');
-const { expect } = require('chai');
 
-describe('Handler: DbInfo', () => {
+describe('Handler: DbDelete', () => {
 
     let handler,
         authHandler,

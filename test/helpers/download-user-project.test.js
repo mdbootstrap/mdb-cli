@@ -82,7 +82,7 @@ describe('Helper: download user project', () => {
 
     it('should return expected result if error', async () => {
 
-        const expectedResult = { Status: 500, Message: 'Error downloading your project' };
+        const expectedResult = { Status: 500, Message: 'Download error.' };
 
         createRequestStub.returns(fakeRequest).yields(fakeResponse);
         readablePipeStub.throws('fakeErr');

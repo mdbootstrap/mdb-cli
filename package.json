@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -29,7 +29,8 @@
     "mocha": "^6.1.1",
     "nyc": "^13.3.0",
     "pkg": "^4.3.5",
-    "sinon": "^7.3.1"
+    "sinon": "^7.3.1",
+    "sinon-chai": "^3.5.0"
   },
   "dependencies": {
     "archiver": "^3.0.0",
@@ -40,6 +41,7 @@
     "dotenv": "^8.0.0",
     "fs-extra": "^8.0.1",
     "inquirer": "^6.2.1",
+    "open": "^7.3.0",
     "ora": "^3.4.0",
     "progress": "^2.0.3",
     "unzipper": "^0.9.7"

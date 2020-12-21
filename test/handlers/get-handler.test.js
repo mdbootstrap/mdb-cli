@@ -79,11 +79,12 @@ describe('Handler: Get', () => {
             expect(handler.options).to.deep.include(expectedResult);
         });
 
-        it('should fetch user projects, parse and assign to options', async () => {
+        it('should fetch user wordpress projects, parse and assign to options', async () => {
 
-            const fakeResult = '[{"projectId":1,"userNicename":"fakeUser","projectName":"fakeName","domainName":null,"publishDate":"2020-07-07T12:29:51.000Z","editDate":"2020-07-07T12:29:51.000Z","repoUrl":"fakeUrl","status":"published"}]';
+            const fakeResult = '[{"projectId":1,"userNicename":"fakeUser","projectName":"fakeName","domainName":null,"publishDate":"2020-07-07T12:29:51.000Z","editDate":"2020-07-07T12:29:51.000Z","repoUrl":"fakeUrl","status":"wordpress"}]';
             sandbox.stub(HttpWrapper.prototype, 'get').resolves(fakeResult);
             const expectedResult = { name: 'fakeName', repoUrl: 'fakeUrl' };
+            sandbox.stub(handler, 'wordpress').value(true);
 
             await handler.fetchProjects();
 

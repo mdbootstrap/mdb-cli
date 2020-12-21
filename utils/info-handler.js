@@ -52,7 +52,7 @@ class InfoHandler {
         let projects = await http.get();
         projects = typeof projects === 'string' ? JSON.parse(projects) : projects;
 
-        this.projects = projects.filter(p => p.status === ProjectStatus.BACKEND).map(p => ({ name: p.projectName }));
+        this.projects = projects.filter(p => [ProjectStatus.BACKEND, ProjectStatus.WORDPRESS].includes(p.status)).map(p => ({ name: p.projectName }));
     }
 
     async askForProjectName() {
@@ -89,8 +89,8 @@ class InfoHandler {
         const isUp = this.result.port;
 
         console.log('\x1b[36m%s\x1b[0m', 'Status:', isUp ? 'running' : 'dead');
-        console.log('\x1b[36m%s\x1b[0m', isUp ? 'Started at:' : 'Killed at:', isUp ? this.result.startedAt : this.result.killedAt );
-        
+        console.log('\x1b[36m%s\x1b[0m', isUp ? 'Started at:' : 'Killed at:', isUp ? this.result.startedAt : this.result.killedAt);
+
         isUp && console.log('\x1b[36m%s\x1b[0m', 'App URL:', `http://${config.projectsDomain}:${this.result.port}`);
     }
 }
