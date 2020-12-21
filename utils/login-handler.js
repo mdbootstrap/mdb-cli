@@ -1,29 +1,26 @@
 'use strict';
 
-const HttpWrapper = require('../utils/http-wrapper');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
+const LoginStrategy = require('../models/login-strategy');
+const NormalLoginStrategy = require('./strategies/login/normal-login-strategy');
+const GoogleLoginStrategy = require('./strategies/login/google-login-strategy');
+const FacebookLoginStrategy = require('./strategies/login/facebook-login-strategy');
+const TwitterLoginStrategy = require('./strategies/login/twitter-login-strategy');
 const helpers = require('../helpers/');
-const config = require('../config');
 
 class LoginHandler {
 
     constructor(response, authHandler = new AuthHandler(false)) {
 
         this.result = response;
-        this.options = {
-            port: config.port,
-            hostname: config.host,
-            path: '/auth/login',
-            method: 'POST',
-            data: '',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        };
         this._userToken = '';
 
         this.authHandler = authHandler;
+
+        this.socialProvider = LoginStrategy.Normal;
+
+        this.strategy = null;
     }
 
     getResult() {
@@ -31,47 +28,29 @@ class LoginHandler {
         return this.result;
     }
 
-    askCredentials() {
+    setArgs(args) {
 
-        const prompt = require('inquirer').createPromptModule();
+        const methodArg = args.find((arg) => arg.startsWith('--method='));
+        if (!methodArg) {
+            return;
+        }
 
-        return prompt([
-            {
-                type: 'text',
-                message: 'Enter your MDB username',
-                name: 'username',
-                validate: (value) => {
-                    /* istanbul ignore next */
-                    const valid = Boolean(value);
-                    /* istanbul ignore next */
-                    return valid || 'Login must not be empty.';
-                }
-            },
-            {
-                type: 'password',
-                message: 'Enter your MDB password',
-                name: 'password',
-                mask: '*',
-                validate: (value) => {
-                    /* istanbul ignore next */
-                    const valid = Boolean(value);
-                    /* istanbul ignore next */
-                    return valid || 'Password must not be empty.';
-                }
-            }
-        ])
-            .then((answers) => {
+        const [, provider] = methodArg.split('=');
+        this.socialProvider = provider.toLowerCase();
+    }
 
-                const { username, password } = answers;
-                this.options.data = JSON.stringify({ username, password });
-                this.options.headers['Content-Length'] = Buffer.byteLength(this.options.data);
-            });
+    setStrategy() {
+        switch (this.socialProvider) {
+            case LoginStrategy.Google: return this.strategy = new GoogleLoginStrategy();
+            case LoginStrategy.Facebook: return this.strategy = new FacebookLoginStrategy();
+            case LoginStrategy.Twitter: return this.strategy = new TwitterLoginStrategy();
+            case LoginStrategy.Normal: return this.strategy = new NormalLoginStrategy();
+        }
     }
 
     login() {
 
-        const http = new HttpWrapper(this.options);
-        return http.post();
+        return this.strategy.login();
     }
 
     parseResponse(response) {

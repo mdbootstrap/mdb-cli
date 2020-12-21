@@ -47,44 +47,37 @@ describe('Command: Login', () => {
         done();
     });
 
-    it('should call handler.askCredentials', (done) => {
+    it('should call handler.setArgs', (done) => {
 
-        const fakeReturnedPromise = {
-
-            then() {
-
-                return this;
-            },
-            catch() {
-
-                return this;
-            }
-
-        };
-        const handlerStub = sandbox.stub(command.handler, 'askCredentials').returns(fakeReturnedPromise);
+        const handlerStub = sandbox.stub(command.handler, 'setArgs');
 
         command.execute();
 
-        chai.assert.isTrue(handlerStub.called, 'handler.askCredentials not called');
+        chai.assert.isTrue(handlerStub.called, 'handler.setArgs not called');
 
         done();
     });
 
-    it('should console.log on handler.askCredentials failure', async () => {
 
-        sandbox.stub(command.handler, 'askCredentials').rejects('Fake error');
-        const consoleStub = sandbox.stub(console, 'log');
+    it('should call handler.setStrategy', (done) => {
 
-        await command.execute();
+        const handlerStub = sandbox.stub(command.handler, 'setStrategy');
+        sandbox.stub(command.handler, 'login').resolves(undefined);
+        sandbox.stub(command.handler, 'parseResponse').returns();
+        sandbox.stub(command.handler, 'saveToken').returns();
+        sandbox.stub(command, 'print').returns();
 
-        chai.assert.isTrue(consoleStub.called, 'console.error not called on handler.askCredentials failure');
+        command.execute();
 
-        return Promise.resolve();
+        chai.assert.isTrue(handlerStub.called, 'handler.setStrategy not called');
+
+        done();
     });
 
-    it('should call handler.login after handler.askCredentials', async () => {
+    it('should call handler.login after handler.setStrategy', async () => {
 
-        sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'setStrategy');
         const loginStub = sandbox.stub(command.handler, 'login').resolves(undefined);
         sandbox.stub(command.handler, 'parseResponse').returns();
 
@@ -97,7 +90,8 @@ describe('Command: Login', () => {
 
     it('should console.log on handler.login failure', async () => {
 
-        sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'setStrategy');
         sandbox.stub(command.handler, 'login').rejects('Fake error');
         const consoleStub = sandbox.stub(console, 'log');
 
@@ -110,7 +104,8 @@ describe('Command: Login', () => {
 
     it('should call handler.parseResponse after handler.login', async () => {
 
-        sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'setStrategy');
         sandbox.stub(command.handler, 'login').resolves(undefined);
         const parseResponseStub = sandbox.stub(command.handler, 'parseResponse').returns();
 
@@ -123,7 +118,8 @@ describe('Command: Login', () => {
 
     it('should call handler.saveToken after handler.login', async () => {
 
-        sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'setStrategy');
         sandbox.stub(command.handler, 'login').resolves([{}]);
         const saveTokenStub = sandbox.stub(command.handler, 'saveToken').returns();
 
@@ -134,22 +130,10 @@ describe('Command: Login', () => {
         return Promise.resolve();
     });
 
-    it('should call handler.getResult after handler.login', async () => {
-
-        sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
-        sandbox.stub(command.handler, 'login').resolves([{}]);
-        const getResultStub = sandbox.stub(command.handler, 'getResult').returns();
-
-        await command.execute();
-
-        chai.assert.isTrue(getResultStub.called, 'handler.getResultStub not called');
-
-        return Promise.resolve();
-    });
-
     it('should call .print() after login', async () => {
 
-        sandbox.stub(command.handler, 'askCredentials').resolves(undefined);
+        sandbox.stub(command.handler, 'setArgs');
+        sandbox.stub(command.handler, 'setStrategy');
         sandbox.stub(command.handler, 'login').resolves([{}]);
         const commandPrintSpy = sandbox.spy(command, 'print');
 

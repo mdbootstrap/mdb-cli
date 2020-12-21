@@ -4,10 +4,12 @@ const fs = require('fs');
 const Ora = require('ora');
 const path = require('path');
 const atob = require('atob');
+const open = require('open');
 const fse = require('fs-extra');
+const inquirer = require('inquirer');
+const childProcess = require('child_process');
 const config = require('../config');
 const helpers = require('../helpers');
-const childProcess = require('child_process');
 const AuthHandler = require('./auth-handler');
 const CliStatus = require('../models/cli-status');
 const HttpWrapper = require('../utils/http-wrapper');
@@ -22,16 +24,22 @@ class PublishHandler {
         this.projectName = '';
         this.packageName = '';
         this.domainName = '';
+        this.pageType = '';
         this.last = 0;
         this.sent = 0;
         this.endMsg = '';
-        this.useFtp = true;
         this.test = false;
+        this.useFtp = true;
         this.useGitlab = false;
+        this.wordpress = false;
+        this.wpData = '';
         this.currentBranch = '';
         this.packageManager = null;
         this.isWindows = process.platform === 'win32';
         this.backendTechnology = undefined;
+        this.customWpInstalation = false;
+        this.projectMetadata = {};
+        this.open = false;
 
         this.options = {
             port: config.port,
@@ -58,8 +66,11 @@ class PublishHandler {
 
     async setArgs(args) {
 
-        this.useFtp = args.some(arg => arg === '--ftp');
+        this.wordpress = args.some(arg => arg === '--wordpress');
+        this.customWpInstalation = args.some(arg => ['--advanced', '--custom'].includes(arg));
+        this.useFtp = args.some(arg => arg === '--ftp') || this.wordpress;
         this.test = args.some(arg => ['-t', '--test'].includes(arg));
+        this.open = args.some(arg => ['-o', '--open'].includes(arg));
         const backendTechnology = args.find(arg => ['-b', '--backend'].includes(arg.split('=')[0]));
         this.backendTechnology = backendTechnology ? backendTechnology.split('=')[1] : undefined;
 
@@ -68,6 +79,37 @@ class PublishHandler {
         if (backendTechnology && !technologies.includes(this.backendTechnology)) {
 
             return Promise.reject({ Status: CliStatus.CLI_ERROR, Message: `This technology is not supported. Allowed technologies: ${technologies.join(', ')}` });
+        }
+
+        const metadataPath = path.join(this.cwd, '.mdb');
+        const metadataExists = fs.existsSync(metadataPath);
+        this.projectMetadata = metadataExists ? await helpers.deserializeJsonFile(metadataPath) : {};
+
+        if (this.projectMetadata.pageType) {
+
+            this.pageType = this.projectMetadata.pageType;
+
+            return;
+        }
+
+        const index = args.indexOf('--type');
+        const pageType = args.find(arg => ['--type'].includes(arg.split('=')[0]));
+
+        if (index !== -1 && args.length > index + 1) {
+            this.pageType = args[index + 1];
+        } else if (pageType) {
+            this.pageType = pageType.split('=')[1];
+        }
+
+        if (this.wordpress && !config.wpPageTypes.includes(this.pageType)) {
+
+            const select = await inquirer.createPromptModule()([{
+                type: 'list',
+                name: 'name',
+                message: 'Choose page type',
+                choices: config.wpPageTypes
+            }]);
+            this.pageType = select.name;
         }
     }
 
@@ -425,15 +467,25 @@ class PublishHandler {
 
     async setProjectName() {
 
+        if (this.wordpress) {
+
+            await this.setWpProjectName();
+
+            if (!this.projectName) await this.askWpCredentials();
+
+            return;
+        }
+
         const packageJsonPath = path.join(this.cwd, 'package.json');
 
         try {
 
             const packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+            if (packageJson.name === undefined) throw new Error('undefined project name');
             this.projectName = packageJson.name;
             this.domainName = packageJson.domainName || '';
 
-            return Promise.resolve();
+            return;
 
         } catch (e) {
 
@@ -478,15 +530,22 @@ class PublishHandler {
 
         this.projectName = name;
 
+        await this.saveProjectMetadata({ projectName: name });
+    }
+
+    async saveProjectMetadata(metadata) {
+
+        const metadataPath = path.join(this.cwd, '.mdb');
+        const metadataExists = fs.existsSync(metadataPath);
+        const projectMetadata = metadataExists ? await helpers.deserializeJsonFile(metadataPath) : {};
+
         if (metadataExists) {
 
-            projectMetadata.projectName = name;
-
-            await helpers.serializeJsonFile(metadataPath, projectMetadata);
+            await helpers.serializeJsonFile(metadataPath, { ...projectMetadata, ...metadata });
         }
         else {
 
-            fs.writeFileSync(metadataPath, JSON.stringify({ projectName: name }), 'utf8');
+            fs.writeFileSync(metadataPath, JSON.stringify(metadata), 'utf8');
         }
     }
 
@@ -549,11 +608,11 @@ class PublishHandler {
                 if (fs.existsSync(appJsPath)) {
 
                     let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                    appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/${username}/${packageJson.name}'`);
+                    appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/${username}/${packageJson.name}/dist'`);
                     fs.writeFileSync(appJsPath, appJsFile, 'utf8');
                 }
 
-                packageJson.homepage = `https://${config.projectsDomain}/${username}/${packageJson.name}/`;
+                packageJson.homepage = `https://${config.projectsDomain}/${username}/${packageJson.name}/dist/`;
                 await helpers.serializeJsonFile('package.json', packageJson);
 
                 await helpers.buildProject(this.packageManager);
@@ -561,7 +620,7 @@ class PublishHandler {
                 if (fs.existsSync(appJsPath)) {
 
                     let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                    const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}'`, 'g');
+                    const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}/dist'`, 'g');
                     appJsFile = appJsFile.replace(regex, '<Router');
                     fs.writeFileSync(appJsPath, appJsFile, 'utf8');
                 }
@@ -569,6 +628,11 @@ class PublishHandler {
                 packageJson = await helpers.deserializeJsonFile(packageJsonPath);
                 delete packageJson.homepage;
                 await helpers.serializeJsonFile('package.json', packageJson);
+
+                if (fs.existsSync(buildPath)) {
+
+                    fse.moveSync(buildPath, distPath, { overwrite: true });
+                }
 
             } else if (isVue) {
 
@@ -613,6 +677,7 @@ In case of problems, please write to our support https://mdbootstrap.com/support
         return new Promise((resolve, reject) => {
 
             if (this.backendTechnology) this.options.headers['x-mdb-cli-backend-technology'] = this.backendTechnology;
+            if (this.wordpress) this.options.headers['x-mdb-cli-wp-page'] = this.pageType;
             this.options.headers['x-mdb-cli-project-name'] = this.projectName;
             this.options.headers['x-mdb-cli-package-name'] = this.packageName;
             this.options.headers['x-mdb-cli-domain-name'] = this.domainName;
@@ -627,20 +692,29 @@ In case of problems, please write to our support https://mdbootstrap.com/support
                     this.endMsg = Buffer.from(data).toString('utf8');
                 });
 
-                response.on('end', () => {
+                response.on('end', async () => {
 
                     this.convertToMb(archive.pointer());
 
                     spinner.succeed(`Uploading files | ${this.sent} Mb`);
 
-                    this.result.push({ 'Status': response.statusCode, 'Message': this.endMsg });
-
                     if (response.statusCode === CliStatus.HTTP_SUCCESS) {
 
                         this.result.push({ 'Status': CliStatus.SUCCESS, 'Message': `Sent ${this.sent} Mb` });
+
+                        const { message, url } = JSON.parse(this.endMsg);
+
+                        this.result.push({ 'Status': response.statusCode, 'Message': message });
+
+                        if (this.open) open(url);
+
+                    } else if (response.statusCode === CliStatus.CREATED) {
+
+                        await this.createWpPage();
+
                     } else {
 
-                        this.result.push({ 'Status': response.statusCode, 'Message': response.statusMessage });
+                        this.result.push({ 'Status': response.statusCode, 'Message': this.endMsg });
                     }
 
                     resolve();
@@ -664,11 +738,127 @@ In case of problems, please write to our support https://mdbootstrap.com/support
 
             archive.glob('**', {
                 cwd: this.cwd,
-                ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**']
+                ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**', '.mdb'],
+                dot: true
             });
 
             archive.finalize();
         });
+    }
+
+    async setWpProjectName() {
+
+        const metadataPath = path.join(this.cwd, '.mdb');
+        const metadataExists = fs.existsSync(metadataPath);
+
+        const projectMetadata = metadataExists ? await helpers.deserializeJsonFile(metadataPath) : {};
+
+        if (projectMetadata.domainName) this.domainName = projectMetadata.domainName
+        if (projectMetadata.projectName) this.projectName = projectMetadata.projectName;
+    }
+
+    async askWpCredentials() {
+
+        const prompt = inquirer.createPromptModule();
+
+        let passwordValue;
+
+        const answers = await prompt([
+            {
+                type: 'text',
+                message: 'Enter page name',
+                name: 'pageName',
+                validate: (value) => {
+                    /* istanbul ignore next */
+                    const valid = Boolean(value) && /^[A-Za-z0-9_ ?!-:;+=]+$/.test(value);
+                    /* istanbul ignore next */
+                    return valid || 'Page name is invalid.';
+                }
+            },
+            ...(this.customWpInstalation ?
+                [{
+                    type: 'text',
+                    message: 'Enter username',
+                    name: 'username',
+                    validate: (value) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && /^[a-z0-9_]+$/.test(value);
+                        /* istanbul ignore next */
+                        return valid || 'Username is invalid.';
+                    }
+                },
+                {
+                    type: 'password',
+                    message: 'Enter password',
+                    name: 'password',
+                    mask: '*',
+                    validate: (value) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(\W|_)).{8,}$/.test(value);
+                        passwordValue = value;
+                        /* istanbul ignore next */
+                        return valid || 'Password is incorrect, it should contain at least one uppercase letter, at least one lowercase letter, at least one number, at least one special symbol and it should contain more than 7 characters.';
+                    }
+                },
+                {
+                    type: 'password',
+                    message: 'Repeat password',
+                    name: 'repeatPassword',
+                    mask: '*',
+                    validate: (value) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && typeof value === 'string' && value === passwordValue;
+                        /* istanbul ignore next */
+                        return valid || 'Passwords do not match.';
+                    }
+                }] : []),
+            {
+                type: 'text',
+                message: 'Enter email',
+                name: 'email',
+                validate: (value) => {
+                    /* istanbul ignore next */
+                    const valid = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/.test(value);
+                    /* istanbul ignore next */
+                    return valid || 'Please enter a valid email.';
+                }
+            }
+        ]);
+
+        answers.pageType = this.pageType;
+
+        if (!this.customWpInstalation) answers.username = 'admin';
+        this.projectName = answers.pageName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '');
+        await this.saveProjectMetadata({ projectName: this.projectName, pageType: this.pageType, email: answers.email });
+        this.wpData = answers;
+    }
+
+    async createWpPage() {
+
+        this.wpData = this.wpData ? this.wpData : {
+            pageType: this.pageType,
+            pageName: this.projectMetadata.projectName,
+            email: this.projectMetadata.email,
+            username: 'admin'
+        };
+        this.options.data = JSON.stringify(this.wpData);
+        this.options.path = '/project/wordpress';
+        this.options.headers = {
+            ...this.authHandler.headers,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(this.options.data)
+        };
+
+        const http = new HttpWrapper(this.options);
+        let response = await http.post().catch(console.log);
+        const { message, url, password } = JSON.parse(response);
+        this.result.push({ Status: CliStatus.HTTP_SUCCESS, Message: message });
+        if (this.open) open(url);
+
+        console.log('\n\x1b[34m%s\x1b[0m', ' Note:', `Your wp-admin is available at ${url}/wp-admin/\n`);
+        console.log('\x1b[34m%s\x1b[0m', ' Note:', 'Please write down your username and password now, as we will not show it again.\n');
+        console.log('\x1b[0m Username: \x1b[36m%s', this.wpData.username);
+        console.log('\x1b[0m Password: \x1b[36m%s\x1b[0m\n', password);
     }
 
     convertToMb(pointer) {

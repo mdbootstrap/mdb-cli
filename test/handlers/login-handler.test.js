@@ -2,6 +2,11 @@
 
 const AuthHandler = require('../../utils/auth-handler');
 const CliStatus = require('../../models/cli-status');
+const LoginStrategy = require('../../models/login-strategy');
+const NormalLoginStrategy = require('../../utils/strategies/login/normal-login-strategy');
+const GoogleLoginStrategy = require('../../utils/strategies/login/google-login-strategy');
+const FacebookLoginStrategy = require('../../utils/strategies/login/facebook-login-strategy');
+const TwitterLoginStrategy = require('../../utils/strategies/login/twitter-login-strategy');
 const sandbox = require('sinon').createSandbox();
 
 describe('Handler: Login', () => {
@@ -58,49 +63,71 @@ describe('Handler: Login', () => {
         done();
     });
 
-    it('should askCredentials()', async () => {
+    it('should not set socialProvider', function () {
 
-        const inquirer = require('inquirer');
+        const fakeArgs = [''];
 
-        const promptStub = sandbox.stub().resolves({ username: '', password: '' });
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
+        handler.setArgs(fakeArgs);
 
-        await handler.askCredentials();
-
-        expect(promptStub.called).to.be.true;
-
-        return Promise.resolve();
+        expect(handler.socialProvider).to.eq(LoginStrategy.Normal);
     });
 
-    it('should set options.data after askCredentials()', async () => {
+    it('should set socialProvider to Google', function () {
 
-        const inquirer = require('inquirer');
-        const optionsData = { username: '', password: '' };
-        const expectedOptionsData = JSON.stringify(optionsData);
-        const promptStub = sandbox.stub().resolves(optionsData);
-        sandbox.stub(inquirer, 'createPromptModule').returns(promptStub);
+        const fakeArgs = ['--method=google'];
 
-        await handler.askCredentials();
+        handler.setArgs(fakeArgs);
 
-        const actualOptionsData = handler.options.data;
+        expect(handler.socialProvider).to.eq(LoginStrategy.Google);
+    });
 
-        chai.assert.deepEqual(actualOptionsData, expectedOptionsData, 'options has not been set after askCredentials()');
+    it('should set Google login strategy', function () {
 
-        return Promise.resolve();
+        handler.socialProvider = 'google';
+
+        handler.setStrategy();
+
+        expect(handler.strategy).to.be.an.instanceOf(GoogleLoginStrategy)
+    });
+
+    it('should set Facebook login strategy', function () {
+
+        handler.socialProvider = 'facebook';
+
+        handler.setStrategy();
+
+        expect(handler.strategy).to.be.an.instanceOf(FacebookLoginStrategy)
+    });
+
+    it('should set Twitter login strategy', function () {
+
+        handler.socialProvider = 'twitter';
+
+        handler.setStrategy();
+
+        expect(handler.strategy).to.be.an.instanceOf(TwitterLoginStrategy)
+    });
+
+    it('should set Normal login strategy', function () {
+
+        handler.socialProvider = 'normal';
+
+        handler.setStrategy();
+
+        expect(handler.strategy).to.be.an.instanceOf(NormalLoginStrategy)
     });
 
     it('should login()', async () => {
 
-        const HttpWrapper = require('../../utils/http-wrapper');
+        const fakeStrategy = {
+            login: sandbox.stub()
+        };
 
-        const httpMock = sandbox.mock(HttpWrapper.prototype);
-        httpMock.expects('post').once().resolves([{ token: '' }]);
+        handler.strategy = fakeStrategy;
 
         await handler.login();
 
-        httpMock.verify();
-
-        return Promise.resolve();
+        expect(fakeStrategy.login).to.have.been.calledOnce;
     });
 
     it('should parseResponse() when object passed', (done) => {

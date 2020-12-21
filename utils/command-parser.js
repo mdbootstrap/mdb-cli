@@ -31,7 +31,8 @@ class CommandParser {
             'db-list',
             'db-info',
             'db-create',
-            'db-delete'
+            'db-delete',
+            'wp-init'
         ];
     }
 
@@ -48,6 +49,13 @@ class CommandParser {
         if (this.command === '-v' || this.command === '--version') {
 
             this.command = 'version';
+        }
+
+        if (this.command === 'wp-download-theme') {
+
+            this.command = 'get';
+            this.args.push('--force');
+            this.args.push('--wordpress');
         }
 
         if (!this.isValid()) {
