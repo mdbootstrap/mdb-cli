@@ -1,47 +1,30 @@
 'use strict';
 
 const { archiveProject } = require('./archiver-wrapper');
-const { buildProject } = require('./build-project');
-const { commitFile } = require('./commit-file');
+const { createConfirmationPrompt } = require('./create-confirmation-prompt');
 const { createJenkinsfile } = require('./create-jenkinsfile');
-const { createPackageJson } = require('./create-package-json');
-const { deserializeJsonFile } = require('./deserialize-object-from-file');
+const { createListPrompt } = require('./create-list-prompt');
+const { createTextPrompt } = require('./create-text-prompt');
+const { deserializeJsonFile } = require('./deserialize-json-file');
 const { downloadFromFTP } = require('./download-from-ftp');
-const { downloadProStarter } = require('./download-pro-starter');
-const { downloadUserProject } = require('./download-user-project');
-const { eraseProjectDirectories } = require('./erase-project-directories');
-const { fetchProducts } = require('./fetch-products');
-const { getPackageName } = require('./get-project-name');
-const { getSorted } = require('./get-sorted-products');
-const { getThemeName } = require('./get-theme-name');
-const { gitClone } = require('./git-clone');
+const { eraseDirectories } = require('./erase-directories');
 const { removeFolder } = require('./remove-folder');
-const { saveMdbConfig } = require('./save-mdb-config');
-const { saveToken } = require('./save-token');
-const { serializeJsonFile } = require('./serialize-object-to-file');
-const { showConfirmationPrompt } = require('./show-confirmation-prompt');
-const { showTextPrompt } = require('./show-text-prompt');
+const { renameFolder } = require('./rename-folder');
+const { serializeJsonFile } = require('./serialize-json-file');
+const { getThemeName } = require('./get-theme-name');
+
 
 module.exports = {
     archiveProject,
-    buildProject,
-    commitFile,
+    createConfirmationPrompt,
     createJenkinsfile,
-    createPackageJson,
+    createListPrompt,
+    createTextPrompt,
     deserializeJsonFile,
     downloadFromFTP,
-    downloadProStarter,
-    downloadUserProject,
-    eraseProjectDirectories,
-    fetchProducts,
-    getPackageName,
-    getSorted,
+    eraseDirectories,
     getThemeName,
-    gitClone,
     removeFolder,
-    saveMdbConfig,
-    saveToken,
-    serializeJsonFile,
-    showConfirmationPrompt,
-    showTextPrompt
+    renameFolder,
+    serializeJsonFile
 };

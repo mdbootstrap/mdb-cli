@@ -1,28 +1,26 @@
 'use strict';
 
 const Command = require('./command');
-const LogsHandler = require('../utils/logs-handler');
-const AuthHandler = require('../utils/auth-handler');
+const BackendReceiver = require('../receivers/backend-receiver');
 
-class InfoCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
+class LogsCommand extends Command {
 
-        super(authHandler);
+    constructor(context) {
+        super(context);
 
-        this.handler = new LogsHandler(authHandler);
+        this.backendReceiver = new BackendReceiver(context);
     }
 
-    execute() {
+    async execute() {
 
-        this.handler.setArgs(this.args);
-        return this.handler.fetchProjects()
-            .then(() => this.handler.askForProjectName())
-            .then(() => this.handler.getLogs())
-            .then(() => this.handler.print())
-            .catch(e => this.catchError(e));
+        this.backendReceiver.result.on('mdb.cli.live.output', (msg) => {
+            this.printResult([msg]);
+        });
+
+        await this.backendReceiver.logs();
+        this.printResult([this.backendReceiver.result]);
     }
-
 }
 
-module.exports = InfoCommand;
+module.exports = LogsCommand;

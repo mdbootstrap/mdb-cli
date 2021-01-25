@@ -1,25 +1,19 @@
 'use strict';
 
 const Command = require('./command');
-const LogoutHandler = require('../utils/logout-handler');
-const AuthHandler = require('../utils/auth-handler');
+const UserReceiver = require('../receivers/user-receiver');
 
 class LogoutCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-
-        this.handler = new LogoutHandler(authHandler);
-
-        this.setAuthHeader();
+        this.receiver = new UserReceiver(context);
     }
 
-    execute() {
-
-        return this.handler.logout()
-            .then(() => this.print())
-            .catch(e => this.catchError(e));
+    async execute() {
+        await this.receiver.logout();
+        this.printResult([this.receiver.result]);
     }
 }
 

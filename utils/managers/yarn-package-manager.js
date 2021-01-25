@@ -1,33 +1,27 @@
 'use strict';
 
 const PackageManager = require('./package-manager');
-const childProcess = require('child_process');
 
 class YarnPackageManager extends PackageManager {
 
-    info() {
-
-        return childProcess.spawn('yarn', ['info', 'mdb-cli', 'version'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+    get cmdCommand() {
+        return 'yarn';
     }
 
     init(cwd) {
-
-        return childProcess.spawn('yarn', ['init'], { cwd, stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['init'], 'package.json created. Proceeding...', 'package.json initialization failed', cwd);
     }
 
     build(cwd) {
-
-        return childProcess.spawn('yarn', ['build'], { cwd, stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['build'], 'Project built successfully', 'Project could not be built', cwd);
     }
 
     test() {
-
-        return childProcess.spawn('yarn', ['test'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['test'], 'Tests ran successfully', 'Tests failed');
     }
 
     update() {
-
-        return childProcess.spawn('yarn', ['global', 'add', 'mdb-cli'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['global', 'add', 'mdb-cli'], 'Successfully updated', 'Update failed');
     }
 }
 

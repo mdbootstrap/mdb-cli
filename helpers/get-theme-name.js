@@ -13,8 +13,10 @@ module.exports = {
                 return 'mdb-blog-with-ecommerce-wordpress-theme';
             case 'sample':
                 return 'mdb-sample-wp-theme';
+            case 'sample-free':
+                return 'mdb-sample-free-wp-theme';
             default:
                 return '';
         }
     }
-}
+};

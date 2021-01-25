@@ -1,0 +1,122 @@
+'use strict';
+
+const Command = require('./command');
+const StarterReceiver = require('../receivers/starter-receiver');
+const FrontendReceiver = require('../receivers/frontend-receiver');
+const BackendReceiver = require('../receivers/backend-receiver');
+const WordpressReceiver = require('../receivers/wordpress-receiver');
+const DatabaseReceiver = require('../receivers/database-receiver');
+const OrderReceiver = require('../receivers/order-receiver');
+
+class LsCommand extends Command {
+
+    constructor(context) {
+        super(context);
+
+        this.receiver = null;
+
+        this.starterReceiver = null;
+        this.frontendReceiver = null;
+        this.backendReceiver = null;
+        this.wordpressReceiver = null;
+        this.databaseReceiver = null;
+        this.orderReceiver = null;
+
+        this.checkFlags(context);
+        this.setReceiver(context);
+    }
+
+    async execute() {
+
+        if (this.receiver) {
+            this.receiver.result.on('mdb.cli.live.output', (msg) => {
+                this.printResult([msg]);
+            });
+
+            await this.receiver.list();
+            this.printResult([this.receiver.result]);
+        } else {
+
+            [
+                'starterReceiver',
+                'frontendReceiver',
+                'backendReceiver',
+                'wordpressReceiver',
+                'databaseReceiver',
+                'orderReceiver'
+            ].forEach((receiver) => {
+                this[receiver].result.on('mdb.cli.live.output', (msg) => {
+                    this.printResult([msg]);
+                });
+            });
+
+            this.starterReceiver.result.addTextLine('\nStarters:');
+            await this.starterReceiver.list();
+            this.frontendReceiver.result.addTextLine('\nFrontend projects:');
+            await this.frontendReceiver.list();
+            this.backendReceiver.result.addTextLine('\nBackend projects:');
+            await this.backendReceiver.list();
+            this.backendReceiver.result.addTextLine('\nWordPress projects:');
+            await this.wordpressReceiver.list();
+            this.databaseReceiver.result.addTextLine('\nDatabases:');
+            await this.databaseReceiver.list();
+            this.orderReceiver.result.addTextLine('\nOrders:');
+            await this.orderReceiver.list();
+            this.printResult([
+                this.frontendReceiver.result,
+                this.backendReceiver.result,
+                this.wordpressReceiver.result,
+                this.databaseReceiver.result,
+                this.starterReceiver.result,
+                this.orderReceiver.result
+            ]);
+        }
+    }
+
+    checkFlags(ctx) {
+
+        const flags = ctx.getParsedFlags();
+        if (!flags.all && this.entity === '') this.entity = 'frontend';
+    }
+
+    setReceiver(ctx) {
+
+        switch (this.entity) {
+
+            case 'starter':
+                this.receiver = new StarterReceiver(ctx);
+                break;
+
+            case 'frontend':
+                this.receiver = new FrontendReceiver(ctx);
+                break;
+
+            case 'backend':
+                this.receiver = new BackendReceiver(ctx);
+                break;
+
+            case 'wordpress':
+                this.receiver = new WordpressReceiver(ctx);
+                break;
+
+            case 'database':
+                this.receiver = new DatabaseReceiver(ctx);
+                break;
+
+            case 'order':
+                this.receiver = new OrderReceiver(ctx);
+                break;
+
+            default:
+                this.starterReceiver = new StarterReceiver(ctx);
+                this.frontendReceiver = new FrontendReceiver(ctx);
+                this.backendReceiver = new BackendReceiver(ctx);
+                this.wordpressReceiver = new WordpressReceiver(ctx);
+                this.databaseReceiver = new DatabaseReceiver(ctx);
+                this.orderReceiver = new OrderReceiver(ctx);
+                break;
+        }
+    }
+}
+
+module.exports = LsCommand;

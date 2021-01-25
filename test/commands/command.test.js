@@ -1,17 +1,10 @@
 'use strict';
 
-const LogoutHandler = require('../../utils/logout-handler');
+const Context = require('../../context');
 const Command = require('../../commands/command');
 const sandbox = require('sinon').createSandbox();
-const fs = require('fs');
 
 describe('Command: parent', () => {
-
-    beforeEach(() => {
-
-        sandbox.stub(fs, 'existsSync').returns(true);
-        sandbox.stub(fs, 'readFileSync').returns('fakeToken');
-    });
 
     afterEach(() => {
 
@@ -19,131 +12,40 @@ describe('Command: parent', () => {
         sandbox.restore();
     });
 
-    it('should throw ReferenceError if command handler is not set', () => {
+    it('should throw an error when execute() method not overridden', function (done) {
 
-        const command = new Command();
-
+        const context = new Context('', '', '', []);
+        const command = new Command(context);
         try {
-
-            command.handler();
-        }
-        catch (err) {
-
-            expect(err.message).to.equal('Command handler must be set before using it');
-        }
-    });
-
-    it('should throw ReferenceError if command execute method is not implemented', () => {
-
-        const command = new Command();
-
-        try {
-
             command.execute();
+            done(new Error('execute() method should throw error'))
+        } catch (e) {
+            done();
         }
-        catch (err) {
-
-            expect(err.message).to.equal('Method must be implemented in a child-class');
-        }
     });
 
-    it('should set args', () => {
+    it('should delegate print task to OutputPrinter', function () {
 
-        const command = new Command();
-        const fakeArgs = { fake: 'args' };
+        const context = new Context('', '', '', []);
+        const command = new Command(context);
+        sandbox.stub(command.output, 'print');
 
-        command.setArgs(fakeArgs);
+        const fakeResults = [];
+        command.printResult(fakeResults);
 
-        expect(command.args).to.equal(fakeArgs);
+        expect(command.output.print).to.have.been.calledWith(fakeResults);
     });
 
-    it('should catchError() print error if it is a table', () => {
+    it('should have assigned entity, arg and flags', function () {
 
-        const command = new Command();
-        const fakeError = [{ fake: 'error' }];
-        const tableStub = sandbox.stub(console, 'table');
+        const fakeEntity = 'fake';
+        const fakeArgs = ['fake'];
+        const fakeFlags = ['--fake'];
+        const context = new Context(fakeEntity, '', fakeArgs, fakeFlags);
+        const command = new Command(context);
 
-        command.catchError(fakeError);
-
-        expect(tableStub.calledOnce).to.be.true;
-    });
-
-    it('should catchError() set result if error is a table', () => {
-
-        const command = new Command();
-        const fakeError = [{ fake: 'error' }];
-        const tableStub = sandbox.stub(console, 'table');
-
-        command.catchError(fakeError, false);
-
-        expect(tableStub.calledOnce).to.be.false;
-        expect(command.result).to.deep.eq(fakeError);
-    });
-
-    it('should catchError() print error if it is an object', () => {
-
-        const command = new Command();
-        const fakeError = { Status: 123, Message: 'fake message' };
-        const printStub = sandbox.stub(command, 'print');
-        const expectedResult = { Status: 123, Message: 'fake message' };
-
-        command.catchError(fakeError);
-
-        expect(printStub.calledOnce).to.be.true;
-        expect(command.result).to.deep.include(expectedResult);
-    });
-
-    it('should catchError() set result if error is an object', () => {
-
-        const command = new Command();
-        const fakeError = { Status: 123, Message: 'fake message' };
-        const printStub = sandbox.stub(command, 'print');
-        const expectedResult = { Status: 123, Message: 'fake message' };
-
-        command.catchError(fakeError, false);
-
-        expect(printStub.calledOnce).to.be.false;
-        expect(command.result).to.deep.include(expectedResult);
-    });
-
-    it('should catchError() set result and print error', () => {
-
-        const command = new Command();
-        const fakeError = { statusCode: 123, message: 'fake message' };
-        const printStub = sandbox.stub(command, 'print');
-        const expectedResult = { Status: 123, Message: 'fake message' };
-
-        command.catchError(fakeError);
-
-        expect(printStub.calledOnce).to.be.true;
-        expect(command.result).to.deep.include(expectedResult);
-    });
-
-    it('should catchError() set result and not print error', () => {
-
-        const command = new Command();
-        const fakeError = { statusCode: 123, message: 'fake message' };
-        const printStub = sandbox.stub(command, 'print');
-        const expectedResult = { Status: 123, Message: 'fake message' };
-
-        command.catchError(fakeError, false);
-
-        expect(printStub.calledOnce).to.be.false;
-        expect(command.result).to.deep.include(expectedResult);
-    });
-
-    it('should catchError() logout user when status code is 401', () => {
-
-        const command = new Command();
-        const fakeError = { statusCode: 401, message: 'fake message' };
-        const expectedResult = { Status: 401, Message: 'Please login first' };
-        const logoutStub = sandbox.stub(LogoutHandler.prototype, 'logout');
-        const printStub = sandbox.stub(command, 'print');
-
-        command.catchError(fakeError);
-
-        expect(logoutStub.calledOnce).to.be.true;
-        expect(printStub.calledOnce).to.be.true;
-        expect(command.result).to.deep.include(expectedResult);
+        expect(command.entity).to.eq(fakeEntity);
+        expect(command.args).to.deep.eq(fakeArgs);
+        expect(command.flags).to.eq(fakeFlags);
     });
 });

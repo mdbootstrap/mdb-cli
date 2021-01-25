@@ -1,27 +1,8 @@
 'use strict';
 
-const Command = require('./command');
-const CreateHandler = require('../utils/create-handler');
-const AuthHandler = require('../utils/auth-handler');
+const InitCommand = require('./init-command');
 
-class CreateCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
-
-        super(authHandler);
-
-        this.handler = new CreateHandler(authHandler);
-    }
-
-    execute() {
-
-        return this.handler.getProjectName()
-            .then(() => this.handler.addJenkinsfile())
-            .then(() => this.handler.create())
-            .then(() => this.handler.pushToGitlab())
-            .then(() => this.print())
-            .catch((e) => this.catchError(e));
-    }
-}
+class CreateCommand extends InitCommand { }
 
 module.exports = CreateCommand;

@@ -1,34 +1,20 @@
 'use strict';
 
-const InfoCommand = require('../../commands/info-command');
-const InfoHandler = require('../../utils/info-handler');
-const AuthHandler = require('../../utils/auth-handler');
+const Context = require('../../context');
 const Command = require('../../commands/command');
+const InfoCommand = require('../../commands/info-command');
+const BackendReceiver = require('../../receivers/backend-receiver');
+const DatabaseReceiver = require('../../receivers/database-receiver');
 const sandbox = require('sinon').createSandbox();
 
-describe('Command: Info', () => {
+describe('Command: info', () => {
 
-    const fakeError = 'fakeError';
-
-    let authHandler,
-        command,
-        setArgsStub,
-        fetchProjectsStub,
-        askForProjectNameStub,
-        getInfoStub,
-        printResultStub,
-        catchErrorStub;
+    let command, context, infoStub, printResultStub;
 
     beforeEach(() => {
 
-        authHandler = new AuthHandler(false);
-        command = new InfoCommand(authHandler);
-        setArgsStub = sandbox.stub(InfoHandler.prototype, 'setArgs');
-        fetchProjectsStub = sandbox.stub(InfoHandler.prototype, 'fetchProjects');
-        askForProjectNameStub = sandbox.stub(InfoHandler.prototype, 'askForProjectName');
-        getInfoStub = sandbox.stub(InfoHandler.prototype, 'getInfo');
-        printResultStub = sandbox.stub(InfoHandler.prototype, 'printResult');
-        catchErrorStub = sandbox.stub(Command.prototype, 'catchError');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
     afterEach(() => {
@@ -37,67 +23,27 @@ describe('Command: Info', () => {
         sandbox.restore();
     });
 
-    it('should have assigned authHandler', () => {
+    it('should call backend receiver info method and print result if entity is backend', async () => {
 
-        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
-        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
-
-        command = new InfoCommand();
-
-        expect(command).to.have.property('authHandler');
-    });
-
-    it('should have assigned handler', () => {
-
-        expect(command).to.have.property('handler');
-        expect(command.handler).to.be.an.instanceOf(InfoHandler);
-    });
-
-    it('should call handler methods in expected order', async () => {
-
-        fetchProjectsStub.resolves()
-        askForProjectNameStub.resolves();
-        getInfoStub.resolves();
+        infoStub = sandbox.stub(BackendReceiver.prototype, 'info');
+        context = new Context('backend', 'info', '', []);
+        command = new InfoCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, getInfoStub, printResultStub);
-        sandbox.assert.notCalled(catchErrorStub);
+        sandbox.assert.calledOnce(infoStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.backendReceiver.result]);
     });
 
-    it('should call catch error if fetchProjects rejects', async () => {
+    it('should call database receiver info method and print result if entity is database', async () => {
 
-        fetchProjectsStub.rejects(fakeError);
+        infoStub = sandbox.stub(DatabaseReceiver.prototype, 'info');
+        context = new Context('database', 'info', '', []);
+        command = new InfoCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, catchErrorStub);
-        sandbox.assert.notCalled(askForProjectNameStub);
-        sandbox.assert.notCalled(printResultStub);
-        sandbox.assert.notCalled(getInfoStub);
-    });
-
-    it('should call catch error if askForProjectName rejects', async () => {
-
-        fetchProjectsStub.resolves();
-        askForProjectNameStub.rejects(fakeError);
-
-        await command.execute();
-
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, catchErrorStub);
-        sandbox.assert.notCalled(printResultStub);
-        sandbox.assert.notCalled(getInfoStub);
-    });
-
-    it('should call catch error if getInfo rejects', async () => {
-
-        fetchProjectsStub.resolves();
-        askForProjectNameStub.resolves();
-        getInfoStub.rejects(fakeError);
-
-        await command.execute();
-
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, getInfoStub, catchErrorStub);
-        sandbox.assert.notCalled(printResultStub);
+        sandbox.assert.calledOnce(infoStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.databaseReceiver.result]);
     });
 });

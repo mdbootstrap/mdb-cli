@@ -6,20 +6,14 @@ const http = config.env === 'dev' ? require('http') : require('https');
 
 class HttpWrapper {
 
-    constructor(options) {
+    constructor() { }
 
-        this._requestData = options.data;
+    createRawRequest(options, callback) {
 
-        delete options.data;
-        this._options = options;
+        if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
+        else options.headers = { 'x-mdb-cli-version': packageJson.version };
 
-        if (this._options.headers) this._options.headers['x-mdb-cli-version'] = packageJson.version;
-        else this._options.headers = { 'x-mdb-cli-version': packageJson.version };
-    }
-
-    createRequest(callback) {
-
-        return http.request(this._options, response => {
+        return http.request(options, response => {
 
             if (callback) {
 
@@ -28,11 +22,42 @@ class HttpWrapper {
         });
     }
 
-    request() {
+    createRequest(options, callback) {
+
+        if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
+        else options.headers = { 'x-mdb-cli-version': packageJson.version };
+
+        return http.request(options, response => {
+
+            let result = '';
+            response.on('data', chunk => {
+
+                result += Buffer.from(chunk).toString('utf8');
+            });
+
+            response.on('end', () => {
+
+                const { statusCode } = response;
+
+                if (statusCode >= 200 && statusCode < 400) {
+
+                    callback(null, { body: result, headers: response.headers, statusCode });
+                } else {
+
+                    callback({ message: result, statusCode }, null);
+                }
+            });
+        });
+    }
+
+    request(options) {
+
+        if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
+        else options.headers = { 'x-mdb-cli-version': packageJson.version };
 
         return new Promise((resolve, reject) => {
 
-            const request = http.request(this._options, response => {
+            const request = http.request(options, response => {
 
                 let result = '';
                 response.on('data', chunk => {
@@ -46,7 +71,7 @@ class HttpWrapper {
 
                     if (statusCode >= 200 && statusCode < 400) {
 
-                        resolve(result);
+                        resolve({ body: result, headers: response.headers, statusCode });
                     } else {
 
                         reject({ message: result, statusCode });
@@ -56,39 +81,39 @@ class HttpWrapper {
 
             request.on('error', error => reject(error));
 
-            this._requestData = typeof this._requestData !== 'string' ? JSON.stringify(this._requestData) : this._requestData;
+            const requestData = typeof options.data !== 'string' ? JSON.stringify(options.data) : options.data;
 
-            request.write(this._requestData || '');
+            request.write(requestData || '');
             request.end();
         });
     }
 
-    get() {
+    get(options) {
 
-        this._options.method = 'GET';
+        options.method = 'GET';
 
-        return this.request();
+        return this.request(options);
     }
 
-    post() {
+    post(options) {
 
-        this._options.method = 'POST';
+        options.method = 'POST';
 
-        return this.request();
+        return this.request(options);
     }
 
-    put() {
+    put(options) {
 
-        this._options.method = 'PUT';
+        options.method = 'PUT';
 
-        return this.request();
+        return this.request(options);
     }
 
-    delete() {
+    delete(options) {
 
-        this._options.method = 'DELETE';
+        options.method = 'DELETE';
 
-        return this.request();
+        return this.request(options);
     }
 }
 

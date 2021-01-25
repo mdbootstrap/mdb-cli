@@ -2,20 +2,18 @@
 
 const YarnPackageManager = require('../../../utils/managers/yarn-package-manager');
 const PackageManager = require('../../../utils/managers/package-manager');
-const PackageManagers = require('../../../models/package-managers');
 const sandbox = require('sinon').createSandbox();
-const childProcess = require('child_process');
 
 describe('Utils: YarnPackageManager', () => {
 
     const fakeCwd = 'fake/cwd';
 
-    let manager, spawnStub;
+    let manager, taskStub;
 
     beforeEach(() => {
 
         manager = new YarnPackageManager();
-        spawnStub = sandbox.stub(childProcess, 'spawn');
+        taskStub = sandbox.stub(PackageManager.prototype, '_task');
     });
 
     afterEach(() => {
@@ -24,98 +22,36 @@ describe('Utils: YarnPackageManager', () => {
         sandbox.restore();
     });
 
-    it('should be an instance of PackageManager', () => {
+    it('should cmdCommand getter return correct command', () => {
 
-        expect(manager).to.be.an.instanceOf(PackageManager);
-    });
-
-    it('should spawn `yarn info` with expected arguments', async () => {
-
-        sandbox.stub(manager, 'isWindows').value(false);
-
-        await manager.info();
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['info', 'mdb-cli', 'version'], { stdio: 'inherit' });
-    });
-
-    it('should spawn `yarn info` with expected arguments on windows', async () => {
-
-        sandbox.stub(manager, 'isWindows').value(true);
-
-        await manager.info();
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['info', 'mdb-cli', 'version'], { shell: true, stdio: 'inherit' });
+        expect(manager.cmdCommand).to.be.eq('yarn');
     });
 
     it('should spawn `yarn init` with expected arguments', async () => {
 
-        sandbox.stub(manager, 'isWindows').value(false);
-
         await manager.init(fakeCwd);
 
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['init'], { cwd: fakeCwd, stdio: 'inherit' });
-    });
-
-    it('should spawn `yarn init` with expected arguments on windows', async () => {
-
-        sandbox.stub(manager, 'isWindows').value(true);
-
-        await manager.init(fakeCwd);
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['init'], { cwd: fakeCwd, shell: true, stdio: 'inherit' });
+        sandbox.assert.calledWith(taskStub, ['init'], 'package.json created. Proceeding...', 'package.json initialization failed', fakeCwd);
     });
 
     it('should spawn `yarn build` with expected arguments', async () => {
 
-        sandbox.stub(manager, 'isWindows').value(false);
-
         await manager.build(fakeCwd);
 
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['build'], { cwd: fakeCwd, stdio: 'inherit' });
-    });
-
-    it('should spawn `yarn build` with expected arguments on windows', async () => {
-
-        sandbox.stub(manager, 'isWindows').value(true);
-
-        await manager.build(fakeCwd);
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['build'], { cwd: fakeCwd, shell: true, stdio: 'inherit' });
+        sandbox.assert.calledWith(taskStub, ['build'], 'Project built successfully', 'Project could not be built', fakeCwd);
     });
 
     it('should spawn `yarn test` with expected arguments', async () => {
 
-        sandbox.stub(manager, 'isWindows').value(false);
-
         await manager.test();
 
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['test'], { stdio: 'inherit' });
-    });
-
-    it('should spawn `yarn test` with expected arguments on windows', async () => {
-
-        sandbox.stub(manager, 'isWindows').value(true);
-
-        await manager.test();
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['test'], { shell: true, stdio: 'inherit' });
+        sandbox.assert.calledWith(taskStub, ['test'], 'Tests ran successfully', 'Tests failed');
     });
 
     it('should spawn `yarn global add` with expected arguments', async () => {
 
-        sandbox.stub(manager, 'isWindows').value(false);
+        await manager.update(fakeCwd);
 
-        await manager.update();
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['global', 'add', 'mdb-cli'], { stdio: 'inherit' });
-    });
-
-    it('should spawn `yarn global add` with expected arguments on windows', async () => {
-
-        sandbox.stub(manager, 'isWindows').value(true);
-
-        await manager.update();
-
-        sandbox.assert.calledWith(spawnStub, PackageManagers.YARN, ['global', 'add', 'mdb-cli'], { shell: true, stdio: 'inherit' });
+        sandbox.assert.calledWith(taskStub, ['global', 'add', 'mdb-cli'], 'Successfully updated', 'Update failed');
     });
 });

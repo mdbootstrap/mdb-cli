@@ -1,29 +1,50 @@
 'use strict';
 
-const PublishHandler = require('../utils/publish-handler');
 const Command = require('./command');
-const AuthHandler = require('../utils/auth-handler');
+const FrontendReceiver = require('../receivers/frontend-receiver');
+const BackendReceiver = require('../receivers/backend-receiver');
+const WordpressReceiver = require('../receivers/wordpress-receiver');
 
 class PublishCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
+        this.receiver = null;
 
-        this.handler = new PublishHandler(authHandler);
-
-        this.setAuthHeader();
+        this.setReceiver(context);
     }
 
-    execute() {
+    async execute() {
 
-        return this.handler.setArgs(this.args)
-            .then(() => this.handler.handlePublishArgs())
-            .then(() => this.handler.runTests())
-            .then(() => this.handler.setProjectName())
-            .then(() => this.handler.publish())
-            .then(() => this.print())
-            .catch(e => this.catchError(e));
+        if (this.receiver) {
+            await this.receiver.publish();
+            this.printResult([this.receiver.result]);
+        }
+    }
+
+    setReceiver(ctx) {
+
+        switch (this.entity) {
+            case 'backend':
+                this.receiver = new BackendReceiver(ctx);
+                this.receiver.result.on('mdb.cli.live.output', (msg) => {
+                    this.printResult([msg]);
+                });
+                break;
+
+            case 'wordpress':
+                this.receiver = new WordpressReceiver(ctx);
+                break;
+
+            case 'frontend':
+            default:
+                this.receiver = new FrontendReceiver(ctx);
+                this.receiver.result.on('mdb.cli.live.output', (msg) => {
+                    this.printResult([msg]);
+                });
+                break;
+        }
     }
 }
 

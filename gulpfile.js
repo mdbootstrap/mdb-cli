@@ -3,7 +3,7 @@ const babel = require('gulp-babel');
 const fs = require('fs');
 
 gulp.task('transpile', () =>
-    gulp.src(['./index.js', './commands/*', './config/*', './helpers/*', './models/*', './utils/**/*'], { base: '.' })
+    gulp.src(['./index.js', './context.js', './command-invoker.js', './commands/*', './config/*', './helpers/*', './models/*', './receivers/**/*', './utils/**/*'], { base: '.' })
         .pipe(babel({
             presets: ['@babel/env']
         }))
@@ -12,7 +12,7 @@ gulp.task('transpile', () =>
 
 gulp.task('copy-package-json', async () => {
 
-    const { deserializeJsonFile } = require('./helpers/deserialize-object-from-file');
+    const { deserializeJsonFile } = require('./helpers/deserialize-json-file');
     const fileContent = await deserializeJsonFile('package.json');
     delete fileContent.devDependencies;
     delete fileContent.pkg;

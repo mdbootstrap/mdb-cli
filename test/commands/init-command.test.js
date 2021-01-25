@@ -1,36 +1,25 @@
 'use strict';
 
-const InitCommand = require('../../commands/init-command');
-const AuthHandler = require('../../utils/auth-handler');
-const InitHandler = require('../../utils/init-handler');
+const Context = require('../../context');
 const Command = require('../../commands/command');
+const InitCommand = require('../../commands/init-command');
+const StarterReceiver = require('../../receivers/starter-receiver');
+const FrontendReceiver = require('../../receivers/frontend-receiver');
+const BackendReceiver = require('../../receivers/backend-receiver');
+const WordpressReceiver = require('../../receivers/wordpress-receiver');
+const DatabaseReceiver = require('../../receivers/database-receiver');
+const BlankReceiver = require('../../receivers/blank-receiver');
+const RepoReceiver = require('../../receivers/repo-receiver');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: init', () => {
 
-    const fakeError = 'fakeErr';
-
-    let authHandler,
-        command,
-        setArgsStub,
-        getAvailableOptionsStub,
-        showUserPromptStub,
-        initProjectStub,
-        addJenkinsfileStub,
-        printStub,
-        catchErrorStub;
+    let command, context, initStub, printResultStub;
 
     beforeEach(() => {
 
-        authHandler = new AuthHandler(false);
-        command = new InitCommand(authHandler);
-        setArgsStub = sandbox.stub(command.handler, 'setArgs');
-        getAvailableOptionsStub = sandbox.stub(command.handler, 'getAvailableOptions');
-        showUserPromptStub = sandbox.stub(command.handler, 'showUserPrompt');
-        initProjectStub = sandbox.stub(command.handler, 'initProject');
-        addJenkinsfileStub = sandbox.stub(command.handler, 'addJenkinsfile');
-        printStub = sandbox.stub(Command.prototype, 'print');
-        catchErrorStub = sandbox.stub(Command.prototype, 'catchError');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
     afterEach(() => {
@@ -39,55 +28,98 @@ describe('Command: init', () => {
         sandbox.restore();
     });
 
-    it('should have assigned handler', () => {
+    it('should call starter receiver init method and print result if entity is starter', async () => {
 
-        expect(command).to.have.property('handler');
-    });
-
-    it('should have assigned authHandler', () => {
-
-        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
-        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
-
-        command = new InitCommand();
-
-        expect(command).to.have.property('authHandler');
-    });
-
-    it('should have InitHandler handler', () => {
-
-        expect(command.handler).to.be.an.instanceOf(InitHandler);
-    });
-
-    it('should call handler methods in expected order', async () => {
-
-        getAvailableOptionsStub.resolves();
-        showUserPromptStub.resolves();
-        initProjectStub.resolves();
-        addJenkinsfileStub.resolves();
+        initStub = sandbox.stub(StarterReceiver.prototype, 'init');
+        context = new Context('starter', 'init', '', []);
+        command = new InitCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, getAvailableOptionsStub, showUserPromptStub, initProjectStub, addJenkinsfileStub, printStub);
-        sandbox.assert.notCalled(catchErrorStub);
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 
-    it('should call handler methods in expected order if addJenkinsfileStub rejects', async () => {
+    it('should call frontend receiver init method and print result if entity is frontend', async () => {
 
-        getAvailableOptionsStub.resolves();
-        showUserPromptStub.resolves();
-        initProjectStub.resolves();
-        addJenkinsfileStub.rejects(fakeError);
+        initStub = sandbox.stub(FrontendReceiver.prototype, 'init');
+        context = new Context('frontend', 'init', '', []);
+        command = new InitCommand(context);
 
-        try {
+        await command.execute();
 
-            await command.execute();
-        }
-        catch (err) {
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
 
-            sandbox.assert.callOrder(setArgsStub, getAvailableOptionsStub, showUserPromptStub, initProjectStub, addJenkinsfileStub, addJenkinsfileStub);
-            sandbox.assert.calledOnceWithExactly(catchErrorStub, fakeError);
-            sandbox.assert.notCalled(printStub);
-        }
+    it('should call backend receiver init method and print result if entity is backend', async () => {
+
+        initStub = sandbox.stub(BackendReceiver.prototype, 'init');
+        context = new Context('backend', 'init', '', []);
+        command = new InitCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call wordpress receiver init method and print result if entity is wordpress', async () => {
+
+        initStub = sandbox.stub(WordpressReceiver.prototype, 'init');
+        context = new Context('wordpress', 'init', '', []);
+        command = new InitCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call database receiver init method and print result if entity is database', async () => {
+
+        initStub = sandbox.stub(DatabaseReceiver.prototype, 'init');
+        context = new Context('database', 'init', '', []);
+        command = new InitCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call blank receiver init method and print result if entity is blank', async () => {
+
+        initStub = sandbox.stub(BlankReceiver.prototype, 'init');
+        context = new Context('blank', 'init', '', []);
+        command = new InitCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call repo receiver init method and print result if entity is repo', async () => {
+
+        initStub = sandbox.stub(RepoReceiver.prototype, 'init');
+        context = new Context('repo', 'init', '', []);
+        command = new InitCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(initStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should not call print result if receiver is undefined', async () => {
+
+        context = new Context('fake', 'init', '', []);
+        command = new InitCommand(context);
+
+        await command.execute();
+
+        expect(command.receiver).to.be.undefined;
+        sandbox.assert.notCalled(printResultStub);
     });
 });

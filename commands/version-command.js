@@ -1,20 +1,19 @@
 'use strict';
 
 const Command = require('./command');
-const AuthHandler = require('../utils/auth-handler');
-const VersionHandler = require('../utils/version-handler');
+const AppReceiver = require('../receivers/app-receiver');
 
 class VersionCommand extends Command {
 
-    constructor(authHandler = new AuthHandler(false)) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-        this.handler = new VersionHandler();
+        this.receiver = new AppReceiver(context);
     }
 
     execute() {
-
-        this.print();
+        this.receiver.getVersion();
+        this.printResult([this.receiver.result]);
     }
 }
 
