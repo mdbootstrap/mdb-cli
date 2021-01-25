@@ -1,29 +1,67 @@
 'use strict';
 
-const InitHandler = require('../utils/init-handler');
 const Command = require('./command');
-const AuthHandler = require('../utils/auth-handler');
+const StarterReceiver = require('../receivers/starter-receiver');
+const FrontendReceiver = require('../receivers/frontend-receiver');
+const BackendReceiver = require('../receivers/backend-receiver');
+const WordpressReceiver = require('../receivers/wordpress-receiver');
+const DatabaseReceiver = require('../receivers/database-receiver');
+const BlankReceiver = require('../receivers/blank-receiver');
+const RepoReceiver = require('../receivers/repo-receiver');
 
 class InitCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
+        this.receiver = undefined;
 
-        this.handler = new InitHandler(authHandler);
-
-        this.setAuthHeader();
+        this.setReceiver(context);
     }
 
-    execute() {
+    async execute() {
 
-        this.handler.setArgs(this.args);
-        return this.handler.getAvailableOptions()
-            .then(() => this.handler.showUserPrompt())
-            .then(() => this.handler.initProject())
-            .then(() => this.handler.addJenkinsfile())
-            .then(() => this.print())
-            .catch(e => this.catchError(e));
+        if (this.receiver) {
+
+            await this.receiver.init();
+            this.printResult([this.receiver.result]);
+        }
+    }
+
+    setReceiver(ctx) {
+
+        switch (this.entity) {
+
+            case 'starter':
+                this.receiver = new StarterReceiver(ctx);
+                break;
+
+            case 'frontend':
+                this.receiver = new FrontendReceiver(ctx);
+                this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+                break;
+
+            case 'backend':
+                this.receiver = new BackendReceiver(ctx);
+                break;
+
+            case 'database':
+                this.receiver = new DatabaseReceiver(ctx);
+                break;
+
+            case 'blank':
+                this.receiver = new BlankReceiver(ctx);
+                break;
+
+            case 'repo':
+                this.receiver = new RepoReceiver(ctx);
+                this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+                break;
+
+            case 'wordpress':
+                this.receiver = new WordpressReceiver(ctx);
+                break;
+        }
     }
 }
 

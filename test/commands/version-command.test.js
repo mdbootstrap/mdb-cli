@@ -1,18 +1,19 @@
 'use strict';
 
+const Context = require('../../context');
+const Command = require('../../commands/command');
 const VersionCommand = require('../../commands/version-command');
-const VersionHandler = require('../../utils/version-handler');
+const AppReceiver = require('../../receivers/app-receiver');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: version', () => {
 
-    let command,
-        printStub;
+    let command, context;
 
     beforeEach(() => {
 
-        command = new VersionCommand();
-        printStub = sandbox.stub(command, 'print');
+        context = new Context('app', 'version', '', []);
+        command = new VersionCommand(context);
     });
 
     afterEach(() => {
@@ -21,16 +22,14 @@ describe('Command: version', () => {
         sandbox.restore();
     });
 
-    it('should have assigned handler', () => {
+    it('should call receiver getVersion method and print result', () => {
 
-        expect(command).to.have.property('handler');
-        expect(command.handler).to.be.an.instanceOf(VersionHandler);
-    });
-
-    it('should call print method', () => {
+        const getVersionStub = sandbox.stub(AppReceiver.prototype, 'getVersion');
+        const printResultStub = sandbox.stub(Command.prototype, 'printResult');
 
         command.execute();
 
-        sandbox.assert.calledOnce(printStub);
+        sandbox.assert.calledOnce(getVersionStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 });

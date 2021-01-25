@@ -1,33 +1,20 @@
 'use strict';
 
+const Context = require('../../context');
+const Command = require('../../commands/command');
 const GetCommand = require('../../commands/get-command');
-const AuthHandler = require('../../utils/auth-handler');
-const GetHandler = require('../../utils/get-handler');
+const BackendReceiver = require('../../receivers/backend-receiver');
+const FrontendReceiver = require('../../receivers/frontend-receiver');
 const sandbox = require('sinon').createSandbox();
 
-describe('Command: Get', () => {
+describe('Command: get', () => {
 
-    let authHandler,
-        command,
-        setArgsStub,
-        fetchProjectsStub,
-        askForProjectNameStub,
-        getUserProjectStub,
-        getResultStub,
-        printStub,
-        catchErrorStub;
+    let command, context, getStub, printResultStub;
 
     beforeEach(() => {
 
-        authHandler = new AuthHandler(false);
-        command = new GetCommand(authHandler);
-        setArgsStub = sandbox.stub(command.handler, 'setArgs');
-        fetchProjectsStub = sandbox.stub(command.handler, 'fetchProjects');
-        askForProjectNameStub = sandbox.stub(command.handler, 'askForProjectName');
-        getUserProjectStub = sandbox.stub(command.handler, 'getUserProject');
-        getResultStub = sandbox.stub(command.handler, 'getResult');
-        printStub = sandbox.stub(command, 'print');
-        catchErrorStub = sandbox.stub(command, 'catchError');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
     afterEach(() => {
@@ -36,69 +23,27 @@ describe('Command: Get', () => {
         sandbox.restore();
     });
 
-    it('should have assigned handler', () => {
+    it('should call backend receiver get method and print result if entity is backend', async () => {
 
-        expect(command.handler).to.be.an.instanceOf(GetHandler);
-    });
-
-    it('should have assigned authHandler', () => {
-
-        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
-        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
-
-        command = new GetCommand();
-
-        expect(command).to.have.property('authHandler');
-    });
-
-    it('should call handler methods in expected order', async () => {
-
-        fetchProjectsStub.resolves();
-        askForProjectNameStub.resolves();
-        getUserProjectStub.resolves();
+        getStub = sandbox.stub(BackendReceiver.prototype, 'get');
+        context = new Context('backend', 'get', '', []);
+        command = new GetCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, getUserProjectStub, printStub);
-        sandbox.assert.notCalled(catchErrorStub);
+        sandbox.assert.calledOnce(getStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.backendReceiver.result]);
     });
 
-    it('should catch error if fetchProjects() rejects', async () => {
+    it('should call frontend receiver get method and print result if entity is frontend', async () => {
 
-        fetchProjectsStub.rejects('fakeError');
+        getStub = sandbox.stub(FrontendReceiver.prototype, 'get');
+        context = new Context('frontend', 'get', '', []);
+        command = new GetCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, catchErrorStub);
-        sandbox.assert.notCalled(askForProjectNameStub);
-        sandbox.assert.notCalled(getUserProjectStub);
-        sandbox.assert.notCalled(getResultStub);
-        sandbox.assert.notCalled(printStub);
-    });
-
-    it('should catch error if askForProjectName() rejects', async () => {
-
-        fetchProjectsStub.resolves();
-        askForProjectNameStub.rejects('fakeError');
-
-        await command.execute();
-
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, catchErrorStub);
-        sandbox.assert.notCalled(getUserProjectStub);
-        sandbox.assert.notCalled(getResultStub);
-        sandbox.assert.notCalled(printStub);
-    });
-
-    it('should catch error if getUserProject() rejects', async () => {
-
-        fetchProjectsStub.resolves();
-        askForProjectNameStub.resolves();
-        getUserProjectStub.rejects('fakeError');
-
-        await command.execute();
-
-        sandbox.assert.callOrder(setArgsStub, fetchProjectsStub, askForProjectNameStub, getUserProjectStub, catchErrorStub);
-        sandbox.assert.notCalled(getResultStub);
-        sandbox.assert.notCalled(printStub);
+        sandbox.assert.calledOnce(getStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.frontendReceiver.result]);
     });
 });

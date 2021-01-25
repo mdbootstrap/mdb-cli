@@ -1,25 +1,19 @@
 'use strict';
 
-const RegisterHandler = require('../utils/register-handler');
-const AuthHandler = require('../utils/auth-handler');
 const Command = require('./command');
+const UserReceiver = require('../receivers/user-receiver');
 
 class RegisterCommand extends Command {
 
-    constructor(authHandler = new AuthHandler(false)) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-
-        this.handler = new RegisterHandler(authHandler);
+        this.receiver = new UserReceiver(context);
     }
 
-    execute() {
-
-        return this.handler.askCredentials()
-            .then(() => this.handler.register())
-            .then(r => this.handler.parseResponse(r))
-            .then(() => this.print())
-            .catch(e => this.catchError(e));
+    async execute() {
+        await this.receiver.register();
+        this.printResult([this.receiver.result]);
     }
 }
 

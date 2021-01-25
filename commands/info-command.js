@@ -1,28 +1,40 @@
 'use strict';
 
 const Command = require('./command');
-const InfoHandler = require('../utils/info-handler');
-const AuthHandler = require('../utils/auth-handler');
+const BackendReceiver = require('../receivers/backend-receiver');
+const DatabaseReceiver = require('../receivers/database-receiver');
+
 
 class InfoCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-
-        this.handler = new InfoHandler(authHandler);
+        this.backendReceiver = new BackendReceiver(context);
+        this.databaseReceiver = new DatabaseReceiver(context);
     }
 
-    execute() {
+    async execute() {
 
-        this.handler.setArgs(this.args);
-        return this.handler.fetchProjects()
-            .then(() => this.handler.askForProjectName())
-            .then(() => this.handler.getInfo())
-            .then(() => this.handler.printResult())
-            .catch(e => this.catchError(e));
+        this.backendReceiver.result.on('mdb.cli.live.output', (msg) => {
+            this.printResult([msg]);
+        });
+
+        switch (this.entity) {
+            case 'backend':
+                await this.backendReceiver.info();
+                this.printResult([this.backendReceiver.result]);
+                break;
+
+            case 'database':
+                await this.databaseReceiver.info();
+                this.printResult([this.databaseReceiver.result]);
+                break;
+        
+            default:
+                break;
+        }
     }
-
 }
 
 module.exports = InfoCommand;

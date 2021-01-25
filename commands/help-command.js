@@ -1,21 +1,19 @@
 'use strict';
 
 const Command = require('./command');
-const AuthHandler = require('../utils/auth-handler');
-const HelpHandler = require('../utils/help-handler');
+const AppReceiver = require('../receivers/app-receiver');
 
 class HelpCommand extends Command {
 
-    constructor(authHandler = new AuthHandler(false)) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-        this.handler = new HelpHandler(authHandler);
+        this.receiver = new AppReceiver(context);
     }
 
     execute() {
-
-        this.handler.setResult();
-        this.print();
+        this.receiver.getHelp();
+        this.printResult([this.receiver.result]);
     }
 }
 

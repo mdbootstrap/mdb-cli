@@ -1,0 +1,396 @@
+'use strict';
+
+const open = require('open');
+const config = require('../../config');
+const Context = require('../../context');
+const WordpressReceiver = require('../../receivers/wordpress-receiver');
+const FtpPublishStrategy = require('../../receivers/strategies/publish/ftp-publish-strategy');
+const ProjectStatus = require('../../models/project-status');
+const sandbox = require('sinon').createSandbox();
+const helpers = require('../../helpers');
+
+describe('Receiver: wordpress', () => {
+
+    const fakeProject = {
+        projectId: 1,
+        userNicename: 'fakeuser',
+        projectName: 'fakeproject',
+        domainName: null,
+        publishDate: '2019-06-24T06:49:53.000Z',
+        editDate: '2019-06-24T06:49:53.000Z',
+        repoUrl: null,
+        status: ProjectStatus.WORDPRESS,
+        projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology' }]
+    };
+
+    let context, receiver, getWordpressProjectsStub;
+
+    beforeEach(() => {
+
+        sandbox.stub(config, 'projectsDomain').value('fake.domain');
+        sandbox.stub(Context.prototype, 'authenticateUser');
+    });
+
+    afterEach(() => {
+        sandbox.reset();
+        sandbox.restore();
+    });
+
+    describe('Method: get', () => {
+
+        beforeEach(() => {
+
+            getWordpressProjectsStub = sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects');
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getWordpressProjectsStub.resolves([]);
+            context = new Context('wordpress', 'get', '', []);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.get();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'get', '', ['-n', 'fakename']);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.get();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project is downloaded from ftp', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Download completed.' }, color: 'green' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'get', '', ['--name', 'fakeproject']);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'downloadFromFTP').resolves('Download completed.');
+
+            await receiver.get();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project is downloaded using git', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Download completed.' }, color: 'green' };
+            const fakeProject1 = { ...fakeProject, ...{ repoUrl: 'fake.url' } };
+            getWordpressProjectsStub.resolves([fakeProject1]);
+            context = new Context('wordpress', 'get', '', []);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.git, 'clone').resolves('Download completed.');
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.get();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not download fakeproject: Fake error' }, color: 'red' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'get', '', ['--force']);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'downloadFromFTP').rejects({ message: 'Fake error' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.get();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: init', function () {
+
+        it('should abort initialization if not in wp-content/themes and user aborts', async function () {
+
+            context = new Context('wordpress', 'init', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(process, 'cwd').returns('/fake/path/tra/la/la');
+            sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
+            sandbox.stub(receiver.result, 'addAlert');
+            sandbox.stub(receiver.result, 'addTextLine');
+
+            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves();
+            const downloadStub = sandbox.stub(helpers, 'downloadFromFTP').resolves();
+
+            await receiver.init();
+
+            expect(listPromptStub).to.not.have.been.called;
+            expect(downloadStub).to.not.have.been.called;
+        });
+
+        it('should continue initialization if not in wp-content/themes but user does not abort', async function () {
+
+            context = new Context('wordpress', 'init', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(process, 'cwd').returns('/fake/path/tra/la/la');
+            sandbox.stub(helpers, 'createConfirmationPrompt').resolves(true);
+            sandbox.stub(receiver.result, 'addAlert');
+            sandbox.stub(receiver.result, 'addTextLine');
+            sandbox.stub(context.mdbConfig, 'save');
+
+            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves();
+            const downloadStub = sandbox.stub(helpers, 'downloadFromFTP').resolves();
+
+            await receiver.init();
+
+            expect(listPromptStub).to.have.been.called;
+            expect(downloadStub).to.have.been.called;
+        });
+
+        it('should print error if invalid variant provided', async function () {
+
+            context = new Context('wordpress', 'init', [], ['--variant', 'invalid']);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(process, 'cwd').returns('/wp-content/themes');
+            sandbox.stub(receiver.result, 'addTextLine');
+
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+
+            await receiver.init();
+
+            expect(alertStub).to.have.been.called;
+        });
+
+        it('should create list prompt if no variant provided', async function () {
+
+            context = new Context('wordpress', 'init', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(process, 'cwd').returns('/wp-content/themes');
+            sandbox.stub(helpers, 'downloadFromFTP').resolves();
+            sandbox.stub(context.mdbConfig, 'save');
+
+            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves();
+
+            await receiver.init();
+
+            expect(listPromptStub).to.have.been.called;
+        });
+
+        it('should download wp theme and update .mdb', async function () {
+
+            context = new Context('wordpress', 'init', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(process, 'cwd').returns('/wp-content/themes');
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
+            sandbox.stub(helpers, 'getThemeName').returns('fakeThemeName');
+
+            const downloadStub = sandbox.stub(helpers, 'downloadFromFTP').resolves();
+            const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
+            const saveStub = sandbox.stub(context.mdbConfig, 'save');
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+
+            await receiver.init();
+
+            expect(downloadStub).to.have.been.called;
+            expect(setValueStub.getCall(0).args).to.deep.eq(['meta.starter', 'fakeVariant']);
+            expect(setValueStub.getCall(1).args).to.deep.eq(['meta.type', 'wordpress']);
+            expect(saveStub).to.have.been.calledWith('fakeThemeName');
+            expect(alertStub).to.have.been.calledWith('green');
+        });
+
+        it('should print error if download fails', async function () {
+
+            context = new Context('wordpress', 'init', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(process, 'cwd').returns('/wp-content/themes');
+            sandbox.stub(helpers, 'createListPrompt').resolves();
+
+            const downloadStub = sandbox.stub(helpers, 'downloadFromFTP').rejects();
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+
+            await receiver.init();
+
+            expect(downloadStub).to.have.been.called;
+            expect(alertStub).to.have.been.calledWith('red');
+        });
+    });
+
+    describe('Method: publish', function () {
+
+        it('should ask for page variant if not saved in .mdb and save it in .mdb', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(context.mdbConfig, 'getValue').withArgs('meta.starter').returns(undefined);
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
+
+            const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
+            const saveStub = sandbox.stub(context.mdbConfig, 'save');
+
+            await receiver._getPageVariant();
+
+            expect(setValueStub.getCall(0).args).to.deep.eq(['meta.starter', 'fakeVariant']);
+            expect(setValueStub.getCall(1).args).to.deep.eq(['meta.type', 'wordpress']);
+            expect(saveStub).to.have.been.calledOnce;
+        });
+
+        it('should not ask for page variant if saved in .mdb', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(context.mdbConfig, 'getValue').withArgs('meta.starter').returns('fakeStarter');
+            const promptStub = sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
+
+            await receiver._getPageVariant();
+
+            expect(promptStub).to.not.have.been.called;
+        });
+
+        it('should ask for simple credentials if projectName not in .mdb and update .mdb', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(context.mdbConfig, 'getValue').withArgs('projectName').returns(undefined);
+            const askStub = sandbox.stub(receiver, 'askWpCredentials').resolves({ pageName: 'fakeProjectName', email: 'fakeEmail', username: 'fakeUsername' });
+            const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
+            const saveStub = sandbox.stub(context.mdbConfig, 'save');
+
+            await receiver._getWpData();
+
+            expect(askStub).to.have.been.calledWith(undefined);
+            expect(setValueStub.getCall(0).args).to.deep.eq(['projectName', 'fakeprojectname']);
+            expect(setValueStub.getCall(1).args).to.deep.eq(['wordpress.email', 'fakeEmail']);
+            expect(setValueStub.getCall(2).args).to.deep.eq(['wordpress.username', 'fakeUsername']);
+            expect(saveStub).to.have.been.calledOnce;
+        });
+
+        it('should ask for advanced credentials if projectName not in .mdb and update .mdb', async function () {
+
+            context = new Context('wordpress', 'publish', [], ['--advanced']);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(context.mdbConfig, 'getValue').withArgs('projectName').returns(undefined);
+            const askStub = sandbox.stub(receiver, 'askWpCredentials').resolves({ pageName: 'fakeProjectName', email: 'fakeEmail', username: 'fakeUsername' });
+            const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
+            const saveStub = sandbox.stub(context.mdbConfig, 'save');
+
+            await receiver._getWpData();
+
+            expect(askStub).to.have.been.calledWith(true);
+            expect(setValueStub.getCall(0).args).to.deep.eq(['projectName', 'fakeprojectname']);
+            expect(setValueStub.getCall(1).args).to.deep.eq(['wordpress.email', 'fakeEmail']);
+            expect(setValueStub.getCall(2).args).to.deep.eq(['wordpress.username', 'fakeUsername']);
+            expect(saveStub).to.have.been.calledOnce;
+        });
+
+        it('should use FtpPublishStrategy to upload files and call API to initialize WP if 201 returned', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
+            sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' });
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns('fakeName')
+                .withArgs('wordpress.email').resolves('fakeEmail')
+                .withArgs('wordpress.username').resolves('fakeUsername');
+
+            const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 201 });
+            const createStub = sandbox.stub(receiver, '_createWpPage').resolves();
+
+            await receiver.publish();
+
+            expect(publishStub).to.have.been.calledOnce;
+            expect(createStub).to.have.been.calledOnce;
+        });
+
+        it('should use FtpPublishStrategy to upload files and not call API if 200 returned', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
+            sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' });
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns('fakeName')
+                .withArgs('wordpress.email').resolves('fakeEmail')
+                .withArgs('wordpress.username').resolves('fakeUsername');
+
+            const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 200 });
+            const createStub = sandbox.stub(receiver, '_createWpPage').resolves();
+
+            await receiver.publish();
+
+            expect(publishStub).to.have.been.calledOnce;
+            expect(createStub).to.not.have.been.called;
+        });
+
+        it('should open browser if --open flag provided and print result', async function () {
+
+            const fakePayload = { username: 'fake' };
+
+            context = new Context('wordpress', 'publish', [], ['--open']);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver.http, 'post').resolves({ body: JSON.stringify({ message: 'fake', url: 'fakeUrl', password: 'fake' }) });
+
+            const openStub = sandbox.stub(open, 'call');
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+            const textStub = sandbox.stub(receiver.result, 'addTextLine');
+
+            await receiver._createWpPage(fakePayload);
+
+            expect(openStub).to.have.been.calledOnce;
+            expect(alertStub).to.have.been.calledWith('green');
+            expect(textStub).to.have.been.calledWith(sandbox.match('fakeUrl'));
+        });
+
+        it('should print error if failed to publish', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
+            sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' });
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns('fakeName')
+                .withArgs('wordpress.email').resolves('fakeEmail')
+                .withArgs('wordpress.username').resolves('fakeUsername');
+
+            sandbox.stub(FtpPublishStrategy.prototype, 'publish').rejects(new Error('fake error'));
+
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+
+            await receiver.publish();
+
+            expect(alertStub).to.have.been.calledWith('red');
+        });
+
+        it('should print error if failed to call API', async function () {
+
+            const fakePayload = { username: 'fake' };
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver.http, 'post').rejects(new Error('fake error'));
+
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+
+            await receiver._createWpPage(fakePayload);
+
+            expect(alertStub).to.have.been.calledWith('red');
+        });
+    });
+});

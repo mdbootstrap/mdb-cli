@@ -1,23 +1,19 @@
 'use strict';
 
 const Command = require('./command');
-const AuthHandler = require('../utils/auth-handler');
-const UpdateHandler = require('../utils/update-handler');
+const AppReceiver = require('../receivers/app-receiver');
 
 class UpdateCommand extends Command {
 
-    constructor(authHandler = new AuthHandler(false)) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-        this.handler = new UpdateHandler(authHandler);
+        this.receiver = new AppReceiver(context);
     }
 
-    execute() {
-
-        this.handler.loadPackageManager()
-            .then(() => this.handler.update())
-            .then(() => this.print())
-            .catch(e => this.catchError(e));
+    async execute() {
+        await this.receiver.updateApp();
+        this.printResult([this.receiver.result]);
     }
 }
 

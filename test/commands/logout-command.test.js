@@ -1,20 +1,19 @@
 'use strict';
 
-const AuthHandler = require('../../utils/auth-handler');
+const Context = require('../../context');
+const Command = require('../../commands/command');
+const LogoutCommand = require('../../commands/logout-command');
+const UserReceiver = require('../../receivers/user-receiver');
 const sandbox = require('sinon').createSandbox();
-const commandClass = require('../../commands/logout-command');
 
-describe('Command: Logout', () => {
+describe('Command: logout', () => {
 
-    let authHandler;
-    let command;
+    let command, context;
 
     beforeEach(() => {
 
-        authHandler = new AuthHandler(false);
-
-        command = new commandClass(authHandler);
-        sandbox.stub(console, 'table');
+        context = new Context('user', 'logout', '', []);
+        command = new LogoutCommand(context);
     });
 
     afterEach(() => {
@@ -23,88 +22,14 @@ describe('Command: Logout', () => {
         sandbox.restore();
     });
 
-    it('should have assigned authHandler', () => {
+    it('should call receiver logout method and print result', async () => {
 
-        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
-        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
-
-        command = new commandClass();
-
-        expect(command).to.have.property('authHandler');
-    });
-
-    it('should have assigned handler', (done) => {
-
-        expect(command).to.have.property('handler');
-
-        done();
-    });
-
-    it('should have LogoutHandler handler', (done) => {
-
-        const LogoutHandler = require('../../utils/logout-handler');
-
-        expect(command.handler).to.be.an.instanceOf(LogoutHandler);
-
-        done();
-    });
-
-    it('should call handler.logout', (done) => {
-
-        const fakeReturnedPromise = {
-
-            then() {
-
-                return this;
-            },
-            catch() {
-
-                return this;
-            }
-
-        };
-        const handlerStub = sandbox.stub(command.handler, 'logout').returns(fakeReturnedPromise);
-
-        command.execute();
-
-        chai.assert.isTrue(handlerStub.called, 'handler.logout not called');
-
-        done();
-    });
-
-    it('should console.log on handler.logout failure', async () => {
-
-        sandbox.stub(command.handler, 'logout').rejects('Fake error');
-        const consoleStub = sandbox.stub(console, 'log');
+        const loginStub = sandbox.stub(UserReceiver.prototype, 'logout');
+        const printResultStub = sandbox.stub(Command.prototype, 'printResult');
 
         await command.execute();
 
-        chai.assert.isTrue(consoleStub.called, 'console.log not called on handler.logout failure');
-
-        return Promise.resolve();
-    });
-
-    it('should call handler.getResult after logout', async () => {
-
-        sandbox.stub(command.handler, 'logout').resolves(undefined);
-        const handlerGetResultStub = sandbox.stub(command.handler, 'getResult').returns([]);
-
-        await command.execute();
-
-        chai.assert.isTrue(handlerGetResultStub.called, 'handler.getResult not called after handler.logout');
-
-        return Promise.resolve();
-    });
-
-    it('should call .print() after logout', async () => {
-
-        sandbox.stub(command.handler, 'logout').resolves();
-        const commandPrintSpy = sandbox.spy(command, 'print');
-
-        await command.execute();
-
-        chai.assert.isTrue(commandPrintSpy.called, 'command.print not called after handler.logout');
-
-        return Promise.resolve();
+        sandbox.assert.calledOnce(loginStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 });

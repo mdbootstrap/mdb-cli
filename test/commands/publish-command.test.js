@@ -1,34 +1,20 @@
 'use strict';
 
+const Context = require('../../context');
+const Command = require('../../commands/command');
 const PublishCommand = require('../../commands/publish-command');
-const PublishHandler = require('../../utils/publish-handler');
-const AuthHandler = require('../../utils/auth-handler');
+const FrontendReceiver = require('../../receivers/frontend-receiver');
+const BackendReceiver = require('../../receivers/backend-receiver');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: publish', () => {
 
-    let command,
-        authHandler,
-        setArgsStub,
-        handlePublishArgsStub,
-        loadPackageManagerStub,
-        runTestsStub,
-        setProjectNameStub,
-        publishStub,
-        printStub,
-        catchErrorStub;
+    let printResultStub;
 
     beforeEach(() => {
 
-        authHandler = new AuthHandler(false);
-        command = new PublishCommand(authHandler);
-        setArgsStub = sandbox.stub(command.handler, 'setArgs');
-        handlePublishArgsStub = sandbox.stub(command.handler, 'handlePublishArgs');
-        runTestsStub = sandbox.stub(command.handler, 'runTests');
-        setProjectNameStub = sandbox.stub(command.handler, 'setProjectName');
-        publishStub = sandbox.stub(command.handler, 'publish');
-        printStub = sandbox.stub(command, 'print');
-        catchErrorStub = sandbox.stub(command, 'catchError');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
     afterEach(() => {
@@ -37,49 +23,27 @@ describe('Command: publish', () => {
         sandbox.restore();
     });
 
-    it('should have assigned authHandler', () => {
+    it('should call frontend receiver publish() method and print result', async () => {
 
-        sandbox.stub(AuthHandler.prototype, 'setAuthHeader');
-        sandbox.stub(AuthHandler.prototype, 'checkForAuth');
-
-        command = new PublishCommand();
-
-        expect(command).to.have.property('authHandler');
-    });
-
-    it('should have assigned handler', () => {
-
-        expect(command).to.have.property('handler');
-        expect(command.handler).to.be.an.instanceOf(PublishHandler);
-    });
-
-    it('should call handler methods in expected order and print result', async () => {
-
-        setArgsStub.resolves();
-        handlePublishArgsStub.resolves();
-        runTestsStub.resolves();
-        setProjectNameStub.resolves();
-        publishStub.resolves();
+        const configStub = sandbox.stub(FrontendReceiver.prototype, 'publish');
+        const context = new Context('frontend', 'publish', '', []);
+        const command = new PublishCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, handlePublishArgsStub, runTestsStub, setProjectNameStub, publishStub, printStub);
-        sandbox.assert.notCalled(catchErrorStub);
+        sandbox.assert.calledOnce(configStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 
-    it('should call catchError if any of methods rejects', async () => {
+    it('should call backend receiver publish() method and print result', async () => {
 
-        const fakeError = 'fakeError';
-        setArgsStub.resolves();
-        handlePublishArgsStub.resolves();
-        runTestsStub.resolves();
-        setProjectNameStub.resolves();
-        publishStub.rejects(fakeError);
+        const configStub = sandbox.stub(BackendReceiver.prototype, 'publish');
+        const context = new Context('backend', 'publish', '', []);
+        const command = new PublishCommand(context);
 
         await command.execute();
 
-        sandbox.assert.callOrder(setArgsStub, handlePublishArgsStub, runTestsStub, setProjectNameStub, publishStub, catchErrorStub);
-        expect(catchErrorStub.calledWith(fakeError));
-        sandbox.assert.notCalled(printStub);
+        sandbox.assert.calledOnce(configStub);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 });

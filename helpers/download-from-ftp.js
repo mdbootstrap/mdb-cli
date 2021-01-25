@@ -1,17 +1,16 @@
 'use strict';
 
-const CliStatus = require('../models/cli-status');
 const ProgressBar = require('progress');
 const { Readable } = require('stream');
 const unzip = require('unzipper');
 
 module.exports = {
 
-    downloadFromFTP(http, destination) {
+    downloadFromFTP(http, options, destination) {
 
         return new Promise((resolve, reject) => {
 
-            const request = http.createRequest((response) => {
+            const request = http.createRawRequest(options, (response) => {
 
                 let result, message = '';
 
@@ -30,7 +29,7 @@ module.exports = {
 
                 response.on('data', (chunk) => {
 
-                    if (response.statusCode === CliStatus.HTTP_SUCCESS) {
+                    if (response.statusCode === 200) {
 
                         readStream.push(chunk);
                         bar.tick(chunk.length);
@@ -45,16 +44,15 @@ module.exports = {
 
                     const { statusCode, statusMessage } = response;
 
-                    if (statusCode === CliStatus.HTTP_SUCCESS) {
+                    if (statusCode === 200) {
 
-                        result = [{ Status: CliStatus.SUCCESS, Message: 'Download completed.' }];
+                        result = 'Download completed.';
 
                         readStream.push(null);
-                        console.log('\n');
 
                     } else {
 
-                        reject({ Status: statusCode, Message: message || statusMessage });
+                        reject(message || statusMessage);
                     }
                 });
 
@@ -64,7 +62,7 @@ module.exports = {
 
                 } catch (e) {
 
-                    reject({ Status: CliStatus.INTERNAL_SERVER_ERROR, Message: 'Download error.' });
+                    reject('Download error.');
                 }
             });
 

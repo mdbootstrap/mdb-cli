@@ -1,33 +1,27 @@
 'use strict';
 
 const PackageManager = require('./package-manager');
-const childProcess = require('child_process');
 
 class NpmPackageManager extends PackageManager {
 
-    info() {
-
-        return childProcess.spawn('npm', ['info', 'mdb-cli', 'version'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+    get cmdCommand() {
+        return 'npm';
     }
 
     init(cwd) {
-
-        return childProcess.spawn('npm', ['init'], { cwd, stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['init'], 'package.json created. Proceeding...', 'package.json initialization failed', cwd);
     }
 
     build(cwd) {
-
-        return childProcess.spawn('npm', ['run', 'build'], { cwd, stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['run', 'build'], 'Project built successfully', 'Project could not be built', cwd);
     }
 
     test() {
-
-        return childProcess.spawn('npm', ['run', 'test'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['run', 'test'], 'Tests ran successfully', 'Tests failed');
     }
 
     update() {
-
-        return childProcess.spawn('npm', ['i', '-g', 'mdb-cli'], { stdio: 'inherit', ...(this.isWindows && { shell: true }) });
+        return this._task(['i', '-g', 'mdb-cli'], 'Successfully updated', 'Update failed');
     }
 }
 

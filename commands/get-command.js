@@ -1,28 +1,41 @@
 'use strict';
 
 const Command = require('./command');
-const GetHandler = require('../utils/get-handler');
-const AuthHandler = require('../utils/auth-handler');
+const FrontendReceiver = require('../receivers/frontend-receiver');
+const BackendReceiver = require('../receivers/backend-receiver');
+const WordpressReceiver = require('../receivers/wordpress-receiver');
 
 class GetCommand extends Command {
 
-    constructor(authHandler = new AuthHandler()) {
+    constructor(context) {
+        super(context);
 
-        super(authHandler);
-
-        this.handler = new GetHandler(authHandler);
+        this.frontendReceiver = new FrontendReceiver(context);
+        this.backendReceiver = new BackendReceiver(context);
+        this.wordpressReceiver = new WordpressReceiver(context);
     }
 
-    execute() {
+    async execute() {
+        switch (this.entity) {
+            case 'frontend':
+                await this.frontendReceiver.get();
+                this.printResult([this.frontendReceiver.result]);
+                break;
 
-        this.handler.setArgs(this.args);
-        return this.handler.fetchProjects()
-            .then(() => this.handler.askForProjectName())
-            .then(() => this.handler.getUserProject())
-            .then(() => this.print())
-            .catch(e => this.catchError(e));
+            case 'backend':
+                await this.backendReceiver.get();
+                this.printResult([this.backendReceiver.result]);
+                break;
+
+            case 'wordpress':
+                await this.wordpressReceiver.get();
+                this.printResult([this.wordpressReceiver.result]);
+                break;
+
+            default:
+                break;
+        }
     }
-
 }
 
 module.exports = GetCommand;

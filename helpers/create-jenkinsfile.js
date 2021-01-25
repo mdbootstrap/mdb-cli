@@ -5,9 +5,9 @@ const path = require('path');
 
 module.exports = {
 
-    async createJenkinsfile(cwd) {
+    async createJenkinsfile(cwd, simple) {
 
-        const arvJenkinsfile =
+        const simpleJenkinsfile =
 `pipeline {
     agent {
         docker {
@@ -26,7 +26,7 @@ module.exports = {
     }
 }`;
 
-        const jqJenkinsfile =
+        const noopJenkinsfile =
 `pipeline {
     agent any
     stages {
@@ -41,31 +41,10 @@ module.exports = {
         const jenkinsfilePath = path.join(cwd, 'Jenkinsfile');
 
         if (fs.existsSync(jenkinsfilePath)) {
-
             return false;
         }
 
-        const helpers = require('../helpers');
-        const packageJsonPath = path.join(cwd, 'package.json');
-        let packageJson;
-
-        try {
-
-            packageJson = await helpers.deserializeJsonFile(packageJsonPath);
-        } 
-        catch (err) {
-
-            packageJson = {};
-        }
-
-        if (packageJson.dependencies && packageJson.scripts && packageJson.scripts.test) {
-
-            fs.writeFileSync(jenkinsfilePath, arvJenkinsfile, 'utf8');
-
-        } else {
-
-            fs.writeFileSync(jenkinsfilePath, jqJenkinsfile, 'utf8');
-        }
+        fs.writeFileSync(jenkinsfilePath, simple ? simpleJenkinsfile : noopJenkinsfile, 'utf8');
 
         return true;
     }
