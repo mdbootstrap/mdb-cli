@@ -3,7 +3,7 @@
 const Command = require('./command');
 const UserReceiver = require('../receivers/user-receiver');
 
-class RegisterCommand extends Command {
+class WhoamiCommand extends Command {
 
     constructor(context) {
         super(context);
@@ -12,12 +12,9 @@ class RegisterCommand extends Command {
     }
 
     async execute() {
-
-        this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
-
-        await this.receiver.register();
+        await this.receiver.whoami();
         this.printResult([this.receiver.result]);
     }
 }
 
-module.exports = RegisterCommand;
+module.exports = WhoamiCommand;

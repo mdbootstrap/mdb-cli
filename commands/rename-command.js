@@ -3,6 +3,8 @@
 const Command = require('./command');
 const FrontendReceiver = require('../receivers/frontend-receiver');
 const BackendReceiver = require('../receivers/backend-receiver');
+const Entity = require('../models/entity');
+const helpers = require('../helpers');
 
 
 class RenameCommand extends Command {
@@ -10,12 +12,57 @@ class RenameCommand extends Command {
     constructor(context) {
         super(context);
 
-        this.frontendReceiver = new FrontendReceiver(context);
-        this.backendReceiver = new BackendReceiver(context);
+        this.receiver = null;
+
+        this.setReceiver(context);
     }
 
-    execute() {
-        // TODO: implement
+    async execute() {
+
+        const projectName = this.receiver.getProjectName();
+        const confirmed = await helpers.createConfirmationPrompt(`Project ${projectName} will be deleted and then published again. Proceed?`, true);
+        if (confirmed) {
+            const deleted = await this.receiver.delete(projectName);
+            this.printResult([this.receiver.result]);
+            if (deleted) {
+                const renamed = await this.receiver.rename();
+                this.printResult([this.receiver.result]);
+                if (renamed) {
+                    this.receiver.clearResult();
+                    await this.receiver.publish();
+                    this.printResult([this.receiver.result]);
+                }
+            }
+        }
+    }
+
+    setReceiver(ctx) {
+
+        if (!this.entity) {
+            const type = ctx.mdbConfig.getValue('meta.type');
+            if (type) {
+                this.entity = type;
+                ctx.entity = type;
+            }
+        }
+
+        switch (this.entity) {
+
+            case Entity.Backend:
+                this.receiver = new BackendReceiver(ctx);
+                break;
+
+            case Entity.Frontend:
+                this.receiver = new FrontendReceiver(ctx);
+                break;
+
+            default:
+                ctx.entity = Entity.Frontend;
+                this.receiver = new FrontendReceiver(ctx);
+                break;
+        }
+
+        this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
     }
 }
 

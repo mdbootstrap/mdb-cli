@@ -112,14 +112,15 @@ describe('Command: init', () => {
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 
-    it('should not call print result if receiver is undefined', async () => {
+    it('should call help method if receiver is undefined', async () => {
 
+        const helpMethodStub = sandbox.stub(InitCommand.prototype, 'help');
         context = new Context('fake', 'init', '', []);
         command = new InitCommand(context);
 
         await command.execute();
 
         expect(command.receiver).to.be.undefined;
-        sandbox.assert.notCalled(printResultStub);
+        sandbox.assert.calledOnce(helpMethodStub);
     });
 });

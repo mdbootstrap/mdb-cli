@@ -50,6 +50,10 @@ class Context {
         return this._flags;
     }
 
+    set entity(entity) {
+        this._entity = entity;
+    }
+
     getParsedFlags() {
         const flags = this.rawFlags.slice();
         const parsedFlags = {};

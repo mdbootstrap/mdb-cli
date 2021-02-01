@@ -6,6 +6,7 @@ const NormalAuthStrategy = require('./strategies/auth/normal-auth-strategy');
 const GoogleAuthStrategy = require('./strategies/auth/google-auth-strategy');
 const FacebookAuthStrategy = require('./strategies/auth/facebook-auth-strategy');
 const TwitterAuthStrategy = require('./strategies/auth/twitter-auth-strategy');
+const atob = require('atob');
 
 class UserReceiver extends Receiver {
 
@@ -14,6 +15,10 @@ class UserReceiver extends Receiver {
 
         this.socialProvider = AuthMethod.Normal;
         this.authStrategy = null;
+        this.context.registerFlagExpansions({
+            '-u': '--username',
+            '-p': '--password'
+        });
     }
 
     async register() {
@@ -50,6 +55,16 @@ class UserReceiver extends Receiver {
         }
     }
 
+    async whoami() {
+        this.context.authenticateUser();
+
+        const token = this.context.userToken;
+        const [, jwtBody] = token.split('.');
+        const username = JSON.parse(atob(jwtBody)).name;
+
+        this.result.addTextLine(username);
+    }
+
     setSocialProvider() {
         const flags = this.context.getParsedFlags();
 
@@ -62,12 +77,14 @@ class UserReceiver extends Receiver {
     }
 
     setAuthStrategy() {
+        const flags = this.context.getParsedFlags();
+
         switch (this.socialProvider) {
             case AuthMethod.Google: return this.authStrategy = new GoogleAuthStrategy();
             case AuthMethod.Facebook: return this.authStrategy = new FacebookAuthStrategy();
             case AuthMethod.Twitter: return this.authStrategy = new TwitterAuthStrategy();
-            case AuthMethod.Normal: return this.authStrategy = new NormalAuthStrategy();
-            default: return this.authStrategy = new NormalAuthStrategy();
+            case AuthMethod.Normal: return this.authStrategy = new NormalAuthStrategy(flags, this.result);
+            default: return this.authStrategy = new NormalAuthStrategy(flags, this.result);
         }
     }
 }

@@ -18,6 +18,10 @@ class Receiver {
     get result() {
         return this._result;
     }
+
+    clearResult() {
+        this._result = new CommandResult();
+    }
 }
 
 module.exports = Receiver;

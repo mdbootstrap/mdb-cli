@@ -4,6 +4,8 @@ const Command = require('./command');
 const FrontendReceiver = require('../receivers/frontend-receiver');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
+const Entity = require('../models/entity');
+
 
 class PublishCommand extends Command {
 
@@ -17,34 +19,41 @@ class PublishCommand extends Command {
 
     async execute() {
 
-        if (this.receiver) {
-            await this.receiver.publish();
-            this.printResult([this.receiver.result]);
-        }
+        await this.receiver.publish();
+        this.printResult([this.receiver.result]);
     }
 
     setReceiver(ctx) {
 
+        if (!this.entity) {
+            const type = ctx.mdbConfig.getValue('meta.type');
+            if (type) {
+                this.entity = type;
+                ctx.entity = type;
+            }
+        }
+
         switch (this.entity) {
-            case 'backend':
+
+            case Entity.Backend:
                 this.receiver = new BackendReceiver(ctx);
-                this.receiver.result.on('mdb.cli.live.output', (msg) => {
-                    this.printResult([msg]);
-                });
                 break;
 
-            case 'wordpress':
+            case Entity.Wordpress:
                 this.receiver = new WordpressReceiver(ctx);
                 break;
 
-            case 'frontend':
-            default:
+            case Entity.Frontend:
                 this.receiver = new FrontendReceiver(ctx);
-                this.receiver.result.on('mdb.cli.live.output', (msg) => {
-                    this.printResult([msg]);
-                });
+                break;
+
+            default:
+                ctx.entity = Entity.Frontend;
+                this.receiver = new FrontendReceiver(ctx);
                 break;
         }
+
+        this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
     }
 }
 

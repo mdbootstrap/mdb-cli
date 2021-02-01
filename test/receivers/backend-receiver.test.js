@@ -3,6 +3,7 @@
 const config = require('../../config');
 const Context = require('../../context');
 const BackendReceiver = require('../../receivers/backend-receiver');
+const HttpWrapper = require('../../utils/http-wrapper');
 const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
 
@@ -24,7 +25,7 @@ describe('Receiver: backend', () => {
 
     beforeEach(() => {
 
-        sandbox.stub(config, 'projectsDomain').value('fake.domain')
+        sandbox.stub(config, 'projectsDomain').value('http://fake.domain');
         sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
@@ -269,6 +270,7 @@ describe('Receiver: backend', () => {
             getBackendProjectsStub.resolves([fakeProject]);
             context = new Context('backend', 'get', '', ['--name', 'fakeproject']);
             receiver = new BackendReceiver(context);
+            sandbox.stub(helpers, 'eraseDirectories').resolves();
             sandbox.stub(helpers, 'downloadFromFTP').resolves('Download completed.');
 
             await receiver.get();
@@ -297,6 +299,7 @@ describe('Receiver: backend', () => {
             getBackendProjectsStub.resolves([fakeProject]);
             context = new Context('backend', 'get', '', ['--force']);
             receiver = new BackendReceiver(context);
+            sandbox.stub(helpers, 'eraseDirectories').resolves();
             sandbox.stub(helpers, 'downloadFromFTP').rejects({ message: 'Fake error' });
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
 
@@ -347,7 +350,7 @@ describe('Receiver: backend', () => {
             getBackendProjectsStub.resolves([fakeProject]);
             context = new Context('backend', 'info', '', ['--name', 'fakeproject']);
             receiver = new BackendReceiver(context);
-            const result = { startedAt: '2021-01-11 11:11:11', killedAt: undefined, port: 1234 };
+            const result = { startedAt: '2021-01-11 11:11:11', killedAt: undefined, isUp: true, url: 'http://fake.domain:1234' };
             sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify(result) });
 
             await receiver.info();
@@ -393,9 +396,14 @@ describe('Receiver: backend', () => {
 
     describe('Method: logs', () => {
 
+        let requestStub, fakeRequest, fakeResponse;
+
         beforeEach(() => {
 
             getBackendProjectsStub = sandbox.stub(BackendReceiver.prototype, 'getBackendProjects');
+            requestStub = sandbox.stub(HttpWrapper.prototype, 'createRawRequest');
+            fakeRequest = { on: sandbox.stub(), end: sandbox.stub() };
+            fakeResponse = { on: sandbox.stub() };
         });
 
         it('should set expected result if user does not have any projects', async () => {
@@ -476,6 +484,103 @@ describe('Receiver: backend', () => {
             await receiver.logs();
 
             expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should print live logs if -f flag is set', async () => {
+
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'logs', '', ['-f']);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+            sandbox.stub(receiver.result, 'liveTextLine');
+            fakeResponse.on.withArgs('data').yields('fake logs');
+            requestStub.returns(fakeRequest).yields(fakeResponse);
+
+            await receiver.logs();
+
+            sandbox.assert.calledWith(receiver.result.liveTextLine, 'fake logs');
+        });
+    });
+
+    describe('Method: rename', () => {
+
+        const fakeName = 'fake-name';
+        const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project name successfully changed to fake-name' }, color: 'green' };
+
+        let promptStub;
+
+        beforeEach(() => {
+
+            promptStub = sandbox.stub(helpers, 'createTextPrompt');
+            sandbox.stub(helpers, 'serializeJsonFile').resolves();
+            context = new Context('backend', 'rename', '', []);
+            sandbox.stub(context, '_loadPackageJsonConfig');
+            sandbox.stub(context.mdbConfig, 'setValue');
+            sandbox.stub(context.mdbConfig, 'save');
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver, 'clearResult');
+        });
+
+        it('should rename project and return expected result if name defined in package.json', async () => {
+
+            receiver.context.packageJsonConfig = { name: 'old-name' };
+            promptStub.resolves(fakeName);
+
+            const result = await receiver.rename();
+
+            expect(result).to.be.eq(true);
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should rename project and return expected result if no package.json', async () => {
+
+            receiver.context.packageJsonConfig = {};
+            receiver.flags['new-name'] = fakeName;
+
+            const result = await receiver.rename();
+
+            expect(result).to.be.eq(true);
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: getProjectName', () => {
+
+        const fakeName = 'fake-name';
+
+        it('should return project name if defined in package.json', () => {
+
+            context = new Context('backend', 'rename', '', []);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({ name: fakeName });
+
+            const projectName = receiver.getProjectName();
+
+            expect(projectName).to.be.eq(fakeName);
+        });
+
+        it('should return project name if defined in config file', () => {
+
+            context = new Context('backend', 'rename', '', []);
+            sandbox.stub(context.mdbConfig, 'getValue').returns(fakeName);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({});
+
+            const projectName = receiver.getProjectName();
+
+            expect(projectName).to.be.eq(fakeName);
+        });
+
+        it('should return undefined if project name not defined', () => {
+
+            context = new Context('backend', 'rename', '', []);
+            sandbox.stub(context.mdbConfig, 'getValue').returns(undefined);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({});
+
+            const projectName = receiver.getProjectName();
+
+            expect(projectName).to.be.eq(undefined);
         });
     });
 });

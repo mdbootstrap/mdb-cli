@@ -7,6 +7,8 @@ const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
 const DatabaseReceiver = require('../receivers/database-receiver');
 const OrderReceiver = require('../receivers/order-receiver');
+const Entity = require('../models/entity');
+
 
 class LsCommand extends Command {
 
@@ -83,27 +85,27 @@ class LsCommand extends Command {
 
         switch (this.entity) {
 
-            case 'starter':
+            case Entity.Starter:
                 this.receiver = new StarterReceiver(ctx);
                 break;
 
-            case 'frontend':
+            case Entity.Frontend:
                 this.receiver = new FrontendReceiver(ctx);
                 break;
 
-            case 'backend':
+            case Entity.Backend:
                 this.receiver = new BackendReceiver(ctx);
                 break;
 
-            case 'wordpress':
+            case Entity.Wordpress:
                 this.receiver = new WordpressReceiver(ctx);
                 break;
 
-            case 'database':
+            case Entity.Database:
                 this.receiver = new DatabaseReceiver(ctx);
                 break;
 
-            case 'order':
+            case Entity.Order:
                 this.receiver = new OrderReceiver(ctx);
                 break;
 

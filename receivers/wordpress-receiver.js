@@ -8,6 +8,7 @@ const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const helpers = require('../helpers');
+const path = require('path');
 
 class WordpressReceiver extends Receiver {
 
@@ -22,7 +23,7 @@ class WordpressReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['free', 'advanced', 'open']);
+        this.context.registerNonArgFlags(['free', 'advanced', 'open', 'ftp']);
         this.context.registerFlagExpansions({
             '-n': '--name',
             '-v': '--variant',
@@ -120,7 +121,7 @@ class WordpressReceiver extends Receiver {
     async _getWpData() {
         let wpData = {};
         if (!this.context.mdbConfig.getValue('projectName')) {
-             wpData = await this.askWpCredentials(this.flags.advanced);
+            wpData = await this.askWpCredentials(this.flags.advanced);
 
             this.context.mdbConfig.setValue('projectName', wpData.pageName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''));
             this.context.mdbConfig.setValue('wordpress.email', wpData.email);
@@ -173,44 +174,44 @@ class WordpressReceiver extends Receiver {
                 }
             },
             ...(advanced ?
-                    [{
-                        type: 'text',
-                        message: 'Enter username',
-                        name: 'username',
-                        validate: (value) => {
-                            /* istanbul ignore next */
-                            const valid = Boolean(value) && /^[a-z0-9_]+$/.test(value);
-                            /* istanbul ignore next */
-                            return valid || 'Username is invalid.';
-                        }
-                    },
-                    {
-                        type: 'password',
-                        message: 'Enter password',
-                        name: 'password',
-                        mask: '*',
-                        validate: (value) => {
-                            /* istanbul ignore next */
-                            const valid = Boolean(value) && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(\W|_)).{8,}$/.test(value);
-                            passwordValue = value;
-                            /* istanbul ignore next */
-                            return valid || 'Password is incorrect, it should contain at least one uppercase letter, at least one lowercase letter, at least one number, at least one special symbol and it should contain more than 7 characters.';
-                        }
-                    },
-                    {
-                        type: 'password',
-                        message: 'Repeat password',
-                        name: 'repeatPassword',
-                        mask: '*',
-                        validate: (value) => {
-                            /* istanbul ignore next */
-                            const valid = Boolean(value) && typeof value === 'string' && value === passwordValue;
-                            /* istanbul ignore next */
-                            return valid || 'Passwords do not match.';
-                        }
-                    }]
+                [{
+                    type: 'text',
+                    message: 'Enter username',
+                    name: 'username',
+                    validate: (value) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && /^[a-z0-9_]+$/.test(value);
+                        /* istanbul ignore next */
+                        return valid || 'Username is invalid.';
+                    }
+                },
+                {
+                    type: 'password',
+                    message: 'Enter password',
+                    name: 'password',
+                    mask: '*',
+                    validate: (value) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(\W|_)).{8,}$/.test(value);
+                        passwordValue = value;
+                        /* istanbul ignore next */
+                        return valid || 'Password is incorrect, it should contain at least one uppercase letter, at least one lowercase letter, at least one number, at least one special symbol and it should contain more than 7 characters.';
+                    }
+                },
+                {
+                    type: 'password',
+                    message: 'Repeat password',
+                    name: 'repeatPassword',
+                    mask: '*',
+                    validate: (value) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && typeof value === 'string' && value === passwordValue;
+                        /* istanbul ignore next */
+                        return valid || 'Passwords do not match.';
+                    }
+                }]
                 :
-                    []),
+                []),
             {
                 type: 'text',
                 message: 'Enter email',
@@ -244,9 +245,11 @@ class WordpressReceiver extends Receiver {
 
         try {
 
-            if (project.repoUrl) {
-                result = await this.git.clone(project.repoUrl);
+            if (project.repoUrl && !this.flags.ftp) {
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//,`https://${project.userNicename}@`);
+                result = await this.git.clone(repoUrlWithNicename);
             } else {
+                await helpers.eraseDirectories(path.join(process.cwd(), projectName));
                 const query = this.flags.force ? '?force=true' : '';
                 this.options.path = `/project/get/${projectName}${query}`;
                 result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
@@ -262,7 +265,9 @@ class WordpressReceiver extends Receiver {
 
         this.options.path = '/project';
         const result = await this.http.get(this.options);
-        return JSON.parse(result.body).filter(p => p.status === ProjectStatus.WORDPRESS);
+        return JSON.parse(result.body)
+            .filter(p => p.status === ProjectStatus.WORDPRESS)
+            .sort((a, b) => a.editDate < b.editDate);
     }
 
 }

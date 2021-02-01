@@ -40,7 +40,7 @@ class CommandInvoker {
          * @private
          */
         this._validNonEntityCommands = new Set([
-            'help', 'update', 'version', 'register', 'login', 'logout', 'ls', 'init', 'get', 'rename', 'publish', 'delete'
+            'help', 'update', 'version', 'register', 'login', 'logout', 'ls', 'init', 'get', 'rename', 'publish', 'delete', 'whoami', 'logs', 'kill', 'info'
         ]);
 
         /**
@@ -118,6 +118,8 @@ class CommandInvoker {
             this.command = this._getDefaultCommandForFlag(firstArg);
             this.entity = this._getDefaultEntityForCommand(this.command);
             this.flags = this.argv.slice();
+        } else if (firstArg === undefined) {
+            this.command = 'help';
         } else {
             throw new Error(`Invalid command: mdb ${processArgv.slice(2).join(' ')}`);
         }
@@ -169,13 +171,21 @@ class CommandInvoker {
 
     /**
      * If it starts with a `-` it's a flag.
+     * Throws error if flag contain `=` instead of space.
      *
      * @param {string} arg
      * @returns {boolean}
+     * @throws Error
      * @private
      */
     _isFlag(arg) {
-        return !!arg && arg.startsWith('-');
+
+        const isFlag = !!arg && arg.startsWith('-');
+
+        if (isFlag && arg.includes('='))
+            throw new Error('Please use space instead of `=` on flags');
+
+        return isFlag;
     }
 
     /**
@@ -249,20 +259,24 @@ class CommandInvoker {
 
     _getDefaultEntityForCommand(command) {
         switch (command) {
+            case 'logs':
+            case 'kill':
+                return 'backend';
             case 'help':
             case 'update':
             case 'version':
                 return 'app';
+            case 'whoami':
             case 'register':
             case 'login':
             case 'logout':
                 return 'user';
             case 'publish':
-                return 'frontend';
             case 'ls':
             case 'delete':
             case 'get':
             case 'init':
+            case 'info':
             case 'rename':
                 return '';
             default:

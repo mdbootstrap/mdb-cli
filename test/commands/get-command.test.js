@@ -1,15 +1,18 @@
 'use strict';
 
+const helpers = require('../../helpers');
 const Context = require('../../context');
 const Command = require('../../commands/command');
 const GetCommand = require('../../commands/get-command');
+const GitManager = require('../../utils/managers/git-manager');
 const BackendReceiver = require('../../receivers/backend-receiver');
 const FrontendReceiver = require('../../receivers/frontend-receiver');
+const WordpressReceiver = require('../../receivers/wordpress-receiver');
 const sandbox = require('sinon').createSandbox();
 
 describe('Command: get', () => {
 
-    let command, context, getStub, printResultStub;
+    let command, context, getStub, printResultStub, gitStub;
 
     beforeEach(() => {
 
@@ -45,5 +48,44 @@ describe('Command: get', () => {
 
         sandbox.assert.calledOnce(getStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.frontendReceiver.result]);
+    });
+
+    describe('should call git clone with expected argument', () => {
+
+        it('FrontendReceiver', async () => {
+
+            testGitClone(FrontendReceiver, 'getFrontendProjects');
+        });
+
+        it('BackendReceiver', async () => {
+
+            testGitClone(BackendReceiver, 'getBackendProjects');
+        });
+
+        it('WordpressReceiver', async () => {
+
+            testGitClone(WordpressReceiver, 'getWordpressProjects');
+        });
+
+        async function testGitClone(receiver, getProjectsMethod) {
+
+            const fakeProject = {
+                projectName: 'fakeProjectName',
+                repoUrl: 'https://git.mdbgo.com/fakeuser/fakeproject.git',
+                userNicename: 'fakeUser'
+            };
+
+            await sandbox.stub(helpers, 'createListPrompt').returns('fakeProjectName');
+            await sandbox.stub(receiver.prototype, getProjectsMethod).returns([fakeProject]);
+
+            gitStub = await sandbox.stub(GitManager.prototype, 'clone');
+            context = new Context('frontend', 'get', '', []);
+            command = new GetCommand(context);
+
+            await command.execute();
+
+            sandbox.assert.calledOnce(gitStub);
+            sandbox.assert.calledOnceWithExactly(gitStub, 'https://fakeUser@git.mdbgo.com/fakeuser/fakeproject.git');
+        }
     });
 });
