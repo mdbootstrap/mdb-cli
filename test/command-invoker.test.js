@@ -28,6 +28,27 @@ describe('CommandInvoker', () => {
         expect(stub).to.have.been.calledOnce;
     });
 
+    it('should execute help command if user doesn\'t provide any argument', async function () {
+        const HelpCommand = require('../commands/help-command');
+        const stub = sandbox.stub(HelpCommand.prototype, 'execute');
+
+        await invoker.parse(['', 'mdb']);
+        await invoker.executeCommand();
+
+        expect(stub).to.have.been.calledOnce;
+    });
+
+    it('should throw error if flag contain `=` instead of space', function () {
+
+        try {
+            invoker.parse(['', 'mdb', 'login', '--method=google']);
+        } catch (e) {
+            return expect(e.message).to.be.eq('Please use space instead of `=` on flags');
+        }
+
+        chai.assert.fail('_isFlag function should throw error if flag contain `=`');
+    });
+
     describe('should properly parse entity, command, arg and flags', function () {
 
         it('mdb help', function () {
@@ -203,7 +224,7 @@ describe('CommandInvoker', () => {
 
             invoker.parse(['', 'mdb', 'publish']);
 
-            expect(invoker.entity).to.eq('frontend');
+            expect(invoker.entity).to.eq('');
             expect(invoker.command).to.eq('publish');
             expect(invoker.args).to.deep.eq([]);
             expect(invoker.flags).to.deep.eq([]);
@@ -213,7 +234,7 @@ describe('CommandInvoker', () => {
 
             invoker.parse(['', 'mdb', 'publish', '-t', '--ftp']);
 
-            expect(invoker.entity).to.eq('frontend');
+            expect(invoker.entity).to.eq('');
             expect(invoker.command).to.eq('publish');
             expect(invoker.args).to.deep.eq([]);
             expect(invoker.flags).to.deep.eq(['-t', '--ftp']);
@@ -241,7 +262,7 @@ describe('CommandInvoker', () => {
 
         it('mdb frontend publish -t --ftp', function () {
 
-            invoker.parse(['', 'mdb', 'publish', '-t', '--ftp']);
+            invoker.parse(['', 'mdb', 'frontend', 'publish', '-t', '--ftp']);
 
             expect(invoker.entity).to.eq('frontend');
             expect(invoker.command).to.eq('publish');

@@ -8,9 +8,11 @@ const inquirer = require('inquirer');
 
 class NormalAuthStrategy extends AuthStrategy {
 
-    constructor() {
+    constructor(flags, result) {
         super();
 
+        this.result = result;
+        this.flags = flags;
         this.options = {
             port: config.port,
             hostname: config.host,
@@ -44,7 +46,7 @@ class NormalAuthStrategy extends AuthStrategy {
 
         const prompt = inquirer.createPromptModule();
 
-        const answers = await prompt([
+        const { username } = this.flags.username ? { username: this.flags.username } : await prompt([
             {
                 type: 'text',
                 message: 'Enter your MDB username',
@@ -55,7 +57,9 @@ class NormalAuthStrategy extends AuthStrategy {
                     /* istanbul ignore next */
                     return valid || 'Login must not be empty.';
                 }
-            },
+            }
+        ]);
+        const { password } = this.flags.password ? { password: this.flags.password } : await prompt([
             {
                 type: 'password',
                 message: 'Enter your MDB password',
@@ -69,14 +73,14 @@ class NormalAuthStrategy extends AuthStrategy {
                 }
             }
         ]);
-
-        const { username, password } = answers;
         this.options.data = JSON.stringify({ username, password });
         this.options.headers['Content-Length'] = Buffer.byteLength(this.options.data);
     }
 
     async register() {
         await this.askRegisterCredentials();
+
+        this.result.liveTextLine('Processing...');
 
         const http = new HttpWrapper();
 

@@ -8,6 +8,7 @@ const GoogleAuthStrategy = require('../../receivers/strategies/auth/google-auth-
 const FacebookAuthStrategy = require('../../receivers/strategies/auth/facebook-auth-strategy');
 const TwitterAuthStrategy = require('../../receivers/strategies/auth/twitter-auth-strategy');
 const sandbox = require('sinon').createSandbox();
+const btoa = require('btoa');
 
 describe('Receiver: user', () => {
 
@@ -245,6 +246,31 @@ describe('Receiver: user', () => {
 
             sandbox.assert.calledOnce(logoutStub);
             expect(receiver.result.messages).to.deep.include(errorMessage);
+        });
+    });
+
+    describe('Method: whoami', () => {
+
+        const successMessage = { type: 'text', value: 'fakeUsername' };
+
+        let authenticateStub;
+
+        beforeEach(() => {
+
+            context = new Context('user', 'whoami', '', []);
+            receiver = new UserReceiver(context);
+            authenticateStub = sandbox.stub(Context.prototype, 'authenticateUser');
+        });
+
+        it('should call authenticateUser method and print username', async () => {
+
+            const fakeToken = `fakefake.${btoa(JSON.stringify({ name: 'fakeUsername' }))}.fakefake`;
+            sandbox.stub(context, 'userToken').value(fakeToken);
+
+            await receiver.whoami();
+
+            sandbox.assert.calledOnce(authenticateStub);
+            expect(receiver.result.messages).to.deep.include(successMessage);
         });
     });
 });

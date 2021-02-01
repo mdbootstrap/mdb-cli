@@ -1,8 +1,10 @@
 'use strict';
 
 const Command = require('./command');
+const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const DatabaseReceiver = require('../receivers/database-receiver');
+const Entity = require('../models/entity');
 
 
 class InfoCommand extends Command {
@@ -12,6 +14,7 @@ class InfoCommand extends Command {
 
         this.backendReceiver = new BackendReceiver(context);
         this.databaseReceiver = new DatabaseReceiver(context);
+        this.results = new CommandResult();
     }
 
     async execute() {
@@ -21,19 +24,30 @@ class InfoCommand extends Command {
         });
 
         switch (this.entity) {
-            case 'backend':
+            case Entity.Backend:
                 await this.backendReceiver.info();
                 this.printResult([this.backendReceiver.result]);
                 break;
 
-            case 'database':
+            case Entity.Database:
                 await this.databaseReceiver.info();
                 this.printResult([this.databaseReceiver.result]);
                 break;
         
             default:
+                await this.help();
+                this.printResult([this.results]);
                 break;
         }
+    }
+
+    async help() {
+
+        this.results.addTextLine('Displays info about entity (current status). Use with backend/database.');
+        this.results.addTextLine('\nUsage: mdb [entity] info');
+        this.results.addTextLine('\nAvailable entities: database, backend');
+        this.results.addTextLine('\nFlags:');
+        this.results.addTextLine('  -n, --name \tProject name');
     }
 }
 

@@ -27,7 +27,8 @@ class FtpPublishStrategy {
             packageName: context.mdbConfig.getValue('meta.starter') || '',
             projectName: this.packageJsonConfig.name || context.mdbConfig.getValue('projectName') || '',
             starter: this.flags.variant || context.mdbConfig.getValue('meta.starter') || '',
-            domain: this.packageJsonConfig.domainName || context.mdbConfig.getValue('domain') || ''
+            domain: this.packageJsonConfig.domainName || context.mdbConfig.getValue('domain') || '',
+            platform: context.mdbConfig.getValue('backend.platform') || ''
         };
 
         this.cwd = process.cwd();
@@ -156,7 +157,7 @@ class FtpPublishStrategy {
                 'Authorization': `Bearer ${this.userToken}`
             };
 
-            if (this.context.entity === 'backend') headers['x-mdb-cli-backend-technology'] = this.flags.platform;
+            if (this.context.entity === 'backend') headers['x-mdb-cli-backend-technology'] = this.flags.platform || this.metaData.platform;
             if (this.context.entity === 'wordpress') headers['x-mdb-cli-wp-page'] = this.metaData.starter;
             headers['x-mdb-cli-project-name'] = this.metaData.projectName;
             headers['x-mdb-cli-package-name'] = this.metaData.packageName;

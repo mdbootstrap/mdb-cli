@@ -64,7 +64,7 @@ describe('Receiver: frontend', () => {
                 editDate: '2019-06-24T06:49:53.000Z',
                 repoUrl: 'fake.repo.url',
                 status: 'created',
-                projectMeta: []
+                projectMeta: [{ metaKey: '_uploaded_to_ftp', metaValue: '0' }]
             };
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
@@ -75,7 +75,7 @@ describe('Receiver: frontend', () => {
                 'Repository': '-'
             }, {
                 'Project Name': 'fakeproject2',
-                'Project URL': `https://fake.domain/fakeuser2/fakeproject2/`,
+                'Project URL': 'Unavailable',
                 'Domain': 'fake.domain.name',
                 'Published': '-',
                 'Edited': new Date(fakeProject1.editDate).toLocaleString(),
@@ -239,6 +239,7 @@ describe('Receiver: frontend', () => {
             getFrontendProjectsStub.resolves([fakeProject]);
             context = new Context('frontend', 'get', '', ['--name', 'fakeproject']);
             receiver = new FrontendReceiver(context);
+            sandbox.stub(helpers, 'eraseDirectories').resolves();
             sandbox.stub(helpers, 'downloadFromFTP').resolves('Download completed.');
 
             await receiver.get();
@@ -267,6 +268,7 @@ describe('Receiver: frontend', () => {
             getFrontendProjectsStub.resolves([fakeProject]);
             context = new Context('frontend', 'get', '', ['--force']);
             receiver = new FrontendReceiver(context);
+            sandbox.stub(helpers, 'eraseDirectories').resolves();
             sandbox.stub(helpers, 'downloadFromFTP').rejects({ message: 'Fake error' });
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
 
@@ -556,6 +558,88 @@ describe('Receiver: frontend', () => {
             await receiver.delete();
 
             expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: rename', () => {
+
+        const fakeName = 'fake-name';
+        const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project name successfully changed to fake-name' }, color: 'green' };
+
+        let promptStub;
+
+        beforeEach(() => {
+
+            promptStub = sandbox.stub(helpers, 'createTextPrompt');
+            sandbox.stub(helpers, 'serializeJsonFile').resolves();
+            context = new Context('frontend', 'rename', '', []);
+            sandbox.stub(context, '_loadPackageJsonConfig');
+            sandbox.stub(context.mdbConfig, 'setValue');
+            sandbox.stub(context.mdbConfig, 'save');
+            receiver = new FrontendReceiver(context);
+            sandbox.stub(receiver, 'clearResult');
+        });
+
+        it('should rename project and return expected result if name defined in package.json', async () => {
+
+            receiver.context.packageJsonConfig = { name: 'old-name' };
+            promptStub.resolves(fakeName);
+
+            const result = await receiver.rename();
+
+            expect(result).to.be.eq(true);
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should rename project and return expected result if no package.json', async () => {
+
+            receiver.context.packageJsonConfig = {};
+            receiver.flags['new-name'] = fakeName;
+
+            const result = await receiver.rename();
+
+            expect(result).to.be.eq(true);
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: getProjectName', () => {
+
+        const fakeName = 'fake-name';
+
+        it('should return project name if defined in package.json', () => {
+
+            context = new Context('frontend', 'rename', '', []);
+            receiver = new FrontendReceiver(context);
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({ name: fakeName });
+
+            const projectName = receiver.getProjectName();
+
+            expect(projectName).to.be.eq(fakeName);
+        });
+
+        it('should return project name if defined in config file', () => {
+
+            context = new Context('frontend', 'rename', '', []);
+            sandbox.stub(context.mdbConfig, 'getValue').returns(fakeName);
+            receiver = new FrontendReceiver(context);
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({});
+
+            const projectName = receiver.getProjectName();
+
+            expect(projectName).to.be.eq(fakeName);
+        });
+
+        it('should return undefined if project name not defined', () => {
+
+            context = new Context('frontend', 'rename', '', []);
+            sandbox.stub(context.mdbConfig, 'getValue').returns(undefined);
+            receiver = new FrontendReceiver(context);
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({});
+
+            const projectName = receiver.getProjectName();
+
+            expect(projectName).to.be.eq(undefined);
         });
     });
 });

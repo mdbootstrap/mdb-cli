@@ -3,6 +3,7 @@
 const NormalAuthStrategy = require('../../../../receivers/strategies/auth/normal-auth-strategy');
 const AuthStrategy = require('../../../../receivers/strategies/auth/auth-strategy');
 const HttpWrapper = require('../../../../utils/http-wrapper');
+const Receiver = require('../../../../receivers/receiver');
 const sandbox = require('sinon').createSandbox();
 const config = require('../../../../config');
 const inquirer = require('inquirer');
@@ -10,7 +11,7 @@ const inquirer = require('inquirer');
 
 describe('Strategy: NormalAuthStrategy', () => {
 
-    let strategy, saveTokenStub, createPromptModuleStub, postStub, promptStub;
+    let strategy, saveTokenStub, createPromptModuleStub, postStub, promptStub, receiver;
 
     beforeEach(() => {
 
@@ -19,7 +20,8 @@ describe('Strategy: NormalAuthStrategy', () => {
         postStub = sandbox.stub(HttpWrapper.prototype, 'post');
         sandbox.stub(config, 'host').value('fakeHost');
         sandbox.stub(config, 'port').value('fakePort');
-        strategy = new NormalAuthStrategy();
+        receiver = new Receiver();
+        strategy = new NormalAuthStrategy({}, receiver.result);
     });
 
     afterEach(() => {

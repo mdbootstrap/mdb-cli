@@ -5,7 +5,9 @@ const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const PipelinePublishStrategy = require('./strategies/publish/pipeline-publish-strategy');
+const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
+const path = require('path');
 
 class BackendReceiver extends Receiver {
 
@@ -20,11 +22,13 @@ class BackendReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['ftp-only', 'remove', 'test']);
+        this.context.registerNonArgFlags(['follow', 'ftp', 'ftp-only', 'open', 'remove', 'test']);
         this.context.registerFlagExpansions({
+            '-f': '--follow',
             '-n': '--name',
-            '-rm': '--remove',
+            '-o': '--open',
             '-p': '--platform',
+            '-rm': '--remove',
             '-t': '--test'
         });
 
@@ -45,6 +49,9 @@ class BackendReceiver extends Receiver {
 
                 const portMeta = p.projectMeta.find(m => m.metaKey === '_container_port');
                 const port = portMeta ? portMeta.metaValue : undefined;
+                const isUp = !!port;
+                const url = !!p.domainName ? `http://${p.domainName}` : `${config.projectsDomain}:${port}`;
+                const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
 
                 return {
                     'Project Name': p.projectName,
@@ -52,7 +59,7 @@ class BackendReceiver extends Receiver {
                     'Edited': new Date(p.editDate).toLocaleString(),
                     'Technology': technology,
                     'Repository': p.repoUrl ? p.repoUrl : '-',
-                    'URL': port ? `http://${config.projectsDomain}:${port}` : 'Unavailable'
+                    'URL': isUp && !deletedFromFTP ? url : 'Unavailable'
                 }
             });
 
@@ -68,24 +75,33 @@ class BackendReceiver extends Receiver {
 
         this.options.path = '/project';
         const result = await this.http.get(this.options);
-        return JSON.parse(result.body).filter(p => p.status === ProjectStatus.BACKEND);
+        return JSON.parse(result.body)
+            .filter(p => p.status === ProjectStatus.BACKEND)
+            .sort((a, b) => a.editDate < b.editDate);
     }
 
     async init() {
         // TODO: implement
-        this.result.addTextLine('No starters available yet.')
+        this.result.addTextLine('No starters available yet.');
     }
 
     async publish() {
 
         this.result.liveAlert('blue', 'Info', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The real port that your app is available at, will be provided to you after successful publish.');
 
-        if (!this.flags.platform) {
+        if (this.flags.platform) {
+            this.context.mdbConfig.setValue('backend.platform', this.flags.platform);
+            this.context.mdbConfig.setValue('meta.type', 'backend');
+            this.context.mdbConfig.save();
+        }
+        const platform = this.flags.platform || this.context.mdbConfig.getValue('backend.platform');
+
+        if (!platform) {
             throw new Error('--platform flag is required when publishing backend projects!');
         }
 
         const supportedPlatforms = config.backendTechnologies;
-        if (!supportedPlatforms.includes(this.flags.platform)) {
+        if (!supportedPlatforms.includes(platform)) {
             throw new Error(`This technology is not supported. Allowed technologies: ${supportedPlatforms.join(', ')}`);
         }
 
@@ -134,26 +150,29 @@ class BackendReceiver extends Receiver {
         return this.context.packageManager.test();
     }
 
-    async delete() {
+    async delete(projectToDelete = this.flags.name) {
         const projects = await this.getBackendProjects();
         if (projects.length === 0) {
-            return this.result.addTextLine('You don\'t have any projects yet.');
+            this.result.addTextLine('You don\'t have any projects yet.');
+            return false;
         }
 
         const choices = projects.map(p => ({ name: p.projectName }));
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const projectName = projectToDelete || await helpers.createListPrompt('Choose project', choices);
         const projectExists = projects.some(p => p.projectName === projectName);
         if (!projectExists) {
-            return this.result.addTextLine(`Project ${projectName} not found.`);
+            this.result.addTextLine(`Project ${projectName} not found.`);
+            return false;
         }
 
-        const name = await helpers.createTextPrompt('This operation cannot be undone. Confirm deleting selected project by typing its name:', 'Project name must not be empty.');
+        const name = this.flags.force || await helpers.createTextPrompt('This operation cannot be undone. Confirm deleting selected project by typing its name:', 'Project name must not be empty.');
 
-        if (name !== projectName) {
-            return this.result.addTextLine('The names do not match.');
+        if (!this.flags.force && name !== projectName) {
+            this.result.addTextLine('The names do not match.');
+            return false;
         }
 
-        this.result.liveTextLine(`\nUnpublishing project ${projectName}...`);
+        this.result.liveTextLine(`Unpublishing project ${projectName}...`);
 
         const query = this.flags['ftp-only'] ? '?ftp=true' : '';
         this.options.path = `/project/unpublish/${projectName}${query}`;
@@ -161,8 +180,10 @@ class BackendReceiver extends Receiver {
         try {
             const result = await this.http.delete(this.options);
             this.result.addAlert('green', 'Success', result.body);
+            return true;
         } catch (err) {
             this.result.addAlert('red', 'Error', `Could not delete ${projectName}: ${err.message}`);
+            return false;
         }
     }
 
@@ -205,9 +226,11 @@ class BackendReceiver extends Receiver {
 
         try {
 
-            if (project.repoUrl) {
-                result = await this.git.clone(project.repoUrl);
+            if (project.repoUrl && !this.flags.ftp) {
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//,`https://${project.userNicename}@`);
+                result = await this.git.clone(repoUrlWithNicename);
             } else {
+                await helpers.eraseDirectories(path.join(process.cwd(), projectName));
                 const query = this.flags.force ? '?force=true' : '';
                 this.options.path = `/project/get/${projectName}${query}`;
                 result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
@@ -239,14 +262,13 @@ class BackendReceiver extends Receiver {
             let result = await this.http.get(this.options);
             result = JSON.parse(result.body);
 
-            const { startedAt, killedAt, port } = result;
-            const isUp = port !== undefined;
+            const { startedAt, killedAt, url, isUp } = result;
 
             this.result.addAlert('turquoise', 'Status:', isUp ? 'running' : 'dead');
             this.result.addAlert('turquoise', isUp ? 'Started at:' : 'Killed at:', isUp ? startedAt : killedAt);
 
             if (isUp) {
-                this.result.addAlert('turquoise', 'App URL:', `http://${config.projectsDomain}:${port}`);
+                this.result.addAlert('turquoise', 'App URL:', url);
             }
         } catch (err) {
 
@@ -266,23 +288,53 @@ class BackendReceiver extends Receiver {
         const projectExists = projects.some(p => p.name === projectName);
         if (!projectExists) return this.result.addTextLine(`Project ${projectName} not found.`);
 
-        const { lines, tail } = this.flags;
-        this.options.path = (lines || tail) ? `/project/logs/${projectName}?lines=${lines || tail}` : `/project/logs/${projectName}`;
+        const { lines, tail, follow } = this.flags;
+        const followQuery = follow ? '?follow=true' : '?follow=false';
+        const linesQuery = (lines || tail) ? `&lines=${lines || tail}` : '';
+        this.options.path = `/project/logs/${projectName}${followQuery}${linesQuery}`;
 
         this.result.liveTextLine('Fetching data...');
 
-        try {
-            const result = await this.http.get(this.options);
-            const parsedResult = JSON.parse(result.body);
+        if (follow) {
 
-            this.result.addTextLine(parsedResult.logs);
-        } catch (err) {
-            this.result.addAlert('red', 'Error', `Could not fetch logs for ${projectName}: ${err.message}`);
+            const http = new HttpWrapper();
+            const request = http.createRawRequest(this.options, response => {
+                response.on('data', chunk => this.result.liveTextLine(Buffer.from(chunk).toString('utf8')));
+                response.on('error', err => { throw err; });
+            });
+            request.on('error', err => { throw err; });
+            request.end();
+
+        } else {
+
+            try {
+                const result = await this.http.get(this.options);
+                const parsedResult = JSON.parse(result.body);
+
+                this.result.addTextLine(parsedResult.logs);
+            } catch (err) {
+                this.result.addAlert('red', 'Error', `Could not fetch logs for ${projectName}: ${err.message}`);
+            }
         }
     }
 
-    rename() {
-        // TODO: implement
+    async rename() {
+        this.clearResult();
+        const newName = this.flags['new-name'] || await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
+        if (this.context.packageJsonConfig.name) {
+            const packageJsonPath = path.join(process.cwd(), 'package.json');
+            await helpers.serializeJsonFile(packageJsonPath, { ...this.context.packageJsonConfig, ...{ name: newName } });
+        }
+        this.context.mdbConfig.setValue('projectName', newName);
+        this.context.mdbConfig.setValue('meta.type', 'backend');
+        this.context.mdbConfig.save();
+        this.context._loadPackageJsonConfig();
+        this.result.addAlert('green', 'Success', `Project name successfully changed to ${newName}`);
+        return true;
+    }
+
+    getProjectName() {
+        return this.context.packageJsonConfig.name || this.context.mdbConfig.getValue('projectName');
     }
 }
 

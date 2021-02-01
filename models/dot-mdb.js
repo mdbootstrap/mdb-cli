@@ -5,6 +5,9 @@ module.exports = {
         starter: true,
         type: true
     },
+    backend: {
+        platform: true
+    },
     wordpress: {
         email: true,
         username: true

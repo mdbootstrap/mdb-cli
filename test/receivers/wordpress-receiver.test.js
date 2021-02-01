@@ -73,6 +73,7 @@ describe('Receiver: wordpress', () => {
             getWordpressProjectsStub.resolves([fakeProject]);
             context = new Context('wordpress', 'get', '', ['--name', 'fakeproject']);
             receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'eraseDirectories').resolves();
             sandbox.stub(helpers, 'downloadFromFTP').resolves('Download completed.');
 
             await receiver.get();
@@ -101,6 +102,7 @@ describe('Receiver: wordpress', () => {
             getWordpressProjectsStub.resolves([fakeProject]);
             context = new Context('wordpress', 'get', '', ['--force']);
             receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'eraseDirectories').resolves();
             sandbox.stub(helpers, 'downloadFromFTP').rejects({ message: 'Fake error' });
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
 

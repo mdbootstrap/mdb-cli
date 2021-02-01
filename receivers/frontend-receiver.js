@@ -43,14 +43,19 @@ class FrontendReceiver extends Receiver {
 
         if (projects.length) {
 
-            projects = projects.map(p => ({
-                'Project Name': p.projectName,
-                'Project URL': `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`,
-                'Domain': p.domainName ? p.domainName : '-',
-                'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
-                'Edited': new Date(p.editDate).toLocaleString(),
-                'Repository': p.repoUrl ? p.repoUrl : '-'
-            }));
+            projects = projects.map(p => {
+
+                const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
+
+                return {
+                    'Project Name': p.projectName,
+                    'Project URL': deletedFromFTP ? 'Unavailable' : `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`,
+                    'Domain': p.domainName ? p.domainName : '-',
+                    'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
+                    'Edited': new Date(p.editDate).toLocaleString(),
+                    'Repository': p.repoUrl ? p.repoUrl : '-'
+                }
+            });
 
             this.result.addTable(projects);
 
@@ -64,8 +69,9 @@ class FrontendReceiver extends Receiver {
 
         this.options.path = '/project';
         const result = await this.http.get(this.options);
-
-        return JSON.parse(result.body).filter(p => [ProjectStatus.CREATED, ProjectStatus.PUBLISHED].includes(p.status));
+        return JSON.parse(result.body)
+            .filter(p => [ProjectStatus.CREATED, ProjectStatus.PUBLISHED].includes(p.status))
+            .sort((a, b) => a.editDate < b.editDate);
     }
 
     async init() {
@@ -97,6 +103,7 @@ class FrontendReceiver extends Receiver {
         this.result.addAlert('green', 'Success', initResult);
         this.context.mdbConfig.setValue('projectName', this.projectName);
         this.context.mdbConfig.setValue('meta.starter', this.packageName);
+        this.context.mdbConfig.setValue('meta.type', 'frontend');
         this.context.mdbConfig.save(projectPath);
         this.context._loadPackageJsonConfig(projectPath);
         await helpers.createJenkinsfile(projectPath, this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test);
@@ -191,26 +198,29 @@ class FrontendReceiver extends Receiver {
         return this.context.packageManager.test();
     }
 
-    async delete() {
+    async delete(projectToDelete = this.flags.name) {
         const projects = await this.getFrontendProjects();
         if (projects.length === 0) {
-            return this.result.addTextLine('You don\'t have any projects yet.');
+            this.result.addTextLine('You don\'t have any projects yet.');
+            return false;
         }
 
         const choices = projects.map(p => ({ name: p.projectName }));
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const projectName = projectToDelete || await helpers.createListPrompt('Choose project', choices);
         const projectExists = projects.some(p => p.projectName == projectName);
         if (!projectExists) {
-            return this.result.addTextLine(`Project ${projectName} not found.`);
+            this.result.addTextLine(`Project ${projectName} not found.`);
+            return false;
         }
 
-        const name = await helpers.createTextPrompt('This operation cannot be undone. Confirm deleting selected project by typing its name:', 'Project name must not be empty.');
+        const name = this.flags.force || await helpers.createTextPrompt('This operation cannot be undone. Confirm deleting selected project by typing its name:', 'Project name must not be empty.');
 
-        if (name !== projectName) {
-            return this.result.addTextLine('The names do not match.');
+        if (!this.flags.force && name !== projectName) {
+            this.result.addTextLine('The names do not match.');
+            return false;
         }
 
-        this.result.liveTextLine(`\nUnpublishing project ${projectName}...`);
+        this.result.liveTextLine(`Unpublishing project ${projectName}...`);
 
         const query = this.flags['ftp-only'] ? '?ftp=true' : '';
         this.options.path = `/project/unpublish/${projectName}${query}`;
@@ -218,8 +228,10 @@ class FrontendReceiver extends Receiver {
         try {
             const result = await this.http.delete(this.options);
             this.result.addAlert('green', 'Success', result.body);
+            return true;
         } catch (err) {
             this.result.addAlert('red', 'Error', `Could not delete ${projectName}: ${err.message}`);
+            return false;
         }
     }
 
@@ -239,12 +251,13 @@ class FrontendReceiver extends Receiver {
 
         try {
 
-            if (project.repoUrl) {
-                result = await this.git.clone(project.repoUrl);
+            if (project.repoUrl && !this.flags.ftp) {
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//,`https://${project.userNicename}@`);
+                result = await this.git.clone(repoUrlWithNicename);
             } else {
+                await helpers.eraseDirectories(path.join(process.cwd(), projectName));
                 const query = this.flags.force ? '?force=true' : '';
                 this.options.path = `/project/get/${projectName}${query}`;
-
                 result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
             }
 
@@ -254,8 +267,24 @@ class FrontendReceiver extends Receiver {
         }
     }
 
-    rename() {
-        // TODO: implement
+    async rename() {
+
+        this.clearResult();
+        const newName = this.flags['new-name'] || await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
+        if (this.context.packageJsonConfig.name) {
+            const packageJsonPath = path.join(process.cwd(), 'package.json');
+            await helpers.serializeJsonFile(packageJsonPath, { ...this.context.packageJsonConfig, ...{ name: newName } });
+        }
+        this.context.mdbConfig.setValue('projectName', newName);
+        this.context.mdbConfig.setValue('meta.type', 'frontend');
+        this.context.mdbConfig.save();
+        this.context._loadPackageJsonConfig();
+        this.result.addAlert('green', 'Success', `Project name successfully changed to ${newName}`);
+        return true;
+    }
+
+    getProjectName() {
+        return this.context.packageJsonConfig.name || this.context.mdbConfig.getValue('projectName');
     }
 }
 
