@@ -227,7 +227,7 @@ class BackendReceiver extends Receiver {
         try {
 
             if (project.repoUrl && !this.flags.ftp) {
-                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//,`https://${project.userNicename}@`);
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.userNicename}@`);
                 result = await this.git.clone(repoUrlWithNicename);
             } else {
                 await helpers.eraseDirectories(path.join(process.cwd(), projectName));
@@ -331,6 +331,50 @@ class BackendReceiver extends Receiver {
         this.context._loadPackageJsonConfig();
         this.result.addAlert('green', 'Success', `Project name successfully changed to ${newName}`);
         return true;
+    }
+
+    async restart() {
+        const projects = await this.getBackendProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        const choices = projects.map(p => ({ name: p.projectName }));
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const project = projects.find(p => p.projectName === projectName);
+        if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
+        this.options.path = `/project/restart/${projectName}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        try {
+            const result = await this.http.post(this.options);
+            this.result.addAlert('green', 'Success', result.body);
+        } catch (err) {
+            this.result.addAlert('red', 'Error', `Could not restart project ${projectName}: ${err.message}`);
+        }
+    }
+
+    async run() {
+        const projects = await this.getBackendProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        const choices = projects.map(p => ({ name: p.projectName }));
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const project = projects.find(p => p.projectName === projectName);
+        if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
+        const { metaValue: technology } = project.projectMeta.find(m => m.metaKey === '_backend_technology');
+        this.options.path = `/project/run/${technology}/${projectName}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        try {
+            const result = await this.http.post(this.options);
+            const { message } = JSON.parse(result.body);
+            this.result.addTextLine(message);
+        } catch (err) {
+            this.result.addAlert('red', 'Error', `Could not run project ${projectName}: ${err.message}`);
+        }
     }
 
     getProjectName() {

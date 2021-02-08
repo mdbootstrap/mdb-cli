@@ -7,6 +7,7 @@ const config = require('../config');
 const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
+const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
 const path = require('path');
 
@@ -23,8 +24,9 @@ class WordpressReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['free', 'advanced', 'open', 'ftp']);
+        this.context.registerNonArgFlags(['free', 'advanced', 'open', 'ftp', 'follow']);
         this.context.registerFlagExpansions({
+            '-f': '--follow',
             '-n': '--name',
             '-v': '--variant',
             '-c': '--advanced',
@@ -35,8 +37,39 @@ class WordpressReceiver extends Receiver {
     }
 
     async list() {
-        // TODO: implement
-        this.result.addTextLine('Not implemented.');
+
+        this.result.liveTextLine('Fetching wordpress projects...');
+
+        let projects = await this.getWordpressProjects();
+
+        if (projects.length) {
+
+            projects = projects.map(p => {
+                const technologyMeta = p.projectMeta.find(m => m.metaKey === '_backend_technology');
+                const technology = technologyMeta ? technologyMeta.metaValue : undefined;
+
+                const portMeta = p.projectMeta.find(m => m.metaKey === '_container_port');
+                const port = portMeta ? portMeta.metaValue : undefined;
+                const isUp = !!port;
+                const url = !!p.domainName ? `http://${p.domainName}` : `${config.projectsDomain}:${port}`;
+                const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
+
+                return {
+                    'Project Name': p.projectName,
+                    'Published': new Date(p.publishDate).toLocaleString(),
+                    'Edited': new Date(p.editDate).toLocaleString(),
+                    'Technology': technology,
+                    'Repository': p.repoUrl ? p.repoUrl : '-',
+                    'URL': isUp && !deletedFromFTP ? url : 'Unavailable'
+                }
+            });
+
+            this.result.addTable(projects);
+
+        } else {
+
+            this.result.addTextLine('You don\'t have any projects yet.');
+        }
     }
 
     async init() {
@@ -149,7 +182,7 @@ class WordpressReceiver extends Receiver {
             this.result.addTextLine(`Your admin panel is available at ${url}/wp-admin/\n`);
             this.result.addAlert('yellow', 'Note', 'Please write down your username and password now, as we will not show it again.\n');
             this.result.addAlert('turquoise', 'Username:', payload.username);
-            this.result.addAlert('turquoise', 'Username:', password);
+            this.result.addAlert('turquoise', 'Password:', password);
         } catch (e) {
             this.result.addAlert('red', 'Error', `Could not create WordPress page: ${e.message}`);
         }
@@ -226,9 +259,42 @@ class WordpressReceiver extends Receiver {
         ]);
     }
 
-    async delete() {
-        // TODO: implement
-        this.result.addTextLine('Not implemented.');
+    async delete(projectToDelete = this.flags.name) {
+        const projects = await this.getWordpressProjects();
+        if (projects.length === 0) {
+            this.result.addTextLine('You don\'t have any projects yet.');
+            return false;
+        }
+
+        const choices = projects.map(p => ({ name: p.projectName }));
+        const projectName = projectToDelete || await helpers.createListPrompt('Choose project', choices);
+        const projectExists = projects.some(p => p.projectName === projectName);
+        if (!projectExists) {
+            this.result.addTextLine(`Project ${projectName} not found.`);
+            return false;
+        }
+
+        this.result.liveAlert('yellow', 'Warning', 'This operation cannot be undone, your project and its database will be permanently deleted.');
+
+        const name = this.flags.force || await helpers.createTextPrompt('Confirm deleting selected project by typing its name:', 'Project name must not be empty.');
+
+        if (!this.flags.force && name !== projectName) {
+            this.result.addTextLine('The names do not match.');
+            return false;
+        }
+
+        this.result.liveTextLine(`Unpublishing project ${projectName}...`);
+
+        this.options.path = `/project/unpublish/${projectName}`;
+
+        try {
+            const result = await this.http.delete(this.options);
+            this.result.addAlert('green', 'Success', result.body);
+            return true;
+        } catch (err) {
+            this.result.addAlert('red', 'Error', `Could not delete ${projectName}: ${err.message}`);
+            return false;
+        }
     }
 
     async get() {
@@ -258,6 +324,107 @@ class WordpressReceiver extends Receiver {
             this.result.addAlert('green', 'Success', result);
         } catch (e) {
             this.result.addAlert('red', 'Error', `Could not download ${projectName}: ${e.message || e}`);
+        }
+    }
+
+    async kill() {
+        let projects = await this.getWordpressProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        projects = projects.map(p => ({ name: p.projectName }));
+
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', projects);
+
+        const projectExists = projects.some(p => p.name === projectName);
+        if (!projectExists) return this.result.addTextLine(`Project ${projectName} not found.`);
+
+        const killType = this.flags.remove ? 'rmkill' : 'kill';
+        this.options.path = `/project/${killType}/${projectName}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        try {
+            const result = await this.http.delete(this.options);
+            this.result.addAlert('green', 'Success', result.body);
+        } catch (err) {
+            this.result.addAlert('red', 'Error', `Could not kill ${projectName}: ${err.message}`);
+        }
+    }
+
+    async info() {
+        let projects = await this.getWordpressProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        projects = projects.map(p => ({ name: p.projectName }));
+
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', projects);
+
+        const projectExists = projects.some(p => p.name === projectName);
+        if (!projectExists) return this.result.addTextLine(`Project ${projectName} not found.`);
+
+        this.options.path = `/project/info/${projectName}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        try {
+            let result = await this.http.get(this.options);
+            result = JSON.parse(result.body);
+
+            const { startedAt, killedAt, url, isUp } = result;
+
+            this.result.addAlert('turquoise', 'Status:', isUp ? 'running' : 'dead');
+            this.result.addAlert('turquoise', isUp ? 'Started at:' : 'Killed at:', isUp ? startedAt : killedAt);
+
+            if (isUp) {
+                this.result.addAlert('turquoise', 'App URL:', url);
+            }
+        } catch (err) {
+
+            this.result.addAlert('red', 'Error:', err.message);
+        }
+    }
+
+    async logs() {
+        let projects = await this.getWordpressProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        projects = projects.map(p => ({ name: p.projectName }));
+
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', projects);
+
+        const projectExists = projects.some(p => p.name === projectName);
+        if (!projectExists) return this.result.addTextLine(`Project ${projectName} not found.`);
+
+        const { lines, tail, follow } = this.flags;
+        const followQuery = follow ? '?follow=true' : '?follow=false';
+        const linesQuery = (lines || tail) ? `&lines=${lines || tail}` : '';
+        this.options.path = `/project/logs/${projectName}${followQuery}${linesQuery}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        if (follow) {
+
+            const http = new HttpWrapper();
+            const request = http.createRawRequest(this.options, response => {
+                response.on('data', chunk => this.result.liveTextLine(Buffer.from(chunk).toString('utf8')));
+                response.on('error', err => { throw err; });
+            });
+            request.on('error', err => { throw err; });
+            request.end();
+
+        } else {
+
+            try {
+                const result = await this.http.get(this.options);
+                const parsedResult = JSON.parse(result.body);
+
+                this.result.addTextLine(parsedResult.logs);
+            } catch (err) {
+                this.result.addAlert('red', 'Error', `Could not fetch logs for ${projectName}: ${err.message}`);
+            }
         }
     }
 

@@ -174,6 +174,7 @@ class FtpPublishStrategy {
             }, (err, response) => {
 
                 if (err) {
+                    spinner.stop();
                     return reject(err.message);
                 }
 

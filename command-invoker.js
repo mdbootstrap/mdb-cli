@@ -40,7 +40,7 @@ class CommandInvoker {
          * @private
          */
         this._validNonEntityCommands = new Set([
-            'help', 'update', 'version', 'register', 'login', 'logout', 'ls', 'init', 'get', 'rename', 'publish', 'delete', 'whoami', 'logs', 'kill', 'info'
+            'help', 'update', 'version', 'register', 'login', 'logout', 'ls', 'init', 'get', 'rename', 'publish', 'delete', 'whoami', 'logs', 'kill', 'info', 'restart', 'run', 'config'
         ]);
 
         /**
@@ -64,7 +64,7 @@ class CommandInvoker {
          * @private
          */
         this._validAliasCommands = new Set([
-            'starters', 'orders', 'config'
+            'starters', 'orders'
         ]);
 
         /**
@@ -249,7 +249,7 @@ class CommandInvoker {
             const command = new CommandClass(ctx);
             await command.execute();
         } catch (e) {
-            if (e.message.toLowerCase().startsWith('cannot find module')) {
+            if (e.message && e.message.toLowerCase().startsWith('cannot find module')) {
                 throw new Error(`Invalid command: ${this.command}`);
             } else {
                 throw e;
@@ -259,8 +259,12 @@ class CommandInvoker {
 
     _getDefaultEntityForCommand(command) {
         switch (command) {
+            case 'config':
+                return 'config';
             case 'logs':
             case 'kill':
+            case 'restart':
+            case 'run':
                 return 'backend';
             case 'help':
             case 'update':
@@ -300,8 +304,6 @@ class CommandInvoker {
                 return ['starter', 'ls'];
             case 'orders':
                 return ['order', 'ls'];
-            case 'config':
-                return ['config', 'config'];
         }
     }
 }

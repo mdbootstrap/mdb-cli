@@ -6,6 +6,7 @@ const Context = require('../../context');
 const WordpressReceiver = require('../../receivers/wordpress-receiver');
 const FtpPublishStrategy = require('../../receivers/strategies/publish/ftp-publish-strategy');
 const ProjectStatus = require('../../models/project-status');
+const HttpWrapper = require('../../utils/http-wrapper');
 const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
 
@@ -20,20 +21,82 @@ describe('Receiver: wordpress', () => {
         editDate: '2019-06-24T06:49:53.000Z',
         repoUrl: null,
         status: ProjectStatus.WORDPRESS,
-        projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology' }]
+        projectMeta: [{ metaKey: '_wordpress_technology', metaValue: 'faketechnology' }]
     };
 
     let context, receiver, getWordpressProjectsStub;
 
     beforeEach(() => {
 
-        sandbox.stub(config, 'projectsDomain').value('fake.domain');
+        sandbox.stub(config, 'projectsDomain').value('http://fake.domain');
         sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
     afterEach(() => {
         sandbox.reset();
         sandbox.restore();
+    });
+
+    describe('Method: list', () => {
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            context = new Context('wordpress', '', '', []);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.http, 'get').resolves({ body: '[]' });
+
+            await receiver.list();
+
+            expect(receiver.result.messages[0].value).to.eql('You don\'t have any projects yet.');
+        });
+
+        it('should set expected result if user has projects', async () => {
+
+            const fakeProject1 = {
+                projectId: 1,
+                userNicename: 'fakeuser1',
+                projectName: 'fakeproject1',
+                domainName: null,
+                publishDate: '2019-06-24T06:49:53.000Z',
+                editDate: '2019-06-24T06:49:53.000Z',
+                repoUrl: null,
+                status: 'wordpress',
+                projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology1' }, { metaKey: '_container_port', metaValue: '12345' }]
+            };
+            const fakeProject2 = {
+                projectId: 2,
+                userNicename: 'fakeuser2',
+                projectName: 'fakeproject2',
+                domainName: null,
+                publishDate: '2019-06-24T06:49:53.000Z',
+                editDate: '2019-06-24T06:49:53.000Z',
+                repoUrl: 'fake.repo.url',
+                status: 'wordpress',
+                projectMeta: []
+            };
+            const expectedResult = [{
+                'Project Name': 'fakeproject1',
+                'Published': new Date(fakeProject1.publishDate).toLocaleString(),
+                'Edited': new Date(fakeProject1.editDate).toLocaleString(),
+                'Technology': 'faketechnology1',
+                'Repository': '-',
+                'URL': 'http://fake.domain:12345'
+            }, {
+                'Project Name': 'fakeproject2',
+                'Published': new Date(fakeProject2.publishDate).toLocaleString(),
+                'Edited': new Date(fakeProject2.editDate).toLocaleString(),
+                'Technology': undefined,
+                'Repository': 'fake.repo.url',
+                'URL': 'Unavailable'
+            }];
+            sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects').resolves([fakeProject1, fakeProject2]);
+            context = new Context('wordpress', '', '', []);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.list();
+
+            expect(receiver.result.messages[0].value).to.eql(expectedResult);
+        });
     });
 
     describe('Method: get', () => {
@@ -107,6 +170,80 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
 
             await receiver.get();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: delete', () => {
+
+        beforeEach(() => {
+
+            getWordpressProjectsStub = sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects');
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getWordpressProjectsStub.resolves([]);
+            context = new Context('wordpress', 'delete', '', []);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.delete();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'delete', '', ['-n', 'fakename']);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.delete();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if the project was deleted', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project successfully deleted.' }, color: 'green' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'delete', '', ['--name', 'fakeproject', '--ftp-only']);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'createTextPrompt').resolves('fakeproject');
+            sandbox.stub(receiver.http, 'delete').resolves({ body: 'Project successfully deleted.' });
+
+            await receiver.delete();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if user enters wrong project name', async () => {
+
+            const expectedResult = { type: 'text', value: 'The names do not match.' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'delete', '', ['--name', 'fakeproject']);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'createTextPrompt').resolves('fakename');
+
+            await receiver.delete();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not delete fakeproject: Fake error' }, color: 'red' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'delete', '', []);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+            sandbox.stub(helpers, 'createTextPrompt').resolves('fakeproject');
+            sandbox.stub(receiver.http, 'delete').rejects({ message: 'Fake error' });
+
+            await receiver.delete();
 
             expect(receiver.result.messages).to.deep.include(expectedResult);
         });
@@ -393,6 +530,259 @@ describe('Receiver: wordpress', () => {
             await receiver._createWpPage(fakePayload);
 
             expect(alertStub).to.have.been.calledWith('red');
+        });
+    });
+
+    describe('Method: kill', () => {
+
+        beforeEach(() => {
+
+            getWordpressProjectsStub = sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects');
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getWordpressProjectsStub.resolves([]);
+            context = new Context('wordpress', 'kill', '', []);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.kill();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'kill', '', ['-n', 'fakename']);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.kill();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project is killed', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Success.' }, color: 'green' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'kill', '', []);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.http, 'delete').resolves({ body: 'Success.' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.kill();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not kill fakeproject: Fake error' }, color: 'red' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'kill', '', ['--remove']);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.http, 'delete').rejects({ message: 'Fake error' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.kill();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: info', () => {
+
+        beforeEach(() => {
+
+            getWordpressProjectsStub = sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects');
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getWordpressProjectsStub.resolves([]);
+            context = new Context('wordpress', 'info', '', []);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.info();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'info', '', ['-n', 'fakename']);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.info();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project is running', async () => {
+
+            const expectedResult = [
+                { type: 'alert', value: { title: 'Status:', body: 'running' }, color: 'turquoise' },
+                { type: 'alert', value: { title: 'Started at:', body: '2021-01-11 11:11:11' }, color: 'turquoise' },
+                { type: 'alert', value: { title: 'App URL:', body: 'http://fake.domain:1234' }, color: 'turquoise' }
+            ];
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'info', '', ['--name', 'fakeproject']);
+            receiver = new WordpressReceiver(context);
+            const result = { startedAt: '2021-01-11 11:11:11', killedAt: undefined, isUp: true, url: 'http://fake.domain:1234' };
+            sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify(result) });
+
+            await receiver.info();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult[0]);
+            expect(receiver.result.messages).to.deep.include(expectedResult[1]);
+            expect(receiver.result.messages).to.deep.include(expectedResult[2]);
+        });
+
+        it('should set expected result if project is not running', async () => {
+
+            const expectedResult = [
+                { type: 'alert', value: { title: 'Status:', body: 'dead' }, color: 'turquoise' },
+                { type: 'alert', value: { title: 'Killed at:', body: '2021-01-11 11:11:11' }, color: 'turquoise' }
+            ];
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'info', '', []);
+            receiver = new WordpressReceiver(context);
+            const result = { startedAt: undefined, killedAt: '2021-01-11 11:11:11', port: undefined };
+            sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify(result) });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.info();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult[0]);
+            expect(receiver.result.messages).to.deep.include(expectedResult[1]);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error:', body: 'Fake error' }, color: 'red' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'info', '', []);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.http, 'get').rejects({ message: 'Fake error' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.info();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: logs', () => {
+
+        let requestStub, fakeRequest, fakeResponse;
+
+        beforeEach(() => {
+
+            getWordpressProjectsStub = sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects');
+            requestStub = sandbox.stub(HttpWrapper.prototype, 'createRawRequest');
+            fakeRequest = { on: sandbox.stub(), end: sandbox.stub() };
+            fakeResponse = { on: sandbox.stub() };
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getWordpressProjectsStub.resolves([]);
+            context = new Context('wordpress', 'logs', '', []);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.logs();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'logs', '', ['-n', 'fakename']);
+            receiver = new WordpressReceiver(context);
+
+            await receiver.logs();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project found', async () => {
+
+            const expectedResult = { type: 'text', value: 'fake logs' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'logs', '', ['--name', 'fakeproject']);
+            receiver = new WordpressReceiver(context);
+            const result = { logs: 'fake logs' };
+            sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify(result) });
+
+            await receiver.logs();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if --lines flag is set', async () => {
+
+            const expectedResult = { type: 'text', value: 'fake logs' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'logs', '', ['--name', 'fakeproject', '--lines', 100]);
+            receiver = new WordpressReceiver(context);
+            const result = { logs: 'fake logs' };
+            sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify(result) });
+
+            await receiver.logs();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if --tail flag is set', async () => {
+
+            const expectedResult = { type: 'text', value: 'fake logs' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'logs', '', ['--name', 'fakeproject', '--tail', 100]);
+            receiver = new WordpressReceiver(context);
+            const result = { logs: 'fake logs' };
+            sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify(result) });
+
+            await receiver.logs();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not fetch logs for fakeproject: Fake error' }, color: 'red' };
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'logs', '', []);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.http, 'get').rejects({ message: 'Fake error' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.logs();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should print live logs if -f flag is set', async () => {
+
+            getWordpressProjectsStub.resolves([fakeProject]);
+            context = new Context('wordpress', 'logs', '', ['-f']);
+            receiver = new WordpressReceiver(context);
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+            sandbox.stub(receiver.result, 'liveTextLine');
+            fakeResponse.on.withArgs('data').yields('fake logs');
+            requestStub.returns(fakeRequest).yields(fakeResponse);
+
+            await receiver.logs();
+
+            sandbox.assert.calledWith(receiver.result.liveTextLine, 'fake logs');
         });
     });
 });
