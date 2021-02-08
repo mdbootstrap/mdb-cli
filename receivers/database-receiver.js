@@ -195,6 +195,82 @@ class DatabaseReceiver extends Receiver {
         this.result.addAlert('turquoise', '\nConnection String:', database.connectionString);
         this.result.addAlert('blue', '\nInfo:', 'The connection string above does not show the password for your database user. You have to replace the \'<password>\' string with your real password in order to connect to the database.\n');
     }
+
+    async changeConfig() {
+
+        const args = this.context.args;
+
+        if (args[0] === 'password') {
+            await this.changePassword();
+        } else {
+            this.result.addAlert('red', 'Error:', 'Please provide valid argument!');
+        }
+    }
+
+    async changePassword() {
+        let databases = await this.getDatabases();
+        if (databases.length === 0) {
+            return this.result.addTextLine('You don\'t have any databases yet.');
+        }
+
+        const dbName = this.flags.name || await helpers.createListPrompt('Choose database', databases);
+
+        const database = databases.find(db => db.name === dbName);
+        if (!database) return this.result.addTextLine(`Database ${dbName} not found.`);
+        this.options.path = '/databases/password/' + database.databaseId;
+
+        await this.askForNewPassword();
+
+        try {
+            await this.http.put(this.options);
+            this.result.addAlert('green', '\nResult:', 'Database password successfully changed.\n');
+        } catch (err) {
+            this.result.addAlert('red', 'Error:', err.message);
+        }
+    }
+
+    async askForNewPassword() {
+
+        const prompt = inquirer.createPromptModule();
+        let passwordValue;
+
+        const answers = await prompt([
+            {
+                type: 'password',
+                message: 'Enter new db password',
+                name: 'password',
+                mask: '*',
+                validate: (value) => {
+                    /* istanbul ignore next */
+                    const valid = Boolean(value) && /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*(\W|_)).{8,}$/.test(value);
+                    passwordValue = value;
+                    /* istanbul ignore next */
+                    return valid || 'Password is incorrect, it should contain at least one uppercase letter, at least one lowercase letter, at least one number, at least one special symbol and it should contain more than 7 characters.';
+                }
+            },
+            {
+                type: 'password',
+                message: 'Re-enter new db password',
+                name: 'repeatPassword',
+                mask: '*',
+                validate: (value) => {
+                    /* istanbul ignore next */
+                    const valid = Boolean(value) && typeof value === 'string' && value === passwordValue;
+                    /* istanbul ignore next */
+                    return valid || 'Passwords do not match.';
+                }
+            }
+        ]);
+
+        const { password, repeatPassword } = answers;
+
+        if (password !== repeatPassword)
+            throw new Error('Passwords do not match');
+
+        this.options.data = JSON.stringify(answers);
+        this.options.headers['Content-Length'] = Buffer.byteLength(this.options.data);
+        this.options.headers['Content-Type'] = 'application/json';
+    }
 }
 
 module.exports = DatabaseReceiver;

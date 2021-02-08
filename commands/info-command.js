@@ -4,6 +4,7 @@ const Command = require('./command');
 const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const DatabaseReceiver = require('../receivers/database-receiver');
+const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
 
 
@@ -14,6 +15,7 @@ class InfoCommand extends Command {
 
         this.backendReceiver = new BackendReceiver(context);
         this.databaseReceiver = new DatabaseReceiver(context);
+        this.wordpressReceiver = new WordpressReceiver(context);
         this.results = new CommandResult();
     }
 
@@ -33,7 +35,12 @@ class InfoCommand extends Command {
                 await this.databaseReceiver.info();
                 this.printResult([this.databaseReceiver.result]);
                 break;
-        
+
+            case Entity.Wordpress:
+                await this.wordpressReceiver.info();
+                this.printResult([this.wordpressReceiver.result]);
+                break;
+
             default:
                 await this.help();
                 this.printResult([this.results]);
@@ -41,11 +48,13 @@ class InfoCommand extends Command {
         }
     }
 
+    
+
     async help() {
 
-        this.results.addTextLine('Displays info about entity (current status). Use with backend/database.');
+        this.results.addTextLine('Displays info about entity (current status).');
         this.results.addTextLine('\nUsage: mdb [entity] info');
-        this.results.addTextLine('\nAvailable entities: database, backend');
+        this.results.addTextLine('\nAvailable entities: database, backend, wordpress');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
     }

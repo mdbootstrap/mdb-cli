@@ -544,6 +544,126 @@ describe('Receiver: backend', () => {
         });
     });
 
+    describe('Method: restart', () => {
+
+        beforeEach(() => {
+
+            getBackendProjectsStub = sandbox.stub(BackendReceiver.prototype, 'getBackendProjects');
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getBackendProjectsStub.resolves([]);
+            context = new Context('backend', 'restart', '', []);
+            receiver = new BackendReceiver(context);
+
+            await receiver.restart();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'restart', '', ['-n', 'fakename']);
+            receiver = new BackendReceiver(context);
+
+            await receiver.restart();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project is restarted', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Success.' }, color: 'green' };
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'restart', '', []);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver.http, 'post').resolves({ body: 'Success.' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.restart();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not restart project fakeproject: Fake error' }, color: 'red' };
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'restart', '', []);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver.http, 'post').rejects({ message: 'Fake error' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.restart();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: run', () => {
+
+        beforeEach(() => {
+
+            getBackendProjectsStub = sandbox.stub(BackendReceiver.prototype, 'getBackendProjects');
+        });
+
+        it('should set expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getBackendProjectsStub.resolves([]);
+            context = new Context('backend', 'run', '', []);
+            receiver = new BackendReceiver(context);
+
+            await receiver.run();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if project not found', async () => {
+
+            const expectedResult = { type: 'text', value: 'Project fakename not found.' };
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'run', '', ['-n', 'fakename']);
+            receiver = new BackendReceiver(context);
+
+            await receiver.run();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if success', async () => {
+
+            const expectedResult = { type: 'text', value: 'Success. Your app is running.' };
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'run', '', ['--name', 'fakeproject']);
+            receiver = new BackendReceiver(context);
+            const result = { message: 'Success. Your app is running.' };
+            sandbox.stub(receiver.http, 'post').resolves({ body: JSON.stringify(result) });
+
+            await receiver.run();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not run project fakeproject: Fake error' }, color: 'red' };
+            getBackendProjectsStub.resolves([fakeProject]);
+            context = new Context('backend', 'run', '', []);
+            receiver = new BackendReceiver(context);
+            sandbox.stub(receiver.http, 'post').rejects({ message: 'Fake error' });
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
+
+            await receiver.run();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
     describe('Method: getProjectName', () => {
 
         const fakeName = 'fake-name';

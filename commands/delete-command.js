@@ -26,6 +26,7 @@ class DeleteCommand extends Command {
         this.backendReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
         this.databaseReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
         this.frontendReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+        this.wordpressReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
 
         switch (this.entity) {
             case Entity.Backend:
