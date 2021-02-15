@@ -11,30 +11,40 @@ class KillCommand extends Command {
     constructor(context) {
         super(context);
 
-        this.backendReceiver = new BackendReceiver(context);
-        this.wordpressReceiver = new WordpressReceiver(context);
+        this.receiver =null;
         this.results = new CommandResult();
+
+        this.setReceiver(context);
     }
 
     async execute() {
 
+        if (this.receiver) {
+
+            if (this.receiver.flags.help) return this.help();
+            this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+            await this.receiver.kill();
+            this.printResult([this.receiver.result]);
+
+        } else {
+
+            this.help();
+        }
+    }
+
+    setReceiver(ctx) {
+
         switch (this.entity) {
 
             case Entity.Backend:
-                this.backendReceiver.result.on('mdb.cli.live.output', (msg) => { this.printResult([msg]); });
-                await this.backendReceiver.kill();
-                this.printResult([this.backendReceiver.result]);
+                this.receiver = new BackendReceiver(ctx);
                 break;
 
             case Entity.Wordpress:
-                this.wordpressReceiver.result.on('mdb.cli.live.output', (msg) => { this.printResult([msg]); });
-                await this.wordpressReceiver.kill();
-                this.printResult([this.wordpressReceiver.result]);
+                this.receiver = new WordpressReceiver(ctx);
                 break;
 
             default:
-                await this.help();
-                this.printResult([this.results]);
                 break;
         }
     }
@@ -46,6 +56,7 @@ class KillCommand extends Command {
         this.results.addTextLine('\nAvailable entities: backend (default), wordpress');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
+        this.printResult([this.results]);
     }
 }
 

@@ -25,14 +25,16 @@ class FrontendReceiver extends Receiver {
         this.projectName = '';
         this.packageName = '';
 
-        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only']);
+        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help']);
         this.context.registerFlagExpansions({
             '-t': '--test',
             '-o': '--open',
-            '-n': '--name'
+            '-n': '--name',
+            '-h': '--help'
         });
 
         this.flags = this.context.getParsedFlags();
+        this.args = this.context.args;
     }
 
     async list() {
@@ -184,7 +186,12 @@ class FrontendReceiver extends Receiver {
             }
 
             const strategy = new FtpPublishStrategy(this.context, this.result);
-            await strategy.publish();
+
+            try {
+                await strategy.publish();
+            } catch (e) {
+                this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
+            }
         }
     }
 
@@ -243,7 +250,7 @@ class FrontendReceiver extends Receiver {
 
         const choices = projects.map(p => ({ name: p.projectName }));
 
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const projectName = this.flags.name || this.args[0] || await helpers.createListPrompt('Choose project', choices);
         const project = projects.find(p => p.projectName === projectName);
         if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
 

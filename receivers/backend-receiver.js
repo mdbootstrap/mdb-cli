@@ -2,6 +2,7 @@
 
 const config = require('../config');
 const Receiver = require('./receiver');
+const DatabaseReceiver = require('./database-receiver');
 const ProjectStatus = require('../models/project-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const PipelinePublishStrategy = require('./strategies/publish/pipeline-publish-strategy');
@@ -22,17 +23,19 @@ class BackendReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['follow', 'ftp', 'ftp-only', 'open', 'remove', 'test']);
+        this.context.registerNonArgFlags(['follow', 'ftp', 'ftp-only', 'open', 'remove', 'test', 'help']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
             '-o': '--open',
             '-p': '--platform',
             '-rm': '--remove',
-            '-t': '--test'
+            '-t': '--test',
+            '-h': '--help'
         });
 
         this.flags = this.context.getParsedFlags();
+        this.args = this.context.args;
     }
 
     async list() {
@@ -135,7 +138,13 @@ class BackendReceiver extends Receiver {
         }
 
         const strategy = new FtpPublishStrategy(this.context, this.result);
-        await strategy.publish();
+
+        try {
+            await strategy.publish();
+        } catch (e) {
+            this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
+            return;
+        }
 
         this.result.addAlert('blue', 'Info', 'Since we need to install dependencies and run your app, it may take a few moments until it will be available.');
     }
@@ -218,7 +227,7 @@ class BackendReceiver extends Receiver {
             return this.result.addTextLine('You don\'t have any projects yet.');
         }
         const choices = projects.map(p => ({ name: p.projectName }));
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const projectName = this.flags.name || this.args[0] || await helpers.createListPrompt('Choose project', choices);
         const project = projects.find(p => p.projectName === projectName);
         if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
 
@@ -249,9 +258,10 @@ class BackendReceiver extends Receiver {
         }
         projects = projects.map(p => ({ name: p.projectName }));
 
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', projects);
+        const projectName = this.flags.name || this.args[0] || await helpers.createListPrompt('Choose project', projects);
 
         const projectExists = projects.some(p => p.name === projectName);
+
         if (!projectExists) return this.result.addTextLine(`Project ${projectName} not found.`);
 
         this.options.path = `/project/info/${projectName}`;
