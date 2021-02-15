@@ -24,16 +24,18 @@ class WordpressReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['free', 'advanced', 'open', 'ftp', 'follow']);
+        this.context.registerNonArgFlags(['free', 'advanced', 'open', 'ftp', 'follow', 'help']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
             '-v': '--variant',
             '-c': '--advanced',
-            '-o': '--open'
+            '-o': '--open',
+            '-h': '--help'
         });
 
         this.flags = this.context.getParsedFlags();
+        this.args = this.context.args;
     }
 
     async list() {
@@ -129,7 +131,7 @@ class WordpressReceiver extends Receiver {
                 await this._createWpPage(payload);
             }
         } catch (e) {
-            this.result.addAlert('red', 'Error', `Could not publish: ${e.message}`);
+            this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
         }
     }
 
@@ -173,11 +175,11 @@ class WordpressReceiver extends Receiver {
 
         try {
             const { body } = await this.http.post(this.options);
-            const { message, url, password } = JSON.parse(body);
+            const { url, password } = JSON.parse(body);
 
             if (this.flags.open && !!url) open.call(null, url);
 
-            this.result.addAlert('green', 'Success', message);
+            this.result.addAlert('green', 'Success', '');
             this.result.addTextLine(`\nYour page is available at ${url}\n`);
             this.result.addTextLine(`Your admin panel is available at ${url}/wp-admin/\n`);
             this.result.addAlert('yellow', 'Note', 'Please write down your username and password now, as we will not show it again.\n');
@@ -303,7 +305,7 @@ class WordpressReceiver extends Receiver {
             return this.result.addTextLine('You don\'t have any projects yet.');
         }
         const choices = projects.map(p => ({ name: p.projectName }));
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const projectName = this.flags.name || this.args[0] || await helpers.createListPrompt('Choose project', choices);
         const project = projects.find(p => p.projectName === projectName);
         if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
 
@@ -312,7 +314,7 @@ class WordpressReceiver extends Receiver {
         try {
 
             if (project.repoUrl && !this.flags.ftp) {
-                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//,`https://${project.userNicename}@`);
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.userNicename}@`);
                 result = await this.git.clone(repoUrlWithNicename);
             } else {
                 await helpers.eraseDirectories(path.join(process.cwd(), projectName));
@@ -359,7 +361,7 @@ class WordpressReceiver extends Receiver {
         }
         projects = projects.map(p => ({ name: p.projectName }));
 
-        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', projects);
+        const projectName = this.flags.name || this.args[0] || await helpers.createListPrompt('Choose project', projects);
 
         const projectExists = projects.some(p => p.name === projectName);
         if (!projectExists) return this.result.addTextLine(`Project ${projectName} not found.`);
@@ -425,6 +427,50 @@ class WordpressReceiver extends Receiver {
             } catch (err) {
                 this.result.addAlert('red', 'Error', `Could not fetch logs for ${projectName}: ${err.message}`);
             }
+        }
+    }
+
+    async restart() {
+        const projects = await this.getWordpressProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        const choices = projects.map(p => ({ name: p.projectName }));
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const project = projects.find(p => p.projectName === projectName);
+        if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
+        this.options.path = `/project/restart/${projectName}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        try {
+            const result = await this.http.post(this.options);
+            this.result.addAlert('green', 'Success', result.body);
+        } catch (err) {
+            this.result.addAlert('red', 'Error', `Could not restart project ${projectName}: ${err.message}`);
+        }
+    }
+
+    async run() {
+        const projects = await this.getWordpressProjects();
+        if (projects.length === 0) {
+            return this.result.addTextLine('You don\'t have any projects yet.');
+        }
+        const choices = projects.map(p => ({ name: p.projectName }));
+        const projectName = this.flags.name || await helpers.createListPrompt('Choose project', choices);
+        const project = projects.find(p => p.projectName === projectName);
+        if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
+        const { metaValue: technology } = project.projectMeta.find(m => m.metaKey === '_backend_technology');
+        this.options.path = `/project/run/${technology}/${projectName}`;
+
+        this.result.liveTextLine('Fetching data...');
+
+        try {
+            const result = await this.http.post(this.options);
+            const { message } = JSON.parse(result.body);
+            this.result.addTextLine(message);
+        } catch (err) {
+            this.result.addAlert('red', 'Error', `Could not run project ${projectName}: ${err.message}`);
         }
     }
 

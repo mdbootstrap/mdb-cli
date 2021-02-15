@@ -18,12 +18,15 @@ class DatabaseReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
+        this.context.registerNonArgFlags(['help']);
         this.context.registerFlagExpansions({
             '-db': '--database',
-            '-n': '--name'
+            '-n': '--name',
+            '-h': '--help'
         });
 
         this.flags = this.context.getParsedFlags();
+        this.args = this.context.args;
     }
 
     async list() {
@@ -187,7 +190,7 @@ class DatabaseReceiver extends Receiver {
             return this.result.addTextLine('You don\'t have any databases yet.');
         }
 
-        const dbName = this.flags.name || await helpers.createListPrompt('Choose database', databases);
+        const dbName = this.flags.name || this.args[0] || await helpers.createListPrompt('Choose database', databases);
 
         const database = databases.find(db => db.name === dbName);
         if (!database) return this.result.addTextLine(`Database ${dbName} not found.`);

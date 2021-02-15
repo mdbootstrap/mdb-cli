@@ -12,30 +12,40 @@ class LogsCommand extends Command {
     constructor(context) {
         super(context);
 
-        this.backendReceiver = new BackendReceiver(context);
-        this.wordpressReceiver = new WordpressReceiver(context);
+        this.receiver = null;
         this.results = new CommandResult();
+
+        this.setReceiver(context);
     }
 
     async execute() {
 
+        if (this.receiver) {
+
+            if (this.receiver.flags.help) return this.help();
+            this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+            await this.receiver.logs();
+            this.printResult([this.receiver.result]);
+
+        } else {
+
+            this.help();
+        }
+    }
+
+    setReceiver(ctx) {
+
         switch (this.entity) {
 
             case Entity.Backend:
-                this.backendReceiver.result.on('mdb.cli.live.output', (msg) => { this.printResult([msg]); });
-                await this.backendReceiver.logs();
-                this.printResult([this.backendReceiver.result]);
+                this.receiver = new BackendReceiver(ctx);
                 break;
 
             case Entity.Wordpress:
-                this.wordpressReceiver.result.on('mdb.cli.live.output', (msg) => { this.printResult([msg]); });
-                await this.wordpressReceiver.logs();
-                this.printResult([this.wordpressReceiver.result]);
+                this.receiver = new WordpressReceiver(ctx);
                 break;
 
             default:
-                await this.help();
-                this.printResult([this.results]);
                 break;
         }
     }
@@ -44,11 +54,12 @@ class LogsCommand extends Command {
 
         this.results.addTextLine('Display logs of a given project.');
         this.results.addTextLine('\nUsage: mdb [entity] logs');
-        this.results.addTextLine('\nAvailable entities: backend (default), wordpress');
+        this.results.addTextLine('\nAvailable entities: backend, wordpress');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
         this.results.addTextLine('  --lines X, --tail X \tShow X last log lines');
         this.results.addTextLine('  -f, --follow \tOutput new log lines as they appear (live)');
+        this.printResult([this.results]);
     }
 }
 

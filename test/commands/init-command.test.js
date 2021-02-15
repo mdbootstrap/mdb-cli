@@ -114,13 +114,13 @@ describe('Command: init', () => {
 
     it('should call help method if receiver is undefined', async () => {
 
-        const helpMethodStub = sandbox.stub(InitCommand.prototype, 'help');
+        const helpMethodSpy = sandbox.spy(InitCommand.prototype, 'help');
         context = new Context('fake', 'init', '', []);
         command = new InitCommand(context);
 
         await command.execute();
 
         expect(command.receiver).to.be.undefined;
-        sandbox.assert.calledOnce(helpMethodStub);
+        sandbox.assert.calledOnce(helpMethodSpy);
     });
 });

@@ -14,49 +14,53 @@ class DeleteCommand extends Command {
     constructor(context) {
         super(context);
 
-        this.backendReceiver = new BackendReceiver(context);
-        this.databaseReceiver = new DatabaseReceiver(context);
-        this.frontendReceiver = new FrontendReceiver(context);
-        this.wordpressReceiver = new WordpressReceiver(context);
+        this.receiver = null;
         this.results = new CommandResult();
+
+        this.setReceiver(context);
     }
 
     async execute() {
 
-        this.backendReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
-        this.databaseReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
-        this.frontendReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
-        this.wordpressReceiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+        if (this.receiver) {
+
+            if (this.receiver.flags.help) return this.help();
+            this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+            await this.receiver.delete();
+            this.printResult([this.receiver.result]);
+
+        } else {
+
+            this.help();
+        }
+    }
+
+    setReceiver(ctx) {
 
         switch (this.entity) {
+
             case Entity.Backend:
-                await this.backendReceiver.delete();
-                this.printResult([this.backendReceiver.result]);
-                break;
-
-            case Entity.Wordpress:
-                await this.wordpressReceiver.delete();
-                this.printResult([this.wordpressReceiver.result]);
-                break;
-
-            case Entity.Database:
-                await this.databaseReceiver.delete();
-                this.printResult([this.databaseReceiver.result]);
+                this.receiver = new BackendReceiver(ctx);
                 break;
 
             case Entity.Frontend:
-                await this.frontendReceiver.delete();
-                this.printResult([this.frontendReceiver.result]);
+                this.receiver = new FrontendReceiver(ctx);
+                break;
+
+            case Entity.Database:
+                this.receiver = new DatabaseReceiver(ctx);
+                break;
+
+            case Entity.Wordpress:
+                this.receiver = new WordpressReceiver(ctx);
                 break;
 
             default:
-                await this.help();
-                this.printResult([this.results]);
                 break;
         }
     }
 
-    async help() {
+    help() {
 
         this.results.addTextLine('Remove your project from the remote server.');
         this.results.addTextLine('Note: If you are using our MDB Go pipeline, your project will still exist as the GitLab repository. The Jenkins job will also remain untouched. However, if you are not using our CI/CD setup, you will have only your local copy of the project available after running this command.');
@@ -64,6 +68,7 @@ class DeleteCommand extends Command {
         this.results.addTextLine('\nAvailable entities: frontend, backend, wordpress, database');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
+        this.printResult([this.results]);
     }
 }
 

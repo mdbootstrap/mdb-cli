@@ -54,6 +54,7 @@ class CommandInvoker {
          * @private
          */
         this._validFlagOnlyCommands = new Set([
+            '-h', '--help',
             '-v', '--version'
         ]);
 
@@ -263,8 +264,6 @@ class CommandInvoker {
                 return 'config';
             case 'logs':
             case 'kill':
-            case 'restart':
-            case 'run':
                 return 'backend';
             case 'help':
             case 'update':
@@ -275,13 +274,15 @@ class CommandInvoker {
             case 'login':
             case 'logout':
                 return 'user';
-            case 'publish':
-            case 'ls':
             case 'delete':
             case 'get':
-            case 'init':
             case 'info':
+            case 'init':
+            case 'ls':
+            case 'publish':
             case 'rename':
+            case 'restart':
+            case 'run':
                 return '';
             default:
                 throw new Error('Invalid command');
@@ -293,6 +294,9 @@ class CommandInvoker {
             case '-v':
             case '--version':
                 return 'version';
+            case '-h':
+            case '--help':
+                return 'help';
             default:
                 throw new Error('Invalid command');
         }

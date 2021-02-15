@@ -33,6 +33,9 @@ class Application {
             await this.invoker.executeCommand();
         } catch (e) {
             this.result.liveAlert('red', 'Error', `Could not process your request: ${e.message || e}`);
+            if (process.argv.some(arg => arg === '--debug')) {
+                console.trace(e);
+            }
         }
     }
 }
