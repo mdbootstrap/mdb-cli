@@ -85,11 +85,12 @@ class FtpPublishStrategy {
             if (fs.existsSync(appJsPath)) {
 
                 let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/${username}/${packageJson.name}/dist'`);
+                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/dist'`);
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
             }
 
-            packageJson.homepage = `https://${config.projectsDomain}/${username}/${packageJson.name}/dist/`;
+            const projectDomain = this.metaData.domain ? this.metaData.domain : `${packageJson.name}.${config.projectsDomain}`;
+            packageJson.homepage = `https://${projectDomain}/dist/`;
             await helpers.serializeJsonFile('package.json', packageJson);
 
             result = await this.runBuildScript();
@@ -97,7 +98,7 @@ class FtpPublishStrategy {
             if (fs.existsSync(appJsPath)) {
 
                 let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}/dist'`, 'g');
+                const regex = new RegExp(`<Router basename='/dist'`, 'g');
                 appJsFile = appJsFile.replace(regex, '<Router');
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
             }
@@ -182,14 +183,8 @@ class FtpPublishStrategy {
 
                 spinner.succeed(`Uploading files | ${this.sent} Mb`);
 
-                if (response.statusCode === 200) {
+                if (response.statusCode >= 200 && response.statusCode <= 299) {
                     this.result.addTextLine(`Sent ${this.sent} Mb`);
-                    const { message, url } = JSON.parse(response.body);
-                    this.result.addTextLine(message);
-
-                    if (this.flags.open && !!url) open(url);
-                } else {
-                    this.result.addTextLine(response.body);
                 }
 
                 resolve(response);

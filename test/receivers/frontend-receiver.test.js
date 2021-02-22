@@ -69,14 +69,12 @@ describe('Receiver: frontend', () => {
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
                 'Project URL': `https://fake.domain/fakeuser1/fakeproject1/`,
-                'Domain': '-',
                 'Published': new Date(fakeProject1.publishDate).toLocaleString(),
                 'Edited': new Date(fakeProject1.editDate).toLocaleString(),
                 'Repository': '-'
             }, {
                 'Project Name': 'fakeproject2',
                 'Project URL': 'Unavailable',
-                'Domain': 'fake.domain.name',
                 'Published': '-',
                 'Edited': new Date(fakeProject1.editDate).toLocaleString(),
                 'Repository': 'fake.repo.url'
@@ -93,7 +91,15 @@ describe('Receiver: frontend', () => {
 
     describe('Method: init', () => {
 
-        const fakeProduct = { productTitle: 'fakeTitle', productSlug: 'fake-slug', available: true };
+        const fakeProduct = {
+            productTitle: 'fakeTitle',
+            productSlug: 'fake-slug',
+            available: true,
+            category: 'fakeCategory',
+            license: 'fakeLicense',
+            displayName: 'fakeName',
+            code: 'fake-slug'
+        };
 
         let createConfirmationPromptStub,
             createJenkinsfileStub,
@@ -102,12 +108,11 @@ describe('Receiver: frontend', () => {
             downloadFromFTPStub,
             eraseDirectoriesStub,
             existsSyncStub,
-            getStub,
-            renameFolderStub;
+            getStub;
 
         beforeEach(() => {
 
-            context = new Context('frontend', 'init', '', []);
+            context = new Context('frontend', 'init', [], []);
             receiver = new FrontendReceiver(context);
             getStub = sandbox.stub(receiver.http, 'get');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
@@ -121,7 +126,6 @@ describe('Receiver: frontend', () => {
             createTextPromptStub = sandbox.stub(helpers, 'createTextPrompt');
             eraseDirectoriesStub = sandbox.stub(helpers, 'eraseDirectories');
             downloadFromFTPStub = sandbox.stub(helpers, 'downloadFromFTP');
-            renameFolderStub = sandbox.stub(helpers, 'renameFolder');
             existsSyncStub = sandbox.stub(fs, 'existsSync');
             sandbox.stub(fs, 'rmdirSync');
         });
@@ -134,7 +138,6 @@ describe('Receiver: frontend', () => {
             existsSyncStub.returns(false);
             eraseDirectoriesStub.resolves();
             downloadFromFTPStub.resolves('Success');
-            renameFolderStub.resolves();
             createJenkinsfileStub.resolves();
 
             await receiver.init();
@@ -161,10 +164,9 @@ describe('Receiver: frontend', () => {
             existsSyncStub.withArgs('fake/cwd/fake-slug').returns(true);
             existsSyncStub.withArgs('fake/cwd/new-fake-slug').returns(false);
             createConfirmationPromptStub.resolves(true);
-            createTextPromptStub.resolves('new-fake-slug')
+            createTextPromptStub.resolves('new-fake-slug');
             eraseDirectoriesStub.resolves();
             downloadFromFTPStub.resolves('Success');
-            renameFolderStub.resolves();
             createJenkinsfileStub.resolves();
 
             await receiver.init();
@@ -385,7 +387,7 @@ describe('Receiver: frontend', () => {
 
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
-            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body: '{}' });
 
             await receiver.publish();
 
@@ -400,7 +402,7 @@ describe('Receiver: frontend', () => {
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = 'ftp';
 
-            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body: '{}' });
 
             await receiver.publish();
 
@@ -432,7 +434,7 @@ describe('Receiver: frontend', () => {
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = 'pipeline';
 
-            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves();
+            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body: '{}' });
 
             await receiver.publish();
 

@@ -35,7 +35,7 @@ describe('Receiver: blank', () => {
             sandbox.stub(process, 'cwd').returns('fake/cwd');
             existsSyncStub = sandbox.stub(fs, 'existsSync');
             sandbox.stub(fs, 'mkdirSync');
-            context = new Context('blank', 'init', '', ['--name', 'fakeName']);
+            context = new Context('blank', 'init', [], ['--name', 'fakeName']);
             receiver = new BlankReceiver(context);
             sandbox.stub(context, '_loadPackageJsonConfig');
             sandbox.stub(context, 'loadPackageManager').resolves();

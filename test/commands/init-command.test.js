@@ -11,14 +11,25 @@ const DatabaseReceiver = require('../../receivers/database-receiver');
 const BlankReceiver = require('../../receivers/blank-receiver');
 const RepoReceiver = require('../../receivers/repo-receiver');
 const sandbox = require('sinon').createSandbox();
+const helpers = require('../../helpers');
 
 describe('Command: init', () => {
 
-    let command, context, initStub, printResultStub;
+    const fakeStarter = [{
+        category: 'fakeCategory',
+        displayName: 'fakeName',
+        license: 'fakeLicense',
+        code: 'fakeCode',
+        type: 'fakeType',
+        available: true
+    }];
+
+    let command, context, initStub, printResultStub, createListPromptStub;
 
     beforeEach(() => {
 
         printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        createListPromptStub = sandbox.stub(helpers, 'createListPrompt');
         sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
@@ -115,6 +126,8 @@ describe('Command: init', () => {
     it('should call help method if receiver is undefined', async () => {
 
         const helpMethodSpy = sandbox.spy(InitCommand.prototype, 'help');
+        sandbox.stub(InitCommand.prototype, '_getStartersOptions').resolves(fakeStarter);
+        createListPromptStub.resolves('fakeCode');
         context = new Context('fake', 'init', '', []);
         command = new InitCommand(context);
 

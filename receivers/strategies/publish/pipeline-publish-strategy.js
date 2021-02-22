@@ -2,6 +2,7 @@
 
 const helpers = require('../../../helpers');
 const config = require('../../../config');
+const atob = require('atob');
 
 class PipelinePublishStrategy {
 
@@ -21,12 +22,16 @@ class PipelinePublishStrategy {
 
     async publish() {
         const currentBranch = await this.git.currentBranch();
+        const [, jwtBody] = this.userToken.split('.');
+        const userNicename = JSON.parse(atob(jwtBody)).name;
+        const projectName = this.context.mdbConfig.mdbConfig.projectName;
 
         return this.createJenkinsfile(currentBranch)
             .then(() => this.git.status())
             .then(() => this.confirmMerge(currentBranch))
             .then(() => this.git.push(`${currentBranch}:${config.mdbgoPipelinePublicBranch}`))
             .then(() => this.confirmSaveSettings())
+            .then(() => this.result.addTextLine(`Your application will be available under https://${config.projectsDomain}/${userNicename}/${projectName}/ address in about 3-5 mins.`))
             .catch(e => this.result.addAlert('red', 'Error', e));
     }
 

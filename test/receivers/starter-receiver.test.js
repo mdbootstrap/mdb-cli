@@ -46,11 +46,11 @@ describe('Receiver: starter', () => {
                 ])
             });
 
-            const tableStub = sandbox.stub(receiver.result, 'addTable');
+            const textLineStub = sandbox.stub(receiver.result, 'addTextLine');
 
             await receiver.list();
 
-            expect(tableStub).to.have.been.calledWith(sandbox.match.array);
+            expect(textLineStub).to.have.been.called;
         }
 
         it('should print starters in a table format when command is `mdb starter ls`', async function () {

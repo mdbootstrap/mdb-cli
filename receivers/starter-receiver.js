@@ -13,9 +13,14 @@ class StarterReceiver extends Receiver {
         this.options = {
             port: config.port,
             hostname: config.host,
-            path: '/packages/read',
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
+
+        this.context.registerFlagExpansions({
+            '-o': '--only'
+        });
+
+        this.flags = this.context.getParsedFlags();
     }
 
     async list() {
@@ -23,43 +28,63 @@ class StarterReceiver extends Receiver {
         this.result.liveTextLine('Fetching starters...');
 
         try {
+            this._validateOnlyFlag();
+
+            const queryParamType = this.flags.only ? `type=${this.flags.only}` : '';
+            const queryParamAvailable = !this.flags.all ? 'available=true' : '';
+
+            this.options.path = `/packages/starters?${queryParamType}&${queryParamAvailable}`;
             const { body: response } = await this.http.get(this.options);
             const starters = JSON.parse(response);
 
-            const output = starters.map((starter) => {
+            const available = [], unavailable = [];
+            for (let i = 0; i < starters.length; i++) {
+                if (starters[i].available) available.push(starters[i]);
+                else unavailable.push(starters[i]);
+            }
 
-                const isPro = starter.productId !== null;
-                const notAvailableMsg = isPro ? `No ( https://mdbootstrap.com/products/${starter.productSlug}/ )` : 'No';
-
-                return {
-                    'Product Name': starter.productTitle.replace(/ version| \[standard Bootstrap] /g, ''),
-                    'Available': starter.available ? 'Yes' : notAvailableMsg
-                };
-            });
-
-            this._sortByTech(output, 'Product Name');
-
-            this.result.addTable(output);
+            this._printStartersMap('green', 'Available starters:', this._buildStartersMap(available));
+            if (this.flags.all) {
+                this._printStartersMap('red', 'Unavailable starters:', this._buildStartersMap(unavailable));
+            }
         } catch (e) {
             return this.result.addAlert('red', 'Error', `Could not fetch starters: ${e.message}`);
         }
     }
 
-    _sortByTech(products, sortKey) {
-        products.sort((a, b) => {
-            const aTech = a[sortKey].substr(a[sortKey].indexOf('('), a[sortKey].indexOf(')'));
-            const bTech = b[sortKey].substr(b[sortKey].indexOf('('), b[sortKey].indexOf(')'));
+    _validateOnlyFlag() {
+        if (!!this.flags.only && !['frontend', 'backend', 'wordpress'].includes(this.flags.only)) {
+            throw new Error('Invalid value for --only flag');
+        }
+    }
 
-            if (aTech > bTech) {
+    _buildStartersMap(options) {
+        return options.reduce((res, curr) => {
+            res[`${curr.category} ${curr.license}`] = res[`${curr.category} ${curr.license}`] || [];
 
-                return 1;
-            } else if (aTech < bTech) {
+            res[`${curr.category} ${curr.license}`].push({
+                name: curr.displayName,
+                short: curr.code,
+                value: curr.code
+            });
 
-                return -1;
+            return res;
+        }, {});
+    }
+
+    _printStartersMap(color, header, map) {
+
+        this.result.addTextLine('');
+        this.result.addAlert(color, header, '\n');
+
+        for (let key in map) {
+            this.result.addTextLine(`---- ${key} ----`);
+            for (let starter of map[key]) {
+                this.result.addTextLine(starter.name);
             }
 
-            return 0;
-        });
+            this.result.addTextLine('');
+        }
     }
 
     async init() {

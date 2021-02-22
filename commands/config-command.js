@@ -19,6 +19,11 @@ class ConfigCommand extends Command {
     }
 
     async execute() {
+
+        if (this.args.length === 0) {
+            return this.help();
+        }
+
         switch (this.entity) {
             case Entity.Database:
                 await this.databaseReceiver.changeConfig();
@@ -30,16 +35,16 @@ class ConfigCommand extends Command {
                 break;
             default:
                 this.help();
-                this.printResult([this.result]);
                 break;
         }
     }
 
-    async help() {
+    help() {
 
         this.result.addTextLine('Configuration');
         this.result.addTextLine('\nUsage: mdb [entity] config [options]');
         this.result.addTextLine('\nAvailable entities: config (default), database');
+        this.printResult([this.result]);
     }
 }
 

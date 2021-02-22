@@ -77,8 +77,10 @@ class LsCommand extends Command {
 
     checkFlags(ctx) {
 
-        const flags = ctx.getParsedFlags();
-        if (!flags.all && this.entity === '') this.entity = 'frontend';
+        if (this.entity === '') {
+            const flags = ctx.getParsedFlags();
+            if (!flags.all) this.entity = 'frontend';
+        }
     }
 
     setReceiver(ctx) {
