@@ -2,6 +2,7 @@
 
 const open = require('open');
 const inquirer = require('inquirer');
+const { Separator } = inquirer;
 
 const config = require('../config');
 const Receiver = require('./receiver');
@@ -10,6 +11,7 @@ const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
 const path = require('path');
+const atob = require('atob');
 
 class WordpressReceiver extends Receiver {
 
@@ -24,11 +26,13 @@ class WordpressReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['free', 'advanced', 'open', 'ftp', 'follow', 'help']);
+        this.projectName = '';
+        this.starterCode = '';
+
+        this.context.registerNonArgFlags(['advanced', 'open', 'ftp', 'follow', 'help']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
-            '-v': '--variant',
             '-c': '--advanced',
             '-o': '--open',
             '-h': '--help'
@@ -74,7 +78,7 @@ class WordpressReceiver extends Receiver {
         }
     }
 
-    async init() {
+    async init(starterCode) {
         if (!process.cwd().endsWith('/wp-content/themes')) {
             const confirmed = await helpers.createConfirmationPrompt('This command should be run inside [...]/wp-content/themes directory. Are you sure you want to continue in the current directory?', false);
             if (!confirmed) {
@@ -82,28 +86,73 @@ class WordpressReceiver extends Receiver {
             }
         }
 
-        let selectedVariant = this.flags.free ? 'sample' : this.flags.variant;
+        const options = await this._getWordpressStartersOptions();
+        const choices = this._buildWordpressStartersList(options);
 
-        const supportedVariants = config.wpPageVariants;
-        if (selectedVariant && !supportedVariants.includes(selectedVariant)) {
-            return this.result.addAlert('red', 'Error', `Invalid variant provided. Supported variants: ${supportedVariants.join(', ')}`);
-        } else if (!selectedVariant) {
-            selectedVariant = await helpers.createListPrompt('Choose page variant:', supportedVariants.map((t) => ({ name: t, short: t, value: t })));
+        if (starterCode) {
+            this.starterCode = starterCode;
+            this.projectName = this.flags.name || this.starterCode;
+        } else {
+            await this.chooseStarter(choices, options);
         }
 
         try {
-            const query = this.flags.free ? '?free=true' : '';
-            this.options.path = `/packages/wordpress/${selectedVariant}${query}`;
+            this.options.path = `/packages/download/${this.starterCode}`;
             const result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
 
-            this.context.mdbConfig.setValue('meta.starter', selectedVariant);
+            const token = this.context.userToken;
+            const [, jwtBody] = token.split('.');
+            const userSubscriptionStatus = JSON.parse(atob(jwtBody)).userSubscriptionStatus;
+            const isStarterFree = this.starterCode === 'starter' && (this.flags.free || userSubscriptionStatus.toLowerCase() === 'free');
+
+            this.context.mdbConfig.setValue('meta.starter', this.starterCode);
             this.context.mdbConfig.setValue('meta.type', 'wordpress');
-            this.context.mdbConfig.save(helpers.getThemeName(this.flags.free ? 'sample-free' : selectedVariant));
+            this.context.mdbConfig.save(helpers.getThemeName(isStarterFree ? 'starter-free' : this.starterCode));
 
             this.result.addAlert('green', 'Success', result);
         } catch (e) {
             this.result.addAlert('red', 'Error', `Could not initialize: ${e.message || e}`);
         }
+    }
+
+    async chooseStarter(choices, options) {
+
+        let promptShownCount = 0;
+        do {
+            if (promptShownCount++ >= 10) {
+                return this.result.addTextLine('Please run `mdb starter ls` to see available packages.');
+            }
+            this.starterCode = await helpers.createListPrompt('Choose project to initialize', choices);
+            this.projectName = this.flags.name || this.starterCode;
+            const project = options.find(o => o.code === this.starterCode);
+            if (project.available) break;
+            else this.result.liveAlert('yellow', 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/my-orders/ and make sure it is available for you.`);
+        } while (promptShownCount <= 10);
+    }
+
+    async _getWordpressStartersOptions() {
+        this.options.path = `/packages/starters?type=wordpress${!this.flags.all ? '&available=true' : ''}`;
+        const result = await this.http.get(this.options);
+        return JSON.parse(result.body);
+    }
+
+    _buildWordpressStartersList(options) {
+        const starters = options.reduce((res, curr) => {
+            res[`${curr.category} ${curr.license}`] = res[`${curr.category} ${curr.license}`] || [];
+
+            res[`${curr.category} ${curr.license}`].push({
+                name: curr.displayName,
+                short: curr.code,
+                value: curr.code
+            });
+
+            return res;
+        }, {});
+
+        return Object.keys(starters).reduce((res, curr) => {
+            res.push(new Separator(`---- ${curr} ----`), ...starters[curr]);
+            return res;
+        }, []);
     }
 
     async publish() {
@@ -119,7 +168,8 @@ class WordpressReceiver extends Receiver {
             const strategy = new FtpPublishStrategy(this.context, this.result);
             const response = await strategy.publish();
 
-            if (response.statusCode === 201) {
+            const firstPublication = response.statusCode === 201;
+            if (firstPublication) {
                 const payload = {
                     pageType: pageVariant,
                     pageName: projectName,
@@ -129,6 +179,8 @@ class WordpressReceiver extends Receiver {
                     repeatPassword: wpData.repeatPassword
                 };
                 await this._createWpPage(payload);
+            } else {
+                this.result.addTextLine(response.body);
             }
         } catch (e) {
             this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
@@ -138,12 +190,10 @@ class WordpressReceiver extends Receiver {
     async _getPageVariant() {
         let pageVariant = this.context.mdbConfig.getValue('meta.starter');
         if (!pageVariant) {
-            const supportedVariants = config.wpPageVariants;
-            pageVariant = await helpers.createListPrompt('Choose page variant:', supportedVariants.map((t) => ({
-                name: t,
-                short: t,
-                value: t
-            })));
+            const options = await this._getWordpressStartersOptions();
+            const choices = this._buildWordpressStartersList(options);
+
+            pageVariant = await helpers.createListPrompt('Choose page variant:', choices);
 
             this.context.mdbConfig.setValue('meta.starter', pageVariant);
             this.context.mdbConfig.setValue('meta.type', 'wordpress');
@@ -158,7 +208,7 @@ class WordpressReceiver extends Receiver {
         if (!this.context.mdbConfig.getValue('projectName')) {
             wpData = await this.askWpCredentials(this.flags.advanced);
 
-            this.context.mdbConfig.setValue('projectName', wpData.pageName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''));
+            this.context.mdbConfig.setValue('projectName', wpData.pageName.trim().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''));
             this.context.mdbConfig.setValue('wordpress.email', wpData.email);
             this.context.mdbConfig.setValue('wordpress.username', wpData.username);
             this.context.mdbConfig.save();
@@ -317,10 +367,11 @@ class WordpressReceiver extends Receiver {
                 const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.userNicename}@`);
                 result = await this.git.clone(repoUrlWithNicename);
             } else {
-                await helpers.eraseDirectories(path.join(process.cwd(), projectName));
+                const projectPath = path.join(process.cwd(), projectName);
+                await helpers.eraseDirectories(projectPath);
                 const query = this.flags.force ? '?force=true' : '';
                 this.options.path = `/project/get/${projectName}${query}`;
-                result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
+                result = await helpers.downloadFromFTP(this.http, this.options, projectPath);
             }
 
             this.result.addAlert('green', 'Success', result);

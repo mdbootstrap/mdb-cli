@@ -24,12 +24,22 @@ describe('Receiver: wordpress', () => {
         projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology' }]
     };
 
+    const fakeStarter = [{
+        available: true,
+        category: 'fakeCategory',
+        license: 'fakeLicense',
+        displayName: 'fakeName',
+        code: 'fakeVariant',
+        type: 'wordpress',
+    }];
+
     let context, receiver, getWordpressProjectsStub;
 
     beforeEach(() => {
 
         sandbox.stub(config, 'projectsDomain').value('http://fake.domain');
         sandbox.stub(Context.prototype, 'authenticateUser');
+        sandbox.stub(WordpressReceiver.prototype, '_getWordpressStartersOptions').resolves(fakeStarter);
     });
 
     afterEach(() => {
@@ -281,7 +291,7 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(receiver.result, 'addTextLine');
             sandbox.stub(context.mdbConfig, 'save');
 
-            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves();
+            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
             const downloadStub = sandbox.stub(helpers, 'downloadFromFTP').resolves();
 
             await receiver.init();
@@ -297,6 +307,7 @@ describe('Receiver: wordpress', () => {
 
             sandbox.stub(process, 'cwd').returns('/wp-content/themes');
             sandbox.stub(receiver.result, 'addTextLine');
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
 
             const alertStub = sandbox.stub(receiver.result, 'addAlert');
 
@@ -314,7 +325,7 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(helpers, 'downloadFromFTP').resolves();
             sandbox.stub(context.mdbConfig, 'save');
 
-            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves();
+            const listPromptStub = sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
 
             await receiver.init();
 
@@ -324,6 +335,7 @@ describe('Receiver: wordpress', () => {
         it('should download wp theme and update .mdb', async function () {
 
             context = new Context('wordpress', 'init', [], []);
+            context.userToken = 'asdf.eyJ1c2VyU3Vic2NyaXB0aW9uU3RhdHVzIjoiRlJFRSJ9.asdf';
             receiver = new WordpressReceiver(context);
 
             sandbox.stub(process, 'cwd').returns('/wp-content/themes');
@@ -350,7 +362,7 @@ describe('Receiver: wordpress', () => {
             receiver = new WordpressReceiver(context);
 
             sandbox.stub(process, 'cwd').returns('/wp-content/themes');
-            sandbox.stub(helpers, 'createListPrompt').resolves();
+            sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
 
             const downloadStub = sandbox.stub(helpers, 'downloadFromFTP').rejects();
             const alertStub = sandbox.stub(receiver.result, 'addAlert');

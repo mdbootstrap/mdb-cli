@@ -1,11 +1,10 @@
 'use strict';
 
+const open = require('open');
 const config = require('../config');
 const Receiver = require('./receiver');
-const DatabaseReceiver = require('./database-receiver');
 const ProjectStatus = require('../models/project-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
-const PipelinePublishStrategy = require('./strategies/publish/pipeline-publish-strategy');
 const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
 const path = require('path');
@@ -140,7 +139,12 @@ class BackendReceiver extends Receiver {
         const strategy = new FtpPublishStrategy(this.context, this.result);
 
         try {
-            await strategy.publish();
+            const response = await strategy.publish();
+
+            const { message, url } = JSON.parse(response.body);
+            this.result.addTextLine(message);
+
+            if (this.flags.open && !!url) open(url);
         } catch (e) {
             this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
             return;

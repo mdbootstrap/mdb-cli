@@ -9,7 +9,6 @@ const { deserializeJsonFile } = require('./deserialize-json-file');
 const { downloadFromFTP } = require('./download-from-ftp');
 const { eraseDirectories } = require('./erase-directories');
 const { removeFolder } = require('./remove-folder');
-const { renameFolder } = require('./rename-folder');
 const { serializeJsonFile } = require('./serialize-json-file');
 const { getThemeName } = require('./get-theme-name');
 
@@ -25,6 +24,5 @@ module.exports = {
     eraseDirectories,
     getThemeName,
     removeFolder,
-    renameFolder,
     serializeJsonFile
 };

@@ -1,5 +1,7 @@
 'use strict';
 
+const { Separator } = require('inquirer');
+const open = require('open');
 const config = require('../config');
 const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
@@ -23,7 +25,7 @@ class FrontendReceiver extends Receiver {
         };
 
         this.projectName = '';
-        this.packageName = '';
+        this.starterCode = '';
 
         this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help']);
         this.context.registerFlagExpansions({
@@ -48,11 +50,11 @@ class FrontendReceiver extends Receiver {
             projects = projects.map(p => {
 
                 const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
+                const projectURL = p.domainName ? `https://${p.domainName}` : `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`;
 
                 return {
                     'Project Name': p.projectName,
-                    'Project URL': deletedFromFTP ? 'Unavailable' : `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`,
-                    'Domain': p.domainName ? p.domainName : '-',
+                    'Project URL': deletedFromFTP ? 'Unavailable' : projectURL,
                     'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
                     'Edited': new Date(p.editDate).toLocaleString(),
                     'Repository': p.repoUrl ? p.repoUrl : '-'
@@ -76,39 +78,82 @@ class FrontendReceiver extends Receiver {
             .sort((a, b) => a.editDate < b.editDate);
     }
 
-    async init() {
+    async init(starterCode) {
 
-        this.options.path = '/packages/read';
-        const result = await this.http.get(this.options);
-        const options = JSON.parse(result.body);
-        const choices = options.map(o => ({ name: o.productTitle, short: o.productSlug, value: o.productSlug }));
+        const initInCurrentFolder = this.context.args.some(arg => arg === '.');
+        if (initInCurrentFolder && fs.readdirSync(process.cwd()).length !== 0) {
+            return this.result.addAlert('red', 'Error', 'Destination path `.` already exists and is not an empty directory.');
+        }
+        let projectPath = process.cwd();
+
+        const options = await this._getFrontendStartersOptions();
+        const choices = this._buildFrontendStartersList(options);
+
+        if (starterCode) {
+            this.starterCode = starterCode;
+            this.projectName = this.flags.name || this.starterCode;
+        } else {
+            await this.chooseStarter(choices, options);
+        }
+
+        if (!initInCurrentFolder) {
+            await this.checkProjectNameExists();
+            projectPath = path.join(process.cwd(), this.projectName);
+            try {
+                await helpers.eraseDirectories(projectPath);
+            } catch (err) {
+                return this.result.addAlert('red', 'Error', err);
+            }
+        }
+        this.result.addTextLine(`Project starter will be downloaded to ${projectPath} folder`);
+        const initResult = await this.downloadProjectStarter(projectPath);
+        this.result.addAlert('green', 'Success', initResult);
+        this.context.mdbConfig.setValue('projectName', this.projectName);
+        this.context.mdbConfig.setValue('meta.starter', this.starterCode);
+        this.context.mdbConfig.setValue('meta.type', 'frontend');
+        this.context.mdbConfig.save(projectPath);
+        this.context._loadPackageJsonConfig(projectPath);
+        await helpers.createJenkinsfile(projectPath, this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test);
+    }
+
+    async chooseStarter(choices, options) {
+
         let promptShownCount = 0;
         do {
             if (promptShownCount++ >= 10) {
                 return this.result.addTextLine('Please run `mdb starter ls` to see available packages.');
             }
-            this.packageName = await helpers.createListPrompt('Choose project to initialize', choices);
-            this.projectName = this.flags.name || this.packageName;
-            const project = options.find(o => o.productSlug === this.packageName);
+            this.starterCode = await helpers.createListPrompt('Choose project to initialize', choices);
+            this.projectName = this.flags.name || this.starterCode;
+            const project = options.find(o => o.code === this.starterCode);
             if (project.available) break;
-            else this.result.liveAlert('yellow', 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/products/${project.productSlug}/ and make sure it is available for you.`);
+            else this.result.liveAlert('yellow', 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/my-orders/ and make sure it is available for you.`);
         } while (promptShownCount <= 10);
+    }
 
-        await this.checkProjectNameExists();
-        const projectPath = path.join(process.cwd(), this.projectName);
-        try {
-            await helpers.eraseDirectories(projectPath);
-        } catch (err) {
-            return this.result.addAlert('red', 'Error', err);
-        }
-        const initResult = await this.downloadProjectStarter();
-        this.result.addAlert('green', 'Success', initResult);
-        this.context.mdbConfig.setValue('projectName', this.projectName);
-        this.context.mdbConfig.setValue('meta.starter', this.packageName);
-        this.context.mdbConfig.setValue('meta.type', 'frontend');
-        this.context.mdbConfig.save(projectPath);
-        this.context._loadPackageJsonConfig(projectPath);
-        await helpers.createJenkinsfile(projectPath, this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test);
+    async _getFrontendStartersOptions() {
+        this.options.path = `/packages/starters?type=frontend${!this.flags.all ? '&available=true' : ''}`;
+        const result = await this.http.get(this.options);
+        return JSON.parse(result.body);
+    }
+
+    _buildFrontendStartersList(options) {
+        const starters = options.reduce((res, curr) => {
+            res[`${curr.category} ${curr.license}`] = res[`${curr.category} ${curr.license}`] || [];
+
+            res[`${curr.category} ${curr.license}`].push({
+                name: curr.displayName,
+                short: curr.code,
+                value: curr.code
+            });
+
+            return res;
+        }, {});
+
+        return Object.keys(starters).reduce((res, curr) => {
+            res.push(new Separator(`---- ${curr} ----`), ...starters[curr]);
+            return res;
+        }, []);
     }
 
     async checkProjectNameExists() {
@@ -122,15 +167,9 @@ class FrontendReceiver extends Receiver {
         }
     }
 
-    async downloadProjectStarter() {
-        const tmpFolder = path.join(process.cwd(), 'tmp-mdb-projects-downloads-dir');
-        this.options.path = `/packages/download/${this.packageName}`;
-        const result = await helpers.downloadFromFTP(this.http, this.options, tmpFolder);
-        const toRename = path.join(tmpFolder, this.packageName);
-        const destination = path.join(process.cwd(), this.projectName);
-        await helpers.renameFolder(toRename, destination);
-        fs.rmdirSync(tmpFolder, { recursive: true });
-
+    async downloadProjectStarter(projectPath) {
+        this.options.path = `/packages/download/${this.starterCode}`;
+        const result = await helpers.downloadFromFTP(this.http, this.options, projectPath);
         return result;
     }
 
@@ -166,10 +205,20 @@ class FrontendReceiver extends Receiver {
 
         if (this.flags.ftp || this.context.mdbConfig.getValue('publishMethod') === 'ftp') {
             const strategy = new FtpPublishStrategy(this.context, this.result);
-            await strategy.publish();
+            const response = await strategy.publish();
+
+            const { message, url } = JSON.parse(response.body);
+            this.result.addTextLine(message);
+
+            if (this.flags.open && !!url) open(url);
         } else if (this.context.mdbConfig.getValue('publishMethod') === 'pipeline') {
             const strategy = new PipelinePublishStrategy(this.context, this.result, this.git);
-            await strategy.publish();
+            const response = await strategy.publish();
+
+            const { message, url } = JSON.parse(response.body);
+            this.result.addTextLine(message);
+
+            if (this.flags.open && !!url) open(url);
         } else {
             const remoteUrl = this.git.getCurrentRemoteUrl();
             if (remoteUrl !== '') {
@@ -188,7 +237,12 @@ class FrontendReceiver extends Receiver {
             const strategy = new FtpPublishStrategy(this.context, this.result);
 
             try {
-                await strategy.publish();
+                const response = await strategy.publish();
+
+                const { message, url } = JSON.parse(response.body);
+                this.result.addTextLine(message);
+
+                if (this.flags.open && !!url) open(url);
             } catch (e) {
                 this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
             }
@@ -270,7 +324,7 @@ class FrontendReceiver extends Receiver {
 
             this.result.addAlert('green', 'Success', result);
         } catch (err) {
-            this.result.addAlert('red', 'Error', `Could not download ${projectName}: ${err.message}`);
+            this.result.addAlert('red', 'Error', `Could not download ${projectName}: ${err.message || err}`);
         }
     }
 

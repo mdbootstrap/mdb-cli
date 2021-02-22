@@ -16,7 +16,7 @@ class RepoReceiver extends Receiver {
         this.options = {
             port: config.port,
             hostname: config.host,
-            path: '/project/create',
+            path: '/repo/create',
             headers: { Authorization: `Bearer ${this.context.userToken}`, 'Content-Type': 'application/json' }
         };
     }

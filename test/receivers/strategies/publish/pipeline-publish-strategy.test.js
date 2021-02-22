@@ -5,6 +5,7 @@ const Context = require('../../../../context');
 const GitManager = require('../../../../utils/managers/git-manager');
 const helpers = require('../../../../helpers');
 const config = require('../../../../config');
+const btoa = require('btoa');
 const fs = require('fs');
 
 const sandbox = require('sinon').createSandbox();
@@ -34,6 +35,8 @@ describe('Strategy: PipelinePublishStrategy', () => {
 
     it('should publish project', async function () {
 
+        const fakeToken = `fakefake.${btoa(JSON.stringify({ name: 'fakeUsername' }))}.fakefake`;
+        sandbox.stub(strategy, 'userToken').value(fakeToken);
         sandbox.stub(git, 'currentBranch').resolves('fakebranch');
         const createJenkinsfileStub = sandbox.stub(strategy, 'createJenkinsfile').resolves();
         const statusStub = sandbox.stub(git, 'status').resolves();
@@ -52,6 +55,8 @@ describe('Strategy: PipelinePublishStrategy', () => {
 
     it('should print alert if publish failed', async function () {
 
+        const fakeToken = `fakefake.${btoa(JSON.stringify({ name: 'fakeUsername' }))}.fakefake`;
+        sandbox.stub(strategy, 'userToken').value(fakeToken);
         sandbox.stub(git, 'currentBranch').resolves('fakebranch');
         sandbox.stub(strategy, 'createJenkinsfile').rejects();
 

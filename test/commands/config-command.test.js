@@ -25,7 +25,7 @@ describe('Command: config', () => {
     it('should call config receiver changeConfig() method and print result', async () => {
 
         const configStub = sandbox.stub(ConfigReceiver.prototype, 'changeConfig');
-        const context = new Context('config', 'config', '', []);
+        const context = new Context('config', 'config', ['projectName', 'fakeName'], []);
         const command = new ConfigCommand(context);
 
         await command.execute();
@@ -44,5 +44,29 @@ describe('Command: config', () => {
 
         sandbox.assert.calledOnce(changePasswordStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.databaseReceiver.result]);
+    });
+
+    it('should call help method and print result if entity is undefined', async () => {
+
+        const helpSpy = sandbox.spy(ConfigCommand.prototype, 'help');
+        const context = new Context('', 'config', ['projectName'], []);
+        const command = new ConfigCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.result]);
+    });
+
+    it('should call help method and print result if args are undefined', async () => {
+
+        const helpSpy = sandbox.spy(ConfigCommand.prototype, 'help');
+        const context = new Context('config', 'config', [], []);
+        const command = new ConfigCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.result]);
     });
 });

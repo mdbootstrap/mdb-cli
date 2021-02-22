@@ -18,15 +18,22 @@ class BlankReceiver extends Receiver {
 
     async init() {
 
-        this.projectName = this.flags.name || await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
-        await this.checkProjectNameExists();
-        const projectPath = path.join(process.cwd(), this.projectName);
-        try {
-            await helpers.eraseDirectories(projectPath);
-        } catch (err) {
-            return this.result.addAlert('red', 'Error', err);
+        const initInCurrentFolder = this.context.args.some(arg => arg === '.');
+        if (initInCurrentFolder && fs.readdirSync(process.cwd()).length !== 0) {
+            return this.result.addAlert('red', 'Error', 'Destination path `.` already exists and is not an empty directory.');
         }
-        fs.mkdirSync(projectPath);
+        let projectPath = process.cwd();
+        if (!initInCurrentFolder) {
+            this.projectName = this.flags.name || await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
+            await this.checkProjectNameExists();
+            projectPath = path.join(process.cwd(), this.projectName);
+            try {
+                await helpers.eraseDirectories(projectPath);
+            } catch (err) {
+                return this.result.addAlert('red', 'Error', err);
+            }
+            fs.mkdirSync(projectPath);
+        }
         const result = await this.createPackageJson(projectPath);
         this.context._loadPackageJsonConfig(projectPath);
         try {
@@ -34,7 +41,7 @@ class BlankReceiver extends Receiver {
         } catch (err) {
             return this.result.addAlert('red', 'Error', err);
         }
-        this.context.mdbConfig.setValue('projectName', this.projectName);
+        this.context.mdbConfig.setValue('projectName', this.context.packageJsonConfig.name);
         this.context.mdbConfig.save(projectPath);
         this.result.addAlert('green', 'Success', result);
     }
