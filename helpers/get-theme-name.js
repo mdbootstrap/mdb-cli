@@ -5,17 +5,17 @@ module.exports = {
     getThemeName(pageType) {
 
         switch (pageType) {
-            case 'blog':
+            case 'wp-essential-blog':
                 return 'mdb-blog-wordpress-theme';
-            case 'ecommerce':
+            case 'wp-essential-ecommerce':
                 return 'mdb-ecommerce-wordpress-theme';
-            case 'blog+ecommerce':
+            case 'wp-essential-blog-ecomm':
                 return 'mdb-blog-with-ecommerce-wordpress-theme';
-            case 'starter':
+            case 'wp-essential-starter':
                 return 'mdb-sample-wp-theme';
-            case 'starter-free':
+            case 'wp-free-starter':
                 return 'mdb-sample-free-wp-theme';
-            case 'empty-starter':
+            case 'wp-free-empty-starter':
                 return 'mdb-empty-wp-theme';
             default:
                 return '';

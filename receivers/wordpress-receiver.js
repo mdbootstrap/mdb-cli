@@ -11,7 +11,6 @@ const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
 const path = require('path');
-const atob = require('atob');
 
 class WordpressReceiver extends Receiver {
 
@@ -100,14 +99,9 @@ class WordpressReceiver extends Receiver {
             this.options.path = `/packages/download/${this.starterCode}`;
             const result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
 
-            const token = this.context.userToken;
-            const [, jwtBody] = token.split('.');
-            const userSubscriptionStatus = JSON.parse(atob(jwtBody)).userSubscriptionStatus;
-            const isStarterFree = this.starterCode === 'starter' && (this.flags.free || userSubscriptionStatus.toLowerCase() === 'free');
-
             this.context.mdbConfig.setValue('meta.starter', this.starterCode);
             this.context.mdbConfig.setValue('meta.type', 'wordpress');
-            this.context.mdbConfig.save(helpers.getThemeName(isStarterFree ? 'starter-free' : this.starterCode));
+            this.context.mdbConfig.save(helpers.getThemeName(this.starterCode));
 
             this.result.addAlert('green', 'Success', result);
         } catch (e) {
