@@ -1,7 +1,6 @@
 'use strict';
 
 const Command = require('./command');
-const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
@@ -11,8 +10,7 @@ class KillCommand extends Command {
     constructor(context) {
         super(context);
 
-        this.receiver =null;
-        this.results = new CommandResult();
+        this.receiver = null;
 
         this.setReceiver(context);
     }
@@ -49,13 +47,14 @@ class KillCommand extends Command {
         }
     }
 
-    async help() {
+    help() {
 
         this.results.addTextLine('Stop a project.');
         this.results.addTextLine('\nUsage: mdb [entity] kill');
         this.results.addTextLine('\nAvailable entities: backend (default), wordpress');
         this.results.addTextLine('\nFlags:');
-        this.results.addTextLine('  -n, --name \tProject name');
+        this.results.addTextLine('   -n, --name   \tProject name');
+        this.results.addTextLine('  -rm, --remove \tRemove the container');
         this.printResult([this.results]);
     }
 }

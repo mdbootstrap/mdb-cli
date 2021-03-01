@@ -2,7 +2,6 @@
 
 const Command = require('./command');
 const Receiver = require('../receivers/receiver');
-const CommandResult = require('../utils/command-result');
 const FrontendReceiver = require('../receivers/frontend-receiver');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
@@ -14,7 +13,6 @@ class GetCommand extends Command {
         super(context);
 
         this.receiver = null;
-        this.results = new CommandResult();
         this.context = context;
     }
 
@@ -74,6 +72,7 @@ class GetCommand extends Command {
         this.results.addTextLine('\nAvailable entities: frontend, backend, wordpress');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
+        this.results.addTextLine('      --ftp  \tDownload from FTP server');
         this.printResult([this.results]);
     }
 }

@@ -1,7 +1,6 @@
 'use strict';
 
 const Command = require('./command');
-const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
@@ -13,7 +12,6 @@ class RunCommand extends Command {
         super(context);
 
         this.receiver = null;
-        this.results = new CommandResult();
 
         this.setReceiver(context);
     }

@@ -1,7 +1,6 @@
 'use strict';
 
 const Command = require('./command');
-const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const DatabaseReceiver = require('../receivers/database-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
@@ -15,7 +14,6 @@ class DeleteCommand extends Command {
         super(context);
 
         this.receiver = null;
-        this.results = new CommandResult();
 
         this.setReceiver(context);
     }
@@ -68,6 +66,8 @@ class DeleteCommand extends Command {
         this.results.addTextLine('\nAvailable entities: frontend, backend, wordpress, database');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
+        this.results.addTextLine('  --ftp-only \tRemove project files only from ftp server');
+        this.results.addTextLine('  --force \tDo not require confirmation of deletion by entering the name again');
         this.printResult([this.results]);
     }
 }

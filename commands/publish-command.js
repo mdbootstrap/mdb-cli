@@ -5,6 +5,7 @@ const FrontendReceiver = require('../receivers/frontend-receiver');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
+const config = require('../config');
 
 
 class PublishCommand extends Command {
@@ -13,11 +14,15 @@ class PublishCommand extends Command {
         super(context);
 
         this.receiver = null;
+        this.context = context;
 
         this.setReceiver(context);
     }
 
     async execute() {
+
+        const flags = this.context.getParsedFlags();
+        if (flags.help) return this.help();
 
         await this.receiver.publish();
         this.printResult([this.receiver.result]);
@@ -54,6 +59,20 @@ class PublishCommand extends Command {
         }
 
         this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+    }
+
+    help() {
+
+        this.results.addTextLine('Upload your current project to our remote server');
+        this.results.addTextLine('\nUsage: mdb [entity] publish');
+        this.results.addTextLine('\nAvailable entities: frontend (default), backend, wordpress');
+        this.results.addTextLine('\nFlags:');
+        this.results.addTextLine(`  -p, --platform \tSpecify the backend platform. Allowed options: ${config.backendTechnologies.join(', ')}`);
+        this.results.addTextLine('  -t, --test     \tRun the "test" script defined in the "package.json" file before publishing');
+        this.results.addTextLine('  -o, --open     \tOpen in default browser after publication');
+        this.results.addTextLine('  -c, --advanced \tPerform an advanced WordPress publication');
+        this.results.addTextLine('      --ftp,     \tDo not use MDB Go pipeline');
+        this.printResult([this.results]);
     }
 }
 

@@ -6,6 +6,8 @@ class AppReceiver extends Receiver {
 
     constructor(context) {
         super(context);
+        
+        this.flags = this.context.getParsedFlags();
     }
 
     getHelp() {

@@ -8,12 +8,13 @@ const sandbox = require('sinon').createSandbox();
 
 describe('Command: update', () => {
 
-    let command, context;
+    let command, context, helpSpy, updateStub, printResultStub;
 
     beforeEach(() => {
 
-        context = new Context('app', 'update', '', []);
-        command = new UpdateCommand(context);
+        helpSpy = sandbox.spy(UpdateCommand.prototype, 'help');
+        updateStub = sandbox.stub(AppReceiver.prototype, 'updateApp');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
     });
 
     afterEach(() => {
@@ -24,12 +25,23 @@ describe('Command: update', () => {
 
     it('should call receiver getupdate method and print result', async () => {
 
-        const updateAppStub = sandbox.stub(AppReceiver.prototype, 'updateApp');
-        const printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        context = new Context('app', 'update', '', []);
+        command = new UpdateCommand(context);
 
         await command.execute();
 
-        sandbox.assert.calledOnce(updateAppStub);
+        sandbox.assert.calledOnce(updateStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call help method and print result if --help flag is used', async () => {
+
+        context = new Context('app', 'update', '', ['-h']);
+        command = new UpdateCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 });

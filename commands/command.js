@@ -1,6 +1,7 @@
 'use strict';
 
 const OutputPrinter = require('../utils/output-printer');
+const CommandResult = require('../utils/command-result');
 
 class Command {
 
@@ -10,6 +11,7 @@ class Command {
         this.entity = context.entity;
         this.args = context.args;
         this.flags = context.rawFlags;
+        this.results = new CommandResult();
     }
 
     execute() {

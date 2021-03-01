@@ -90,4 +90,16 @@ describe('Command: publish', () => {
         expect(command.receiver.context.entity).to.be.eq('backend');
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
+
+    it('should call help method and print result if --help flag is used', async () => {
+
+        const helpSpy = sandbox.spy(PublishCommand.prototype, 'help');
+        const context = new Context('', 'publish', '', ['-h']);
+        const command = new PublishCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
+    });
 });

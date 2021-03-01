@@ -4,7 +4,6 @@ const { Separator } = require('inquirer');
 const config = require('../config');
 const helpers = require('../helpers');
 const Command = require('./command');
-const CommandResult = require('../utils/command-result');
 const StarterReceiver = require('../receivers/starter-receiver');
 const FrontendReceiver = require('../receivers/frontend-receiver');
 const BackendReceiver = require('../receivers/backend-receiver');
@@ -20,7 +19,6 @@ class InitCommand extends Command {
     constructor(context) {
         super(context);
 
-        this.results = new CommandResult();
         this.receiver = undefined;
         this.context = context;
 
@@ -31,11 +29,14 @@ class InitCommand extends Command {
 
     async execute() {
 
+        const flags = this.context.getParsedFlags();
+        if (flags.help) return this.help();
+
         if (this.receiver) {
 
             await this.receiver.init();
             this.printResult([this.receiver.result]);
-        } else {
+        } else {
 
             await this.detectReceiver();
 
@@ -155,8 +156,8 @@ class InitCommand extends Command {
         this.results.addTextLine('\nUsage: mdb [entity] init [options]');
         this.results.addTextLine('\nAvailable entities: starter, blank, frontend, backend, wordpress, database, repo');
         this.results.addTextLine('\nOptions:');
-        this.results.addTextLine('  -n, --name \tSet the name of your project right after initializing it');
-
+        this.results.addTextLine('   -n, --name     \tSet the name of your project right after initializing it');
+        this.results.addTextLine(`  -db, --database \tSet type of database. Avaliable options: ${config.databases.join(', ')}`);
         this.printResult([this.results]);
     }
 }

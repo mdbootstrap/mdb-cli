@@ -12,8 +12,16 @@ class VersionCommand extends Command {
     }
 
     execute() {
+        if (this.receiver.flags.help) return this.help();
         this.receiver.getVersion();
         this.printResult([this.receiver.result]);
+    }
+
+    help() {
+        this.results.addTextLine('Check currently installed version of MDB CLI');
+        this.results.addTextLine('\nUsage: mdb [entity] version');
+        this.results.addTextLine('\nAvailable entities: app (default)');
+        this.printResult([this.results]);
     }
 }
 

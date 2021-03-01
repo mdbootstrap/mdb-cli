@@ -205,20 +205,10 @@ class FrontendReceiver extends Receiver {
 
         if (this.flags.ftp || this.context.mdbConfig.getValue('publishMethod') === 'ftp') {
             const strategy = new FtpPublishStrategy(this.context, this.result);
-            const response = await strategy.publish();
-
-            const { message, url } = JSON.parse(response.body);
-            this.result.addTextLine(message);
-
-            if (this.flags.open && !!url) open(url);
+            await this._handlePublication(strategy);
         } else if (this.context.mdbConfig.getValue('publishMethod') === 'pipeline') {
-            const strategy = new PipelinePublishStrategy(this.context, this.result, this.git);
-            const response = await strategy.publish();
-
-            const { message, url } = JSON.parse(response.body);
-            this.result.addTextLine(message);
-
-            if (this.flags.open && !!url) open(url);
+            const strategy = new PipelinePublishStrategy(this.context, this.result, this.git, this.http, this.options);
+            await this._handlePublication(strategy);
         } else {
             const remoteUrl = this.git.getCurrentRemoteUrl();
             if (remoteUrl !== '') {
@@ -228,24 +218,28 @@ class FrontendReceiver extends Receiver {
                 );
 
                 if (useGitlab) {
-                    const strategy = new PipelinePublishStrategy(this.context, this.result, this.git);
-                    await strategy.publish();
+                    const strategy = new PipelinePublishStrategy(this.context, this.result, this.git, this.http, this.options);
+                    await this._handlePublication(strategy);
                     return;
                 }
             }
 
             const strategy = new FtpPublishStrategy(this.context, this.result);
+            await this._handlePublication(strategy);
+        }
+    }
 
-            try {
-                const response = await strategy.publish();
+    async _handlePublication(strategy) {
 
-                const { message, url } = JSON.parse(response.body);
-                this.result.addTextLine(message);
+        try {
+            const response = await strategy.publish();
 
-                if (this.flags.open && !!url) open(url);
-            } catch (e) {
-                this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
-            }
+            const { message, url } = JSON.parse(response.body);
+            this.result.addTextLine(message);
+
+            if (this.flags.open && !!url) open(url);
+        } catch (e) {
+            this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
         }
     }
 

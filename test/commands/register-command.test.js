@@ -8,12 +8,13 @@ const sandbox = require('sinon').createSandbox();
 
 describe('Command: register', () => {
 
-    let command, context;
+    let command, context, helpSpy, registerStub, printResultStub;
 
     beforeEach(() => {
 
-        context = new Context('user', 'register', '', []);
-        command = new RegisterCommand(context);
+        helpSpy = sandbox.spy(RegisterCommand.prototype, 'help');
+        registerStub = sandbox.stub(UserReceiver.prototype, 'register');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
     });
 
     afterEach(() => {
@@ -24,12 +25,23 @@ describe('Command: register', () => {
 
     it('should call receiver register method and print result', async () => {
 
-        const registerStub = sandbox.stub(UserReceiver.prototype, 'register');
-        const printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        context = new Context('user', 'register', '', []);
+        command = new RegisterCommand(context);
 
         await command.execute();
 
         sandbox.assert.calledOnce(registerStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call help method and print result if --help flag is used', async () => {
+
+        context = new Context('user', 'register', '', ['-h']);
+        command = new RegisterCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 });

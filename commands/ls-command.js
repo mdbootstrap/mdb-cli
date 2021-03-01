@@ -16,6 +16,7 @@ class LsCommand extends Command {
         super(context);
 
         this.receiver = null;
+        this.context = context;
 
         this.starterReceiver = null;
         this.frontendReceiver = null;
@@ -29,6 +30,9 @@ class LsCommand extends Command {
     }
 
     async execute() {
+
+        const flags = this.context.getParsedFlags();
+        if (flags.help) return this.help();
 
         if (this.receiver) {
             this.receiver.result.on('mdb.cli.live.output', (msg) => {
@@ -120,6 +124,17 @@ class LsCommand extends Command {
                 this.orderReceiver = new OrderReceiver(ctx);
                 break;
         }
+    }
+
+    help() {
+
+        this.results.addTextLine('List entity content.');
+        this.results.addTextLine('\nUsage: mdb [entity] ls');
+        this.results.addTextLine('\nAvailable entities: starter, frontend (default), backend, wordpress, database, order');
+        this.results.addTextLine('\nFlags:');
+        this.results.addTextLine('  -a, --all  \tList all starters, projects, databases and orders.');
+        this.results.addTextLine('  -o, --only \tSpecify the type of starters you want to display. Possible values: frontend, backend, wordpress');
+        this.printResult([this.results]);
     }
 }
 

@@ -1,7 +1,6 @@
 'use strict';
 
 const Command = require('./command');
-const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
@@ -13,7 +12,6 @@ class LogsCommand extends Command {
         super(context);
 
         this.receiver = null;
-        this.results = new CommandResult();
 
         this.setReceiver(context);
     }
@@ -50,15 +48,15 @@ class LogsCommand extends Command {
         }
     }
 
-    async help() {
+    help() {
 
         this.results.addTextLine('Display logs of a given project.');
         this.results.addTextLine('\nUsage: mdb [entity] logs');
         this.results.addTextLine('\nAvailable entities: backend, wordpress');
         this.results.addTextLine('\nFlags:');
-        this.results.addTextLine('  -n, --name \tProject name');
+        this.results.addTextLine('  -n, --name          \tProject name');
+        this.results.addTextLine('  -f, --follow        \tOutput new log lines as they appear (live)');
         this.results.addTextLine('  --lines X, --tail X \tShow X last log lines');
-        this.results.addTextLine('  -f, --follow \tOutput new log lines as they appear (live)');
         this.printResult([this.results]);
     }
 }

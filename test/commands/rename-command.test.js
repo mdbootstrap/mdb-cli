@@ -84,7 +84,6 @@ describe('Command: rename', () => {
             deleteStub = sandbox.stub(command.receiver, 'delete');
             renameStub = sandbox.stub(command.receiver, 'rename');
             publishStub = sandbox.stub(command.receiver, 'publish');
-
         });
 
         it('should rename project', async () => {
@@ -139,6 +138,18 @@ describe('Command: rename', () => {
             sandbox.assert.calledOnce(renameStub);
             sandbox.assert.notCalled(publishStub);
             sandbox.assert.calledTwice(printResultStub);
+        });
+
+        it('should call help method and print result if --help flag is used', async () => {
+
+            const helpSpy = sandbox.spy(RenameCommand.prototype, 'help');
+            context = new Context('', 'rename', '', ['-h']);
+            command = new RenameCommand(context);
+    
+            await command.execute();
+    
+            sandbox.assert.calledOnce(helpSpy);
+            sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
         });
     });
 });

@@ -164,6 +164,7 @@ class WordpressReceiver extends Receiver {
 
             const firstPublication = response.statusCode === 201;
             if (firstPublication) {
+                this.result.liveTextLine('Files uploaded, running your project...');
                 const payload = {
                     pageType: pageVariant,
                     pageName: projectName,
