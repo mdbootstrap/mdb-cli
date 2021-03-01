@@ -6,9 +6,8 @@ const atob = require('atob');
 
 class PipelinePublishStrategy {
 
-    constructor(context, result, git) {
+    constructor(context, result, git, http, options) {
 
-        this.userToken = context.userToken;
         this.context = context;
         this.result = result;
         this.packageJsonConfig = context.packageJsonConfig;
@@ -18,21 +17,19 @@ class PipelinePublishStrategy {
         this.cwd = process.cwd();
 
         this.git = git;
+        this.http = http;
+        this.options = options;
     }
 
     async publish() {
         const currentBranch = await this.git.currentBranch();
-        const [, jwtBody] = this.userToken.split('.');
-        const userNicename = JSON.parse(atob(jwtBody)).name;
-        const projectName = this.context.mdbConfig.mdbConfig.projectName;
 
         return this.createJenkinsfile(currentBranch)
             .then(() => this.git.status())
             .then(() => this.confirmMerge(currentBranch))
             .then(() => this.git.push(`${currentBranch}:${config.mdbgoPipelinePublicBranch}`))
             .then(() => this.confirmSaveSettings())
-            .then(() => this.result.addTextLine(`Your application will be available under https://${config.projectsDomain}/${userNicename}/${projectName}/ address in about 3-5 mins.`))
-            .catch(e => this.result.addAlert('red', 'Error', e));
+            .then(() => this.updateProjectStatus());
     }
 
     async createJenkinsfile(currentBranch) {
@@ -76,6 +73,20 @@ class PipelinePublishStrategy {
         } else {
             this.result.addAlert('green', 'Success', 'This time your project will be published using GitLab pipeline. We will remember to ask you again next time.');
         }
+    }
+
+    updateProjectStatus() {
+
+        const repoUrl = this.git.getCurrentRemoteUrl();
+        const domain = this.context.mdbConfig.getValue('domain');
+        const projectName = this.context.mdbConfig.getValue('projectName');
+
+        this.options.data = JSON.stringify({ repoUrl, domain });
+        this.options.headers['Content-Length'] = Buffer.byteLength(this.options.data);
+        this.options.headers['Content-Type'] = 'application/json';
+        this.options.path = `/project/save/${projectName}`;
+
+        return this.http.post(this.options);
     }
 }
 

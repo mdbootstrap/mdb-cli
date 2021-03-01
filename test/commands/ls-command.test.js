@@ -13,13 +13,11 @@ const sandbox = require('sinon').createSandbox();
 
 describe('Command: ls', () => {
 
-    let command,
-        context,
-        listStub,
-        printResultStub;
+    let command, context, helpSpy, listStub, printResultStub;
 
     beforeEach(() => {
 
+        helpSpy = sandbox.spy(LsCommand.prototype, 'help');
         printResultStub = sandbox.stub(Command.prototype, 'printResult');
         sandbox.stub(Context.prototype, 'authenticateUser');
     });
@@ -112,6 +110,17 @@ describe('Command: ls', () => {
 
         sandbox.assert.calledOnce(listStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call help method and print result if --help flag is used', async () => {
+
+        context = new Context('', 'ls', '', ['-h']);
+        command = new LsCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 
     it('should call all receivers list method and print results if entity is not defined and --all flag provided', async () => {

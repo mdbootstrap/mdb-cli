@@ -1,7 +1,6 @@
 'use strict';
 
 const Command = require('./command');
-const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
@@ -13,7 +12,6 @@ class RestartCommand extends Command {
         super(context);
 
         this.receiver = null;
-        this.results = new CommandResult();
 
         this.setReceiver(context);
     }
@@ -52,11 +50,11 @@ class RestartCommand extends Command {
 
     help() {
 
-        this.results.addTextLine('\nRestart a backend project.');
+        this.results.addTextLine('Restart a backend project.');
         this.results.addTextLine('\nUsage: mdb [entity] restart');
         this.results.addTextLine('\nAvailable entities: backend, wordpress');
         this.results.addTextLine('\nFlags:');
-        this.results.addTextLine('  -n, --name \tProject name\n');
+        this.results.addTextLine('  -n, --name \tProject name');
         this.printResult([this.results]);
     }
 }

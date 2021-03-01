@@ -2,7 +2,6 @@
 
 const Command = require('./command');
 const Receiver = require('../receivers/receiver');
-const CommandResult = require('../utils/command-result');
 const BackendReceiver = require('../receivers/backend-receiver');
 const DatabaseReceiver = require('../receivers/database-receiver');
 const WordpressReceiver = require('../receivers/wordpress-receiver');
@@ -14,7 +13,6 @@ class InfoCommand extends Command {
         super(context);
 
         this.receiver = null;
-        this.results = new CommandResult();
         this.context = context;
     }
 

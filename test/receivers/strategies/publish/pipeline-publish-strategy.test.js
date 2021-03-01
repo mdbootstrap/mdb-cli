@@ -3,16 +3,15 @@
 const PipelinePublishStrategy = require('../../../../receivers/strategies/publish/pipeline-publish-strategy');
 const Context = require('../../../../context');
 const GitManager = require('../../../../utils/managers/git-manager');
+const HttpWrapper = require('../../../../utils/http-wrapper');
 const helpers = require('../../../../helpers');
 const config = require('../../../../config');
-const btoa = require('btoa');
-const fs = require('fs');
 
 const sandbox = require('sinon').createSandbox();
 
 describe('Strategy: PipelinePublishStrategy', () => {
 
-    let result, git, context, strategy;
+    let result, git, context, strategy, http;
 
     beforeEach(() => {
 
@@ -24,8 +23,9 @@ describe('Strategy: PipelinePublishStrategy', () => {
         sandbox.stub(Context.prototype, 'authenticateUser');
 
         git = new GitManager();
+        http = new HttpWrapper();
         context = new Context('', '', [], []);
-        strategy = new PipelinePublishStrategy(context, result, git);
+        strategy = new PipelinePublishStrategy(context, result, git, http, { headers: {} });
     });
 
     afterEach(() => {
@@ -35,14 +35,13 @@ describe('Strategy: PipelinePublishStrategy', () => {
 
     it('should publish project', async function () {
 
-        const fakeToken = `fakefake.${btoa(JSON.stringify({ name: 'fakeUsername' }))}.fakefake`;
-        sandbox.stub(strategy, 'userToken').value(fakeToken);
         sandbox.stub(git, 'currentBranch').resolves('fakebranch');
         const createJenkinsfileStub = sandbox.stub(strategy, 'createJenkinsfile').resolves();
         const statusStub = sandbox.stub(git, 'status').resolves();
         const mergeStub = sandbox.stub(strategy, 'confirmMerge').resolves();
         const pushStub = sandbox.stub(git, 'push').resolves();
         const saveSettingsStub = sandbox.stub(strategy, 'confirmSaveSettings').resolves();
+        const updateStatusStub = sandbox.stub(strategy, 'updateProjectStatus').resolves();
 
         await strategy.publish();
 
@@ -51,18 +50,7 @@ describe('Strategy: PipelinePublishStrategy', () => {
         expect(mergeStub).to.have.been.calledOnce;
         expect(pushStub).to.have.been.calledOnce;
         expect(saveSettingsStub).to.have.been.calledOnce;
-    });
-
-    it('should print alert if publish failed', async function () {
-
-        const fakeToken = `fakefake.${btoa(JSON.stringify({ name: 'fakeUsername' }))}.fakefake`;
-        sandbox.stub(strategy, 'userToken').value(fakeToken);
-        sandbox.stub(git, 'currentBranch').resolves('fakebranch');
-        sandbox.stub(strategy, 'createJenkinsfile').rejects();
-
-        await strategy.publish();
-
-        expect(result.addAlert).to.have.been.calledOnce;
+        expect(updateStatusStub).to.have.been.calledOnce;
     });
 
     describe('Method: createJenkinsfile()', function () {
@@ -181,6 +169,24 @@ describe('Strategy: PipelinePublishStrategy', () => {
 
             expect(confirmPromptStub).to.have.been.calledOnce;
             expect(commitStub).to.have.been.calledOnce;
+        });
+    });
+
+    describe('Method: updateProjectStatus()', function () {
+
+        it('should set options update project status', async function () {
+
+            sandbox.stub(git, 'getCurrentRemoteUrl').returns('fake.remote.url');
+            const getValueStub = sandbox.stub(context.mdbConfig, 'getValue');
+            getValueStub.withArgs('projectName').returns('fakeProjectName')
+            getValueStub.withArgs('domain').returns('fake.domain.name');
+            const postStub = sandbox.stub(http, 'post').resolves();
+
+            await strategy.updateProjectStatus();
+
+            sandbox.assert.calledOnce(postStub);
+            expect(strategy.options.path).to.be.eq('/project/save/fakeProjectName');
+            expect(strategy.options.data).to.be.eq('{"repoUrl":"fake.remote.url","domain":"fake.domain.name"}');
         });
     });
 });

@@ -419,7 +419,7 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('git.mdbgo.com');
             sandbox.stub(helpers, 'createConfirmationPrompt').resolves(true);
 
-            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves();
+            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body: '{}' });
 
             await receiver.publish();
 

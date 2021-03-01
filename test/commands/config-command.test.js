@@ -55,7 +55,7 @@ describe('Command: config', () => {
         await command.execute();
 
         sandbox.assert.calledOnce(helpSpy);
-        sandbox.assert.calledOnceWithExactly(printResultStub, [command.result]);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 
     it('should call help method and print result if args are undefined', async () => {
@@ -67,6 +67,6 @@ describe('Command: config', () => {
         await command.execute();
 
         sandbox.assert.calledOnce(helpSpy);
-        sandbox.assert.calledOnceWithExactly(printResultStub, [command.result]);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 });

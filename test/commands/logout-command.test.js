@@ -8,12 +8,13 @@ const sandbox = require('sinon').createSandbox();
 
 describe('Command: logout', () => {
 
-    let command, context;
+    let command, context, helpSpy, logoutStub, printResultStub;
 
     beforeEach(() => {
 
-        context = new Context('user', 'logout', '', []);
-        command = new LogoutCommand(context);
+        helpSpy = sandbox.spy(LogoutCommand.prototype, 'help');
+        logoutStub = sandbox.stub(UserReceiver.prototype, 'logout');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
     });
 
     afterEach(() => {
@@ -24,12 +25,23 @@ describe('Command: logout', () => {
 
     it('should call receiver logout method and print result', async () => {
 
-        const loginStub = sandbox.stub(UserReceiver.prototype, 'logout');
-        const printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        context = new Context('user', 'logout', '', []);
+        command = new LogoutCommand(context);
 
         await command.execute();
 
-        sandbox.assert.calledOnce(loginStub);
+        sandbox.assert.calledOnce(logoutStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call help method and print result if --help flag is used', async () => {
+
+        context = new Context('user', 'logout', '', ['-h']);
+        command = new LogoutCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 });

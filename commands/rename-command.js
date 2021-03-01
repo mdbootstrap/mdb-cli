@@ -19,6 +19,7 @@ class RenameCommand extends Command {
 
     async execute() {
 
+        if (this.receiver.flags.help) return this.help();
         const projectName = this.receiver.getProjectName();
         const confirmed = await helpers.createConfirmationPrompt(`Project ${projectName} will be deleted and then published again. Proceed?`, true);
         if (confirmed) {
@@ -63,6 +64,16 @@ class RenameCommand extends Command {
         }
 
         this.receiver.result.on('mdb.cli.live.output', msg => this.printResult([msg]));
+    }
+
+    help() {
+        this.results.addTextLine('Change the project name locally and on public server. Project will be deleted and then published again.');
+        this.results.addTextLine('\nUsage: mdb [entity] rename');
+        this.results.addTextLine('\nAvailable entities: frontend (default), backend');
+        this.results.addTextLine('\nFlags:');
+        this.results.addTextLine('  -n, --name \tProject name');
+        this.results.addTextLine('  --new-name \tNew project name');
+        this.printResult([this.results]);
     }
 }
 

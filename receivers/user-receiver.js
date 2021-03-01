@@ -15,10 +15,14 @@ class UserReceiver extends Receiver {
 
         this.socialProvider = AuthMethod.Normal;
         this.authStrategy = null;
+        this.context.registerNonArgFlags(['help']);
         this.context.registerFlagExpansions({
             '-u': '--username',
-            '-p': '--password'
+            '-p': '--password',
+            '-m': '--method',
+            '-h': '--help'
         });
+        this.flags = this.context.getParsedFlags();
     }
 
     async register() {
@@ -66,25 +70,23 @@ class UserReceiver extends Receiver {
     }
 
     setSocialProvider() {
-        const flags = this.context.getParsedFlags();
 
         const supportedMethods = [AuthMethod.Google, AuthMethod.Facebook, AuthMethod.Twitter, AuthMethod.Normal];
-        if (flags.method && !supportedMethods.includes(flags.method)){
-            throw new Error(`Unsupported --method provided: ${flags.method}. Supported methods: ${supportedMethods.join(', ')}`);
-        } else if (flags.method) {
-            this.socialProvider = flags.method;
+        if (this.flags.method && !supportedMethods.includes(this.flags.method)) {
+            throw new Error(`Unsupported --method provided: ${this.flags.method}. Supported methods: ${supportedMethods.join(', ')}`);
+        } else if (this.flags.method) {
+            this.socialProvider = this.flags.method;
         }
     }
 
     setAuthStrategy() {
-        const flags = this.context.getParsedFlags();
 
         switch (this.socialProvider) {
             case AuthMethod.Google: return this.authStrategy = new GoogleAuthStrategy();
             case AuthMethod.Facebook: return this.authStrategy = new FacebookAuthStrategy();
             case AuthMethod.Twitter: return this.authStrategy = new TwitterAuthStrategy();
-            case AuthMethod.Normal: return this.authStrategy = new NormalAuthStrategy(flags, this.result);
-            default: return this.authStrategy = new NormalAuthStrategy(flags, this.result);
+            case AuthMethod.Normal: return this.authStrategy = new NormalAuthStrategy(this.flags, this.result);
+            default: return this.authStrategy = new NormalAuthStrategy(this.flags, this.result);
         }
     }
 }

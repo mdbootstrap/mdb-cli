@@ -8,12 +8,13 @@ const sandbox = require('sinon').createSandbox();
 
 describe('Command: version', () => {
 
-    let command, context;
+    let command, context, helpSpy, getVersionStub, printResultStub;
 
     beforeEach(() => {
 
-        context = new Context('app', 'version', '', []);
-        command = new VersionCommand(context);
+        helpSpy = sandbox.spy(VersionCommand.prototype, 'help');
+        getVersionStub = sandbox.stub(AppReceiver.prototype, 'getVersion');
+        printResultStub = sandbox.stub(Command.prototype, 'printResult');
     });
 
     afterEach(() => {
@@ -24,12 +25,23 @@ describe('Command: version', () => {
 
     it('should call receiver getVersion method and print result', () => {
 
-        const getVersionStub = sandbox.stub(AppReceiver.prototype, 'getVersion');
-        const printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        context = new Context('app', 'version', '', []);
+        command = new VersionCommand(context);
 
         command.execute();
 
         sandbox.assert.calledOnce(getVersionStub);
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
+    });
+
+    it('should call help method and print result if --help flag is used', async () => {
+
+        context = new Context('app', 'version', '', ['-h']);
+        command = new VersionCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(helpSpy);
+        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 });

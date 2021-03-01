@@ -89,8 +89,6 @@ class BackendReceiver extends Receiver {
 
     async publish() {
 
-        this.result.liveAlert('blue', 'Info', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The real port that your app is available at, will be provided to you after successful publish.');
-
         if (this.flags.platform) {
             this.context.mdbConfig.setValue('backend.platform', this.flags.platform);
             this.context.mdbConfig.setValue('meta.type', 'backend');
@@ -100,6 +98,10 @@ class BackendReceiver extends Receiver {
 
         if (!platform) {
             throw new Error('--platform flag is required when publishing backend projects!');
+        }
+
+        if (platform.includes('node')) {
+            this.result.liveAlert('blue', 'Info', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The URL that your app is available at, will be provided to you after successful publish.');
         }
 
         const supportedPlatforms = config.backendTechnologies;
