@@ -49,7 +49,7 @@ describe('Receiver: blank', () => {
 
         it('should init blank project and return expected result', async () => {
 
-            const expectedResult = { type: 'alert', value: { title: 'Success', body: '' }, color: 'green' };
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Your project was initialized in fake/cwd/fakeName' }, color: 'green' };
             existsSyncStub.returns(false);
             eraseDirectoriesStub.resolves();
             createJenkinsfileStub.resolves();

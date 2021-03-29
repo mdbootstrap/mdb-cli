@@ -1,5 +1,6 @@
 'use strict';
 
+const { Separator } = require('inquirer');
 const open = require('open');
 const config = require('../config');
 const Receiver = require('./receiver');
@@ -8,6 +9,7 @@ const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
 const path = require('path');
+const fs = require('fs');
 
 class BackendReceiver extends Receiver {
 
@@ -82,9 +84,99 @@ class BackendReceiver extends Receiver {
             .sort((a, b) => a.editDate < b.editDate);
     }
 
-    async init() {
-        // TODO: implement
-        this.result.addTextLine('No starters available yet.');
+    async init(starterCode) {
+
+        const initInCurrentFolder = this.context.args.some(arg => arg === '.');
+        if (initInCurrentFolder && fs.readdirSync(process.cwd()).length !== 0) {
+            return this.result.addAlert('red', 'Error', 'Destination path `.` already exists and is not an empty directory.');
+        }
+        let projectPath = process.cwd();
+
+        const options = await this._getBackendStartersOptions();
+        const choices = this._buildBackendStartersList(options);
+
+        if (starterCode) {
+            this.starterCode = starterCode;
+            this.projectName = this.flags.name || this.starterCode;
+        } else {
+            await this.chooseStarter(choices, options);
+        }
+
+        if (!initInCurrentFolder) {
+            await this.checkProjectNameExists();
+            projectPath = path.join(process.cwd(), this.projectName);
+            try {
+                await helpers.eraseDirectories(projectPath);
+            } catch (err) {
+                return this.result.addAlert('red', 'Error', err);
+            }
+        }
+        this.result.addTextLine(`Project starter will be downloaded to ${projectPath} folder`);
+        const initResult = await this.downloadProjectStarter(projectPath);
+        this.result.addAlert('green', 'Success', initResult);
+        this.context.mdbConfig.setValue('projectName', this.projectName);
+        this.context.mdbConfig.setValue('meta.starter', this.starterCode);
+        this.context.mdbConfig.setValue('meta.type', 'backend');
+        this.context.mdbConfig.save(projectPath);
+        this.context._loadPackageJsonConfig(projectPath);
+        await helpers.createJenkinsfile(projectPath, this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test);
+    }
+
+    async chooseStarter(choices, options) {
+
+        let promptShownCount = 0;
+        do {
+            if (promptShownCount++ >= 10) {
+                return this.result.addTextLine('Please run `mdb starter ls` to see available packages.');
+            }
+            this.starterCode = await helpers.createListPrompt('Choose project to initialize', choices);
+            this.projectName = this.flags.name || this.starterCode;
+            const project = options.find(o => o.code === this.starterCode);
+            if (project.available) break;
+            else this.result.liveAlert('yellow', 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/my-orders/ and make sure it is available for you.`);
+        } while (promptShownCount <= 10);
+    }
+
+    async _getBackendStartersOptions() {
+        this.options.path = `/packages/starters?type=backend${!this.flags.all ? '&available=true' : ''}`;
+        const result = await this.http.get(this.options);
+        return JSON.parse(result.body);
+    }
+
+    _buildBackendStartersList(options) {
+        const starters = options.reduce((res, curr) => {
+            res[`${curr.category} ${curr.license}`] = res[`${curr.category} ${curr.license}`] || [];
+
+            res[`${curr.category} ${curr.license}`].push({
+                name: curr.displayName,
+                short: curr.code,
+                value: curr.code
+            });
+
+            return res;
+        }, {});
+
+        return Object.keys(starters).reduce((res, curr) => {
+            res.push(new Separator(`---- ${curr} ----`), ...starters[curr]);
+            return res;
+        }, []);
+    }
+
+    async checkProjectNameExists() {
+        const projectPath = path.join(process.cwd(), this.projectName);
+        if (fs.existsSync(projectPath)) {
+            const confirmed = await helpers.createConfirmationPrompt(`Folder ${this.projectName} already exists, do you want to rename project you are creating now?`, true);
+            if (confirmed) {
+                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
+                await this.checkProjectNameExists();
+            }
+        }
+    }
+
+    async downloadProjectStarter(projectPath) {
+        this.options.path = `/packages/download/${this.starterCode}`;
+        const result = await helpers.downloadFromFTP(this.http, this.options, projectPath);
+        return result;
     }
 
     async publish() {
@@ -100,7 +192,9 @@ class BackendReceiver extends Receiver {
             throw new Error('--platform flag is required when publishing backend projects!');
         }
 
-        if (platform.includes('node')) {
+        const isNodePlatform = platform.includes('node');
+
+        if (isNodePlatform) {
             this.result.liveAlert('blue', 'Info', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The URL that your app is available at, will be provided to you after successful publish.');
         }
 
@@ -110,7 +204,7 @@ class BackendReceiver extends Receiver {
         }
 
         const packageJsonEmpty = this.context.packageJsonConfig.name === undefined;
-        if (packageJsonEmpty) {
+        if (packageJsonEmpty && isNodePlatform) {
             this.result.liveTextLine('package.json file is required. Creating...');
             try {
                 const result = await this.createPackageJson();
@@ -136,6 +230,10 @@ class BackendReceiver extends Receiver {
                 this.result.addAlert('red', 'Error', e);
                 return;
             }
+        }
+
+        if (!this.getProjectName()) {
+            await this.askForProjectName();
         }
 
         const strategy = new FtpPublishStrategy(this.context, this.result);
@@ -391,6 +489,12 @@ class BackendReceiver extends Receiver {
         } catch (err) {
             this.result.addAlert('red', 'Error', `Could not run project ${projectName}: ${err.message}`);
         }
+    }
+
+    async askForProjectName() {
+        const projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
+        this.context.mdbConfig.setValue('projectName', projectName);
+        this.context.mdbConfig.save();
     }
 
     getProjectName() {
