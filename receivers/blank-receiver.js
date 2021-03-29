@@ -43,7 +43,7 @@ class BlankReceiver extends Receiver {
         }
         this.context.mdbConfig.setValue('projectName', this.context.packageJsonConfig.name);
         this.context.mdbConfig.save(projectPath);
-        this.result.addAlert('green', 'Success', result);
+        this.result.addAlert('green', 'Success', `Your project was initialized in ${projectPath}`);
     }
 
     async checkProjectNameExists() {

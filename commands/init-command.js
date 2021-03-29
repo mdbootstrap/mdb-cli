@@ -103,6 +103,10 @@ class InitCommand extends Command {
                 return this.result.addTextLine('Please run `mdb starter ls` to see available packages.');
             }
             this.starterCode = await helpers.createListPrompt('Choose project to initialize', choices);
+            if (this.starterCode === 'blank-starter') {
+                this.receiver = new BlankReceiver(ctx);
+                return;
+            }
             starter = options.find(o => o.code === this.starterCode);
             if (starter.available) break;
             else this.results.liveAlert('yellow', 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/my-orders/ and make sure it is available for you.`);
@@ -147,7 +151,7 @@ class InitCommand extends Command {
         return Object.keys(starters).reduce((res, curr) => {
             res.push(new Separator(`---- ${curr} ----`), ...starters[curr]);
             return res;
-        }, []);
+        }, [new Separator('---- Blank ----'), { name: 'Empty starter', value: 'blank-starter' }]);
     }
 
     help() {
