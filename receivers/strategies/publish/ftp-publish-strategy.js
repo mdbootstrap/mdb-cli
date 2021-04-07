@@ -85,12 +85,11 @@ class FtpPublishStrategy {
             if (fs.existsSync(appJsPath)) {
 
                 let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/dist'`);
+                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/${username}/${packageJson.name}/dist'`);
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
             }
 
-            const projectDomain = this.metaData.domain ? this.metaData.domain : `${packageJson.name}.${config.projectsDomain}`;
-            packageJson.homepage = `https://${projectDomain}/dist/`;
+            packageJson.homepage = `https://${config.projectsDomain}/${username}/${packageJson.name}/dist/`;
             await helpers.serializeJsonFile('package.json', packageJson);
 
             result = await this.runBuildScript();
@@ -98,7 +97,7 @@ class FtpPublishStrategy {
             if (fs.existsSync(appJsPath)) {
 
                 let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                const regex = new RegExp(`<Router basename='/dist'`, 'g');
+                const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}/dist'`, 'g');
                 appJsFile = appJsFile.replace(regex, '<Router');
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
             }

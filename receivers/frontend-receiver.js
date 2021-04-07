@@ -50,7 +50,7 @@ class FrontendReceiver extends Receiver {
             projects = projects.map(p => {
 
                 const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
-                const projectURL = p.domainName ? `https://${p.domainName}` : `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`;
+                const projectURL = `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`;
 
                 return {
                     'Project Name': p.projectName,
