@@ -19,6 +19,9 @@ class ConfigReceiver extends Receiver {
             this.result.addTextLine(`Config key '${name}' has been deleted.`);
         } else {
             this.context.mdbConfig.setValue(name, value);
+            if (name === 'domain') {
+                this.result.addAlert('yellow', 'Warning!', 'To update the domain name on the remote server, you must publish your project again.');
+            }
             this.result.addTextLine(`Config value '${name}' has been set to '${value}'.`);
         }
 
