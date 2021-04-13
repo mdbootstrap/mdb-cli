@@ -139,8 +139,13 @@ class DatabaseReceiver extends Receiver {
         this.options.headers['Content-Type'] = 'application/json';
         this.options.path = '/databases';
 
-        let response = await this.http.post(this.options);
-        response = JSON.parse(response.body);
+        let response;
+        try {
+            response = await this.http.post(this.options);
+            response = JSON.parse(response.body);
+        } catch (err) {
+            return this.result.addAlert('red', 'Error', `Could not create database: ${err.message || err}`);
+        }
 
         const mysqlMsg = `You can manage your database with phpMyAdmin at https://phpmyadmin.mdbgo.com/`;
         const mongoMsg = `To connect to this database you need to download Robo3T or another MongoDB client`;
