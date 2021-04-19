@@ -575,33 +575,43 @@ describe('Receiver: frontend', () => {
             promptStub = sandbox.stub(helpers, 'createTextPrompt');
             sandbox.stub(helpers, 'serializeJsonFile').resolves();
             context = new Context('frontend', 'rename', '', []);
-            sandbox.stub(context, '_loadPackageJsonConfig');
             sandbox.stub(context.mdbConfig, 'setValue');
             sandbox.stub(context.mdbConfig, 'save');
             receiver = new FrontendReceiver(context);
-            sandbox.stub(receiver, 'clearResult');
         });
 
         it('should rename project and return expected result if name defined in package.json', async () => {
 
+            sandbox.stub(receiver.http, 'post').resolves({ body: JSON.stringify({ message: 'Fake message' }) });
             receiver.context.packageJsonConfig = { name: 'old-name' };
             promptStub.resolves(fakeName);
 
-            const result = await receiver.rename();
+            await receiver.rename();
 
-            expect(result).to.be.eq(true);
             expect(receiver.result.messages).to.deep.include(expectedResult);
         });
 
         it('should rename project and return expected result if no package.json', async () => {
 
+            sandbox.stub(receiver.http, 'post').resolves({ body: JSON.stringify({ message: 'Fake message' }) });
             receiver.context.packageJsonConfig = {};
             receiver.flags['new-name'] = fakeName;
 
-            const result = await receiver.rename();
+            await receiver.rename();
 
-            expect(result).to.be.eq(true);
             expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if error', async () => {
+
+            const expectedRes = { type: 'alert', value: { title: 'Error', body: 'Could not rename old-name: Fake error message' }, color: 'red' };
+            sandbox.stub(receiver.http, 'post').rejects({ message: 'Fake error message' });
+            receiver.context.packageJsonConfig = { name: 'old-name' };
+            receiver.flags['new-name'] = fakeName;
+
+            await receiver.rename(receiver.result.messages);
+
+            expect(receiver.result.messages).to.deep.include(expectedRes);
         });
     });
 

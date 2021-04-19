@@ -514,11 +514,10 @@ describe('Receiver: backend', () => {
             promptStub = sandbox.stub(helpers, 'createTextPrompt');
             sandbox.stub(helpers, 'serializeJsonFile').resolves();
             context = new Context('backend', 'rename', '', []);
-            sandbox.stub(context, '_loadPackageJsonConfig');
             sandbox.stub(context.mdbConfig, 'setValue');
             sandbox.stub(context.mdbConfig, 'save');
             receiver = new BackendReceiver(context);
-            sandbox.stub(receiver, 'clearResult');
+            sandbox.stub(receiver.http, 'post').resolves({ body: JSON.stringify({ message: 'Fake message' }) });
         });
 
         it('should rename project and return expected result if name defined in package.json', async () => {
@@ -526,9 +525,8 @@ describe('Receiver: backend', () => {
             receiver.context.packageJsonConfig = { name: 'old-name' };
             promptStub.resolves(fakeName);
 
-            const result = await receiver.rename();
+            await receiver.rename();
 
-            expect(result).to.be.eq(true);
             expect(receiver.result.messages).to.deep.include(expectedResult);
         });
 
@@ -537,9 +535,8 @@ describe('Receiver: backend', () => {
             receiver.context.packageJsonConfig = {};
             receiver.flags['new-name'] = fakeName;
 
-            const result = await receiver.rename();
+            await receiver.rename();
 
-            expect(result).to.be.eq(true);
             expect(receiver.result.messages).to.deep.include(expectedResult);
         });
     });

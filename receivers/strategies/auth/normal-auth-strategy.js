@@ -14,7 +14,6 @@ class NormalAuthStrategy extends AuthStrategy {
         this.result = result;
         this.flags = flags;
         this.options = {
-            port: config.port,
             hostname: config.host,
             path: '/auth/login',
             headers: {

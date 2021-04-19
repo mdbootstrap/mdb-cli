@@ -15,6 +15,7 @@ describe('Receiver: database', () => {
         username: 'fakeUsername',
         database: 'mongodb',
         name: 'fakeDbName',
+        host: 'fakehost.mdbgo.com',
         description: 'fakeDesc',
         connectionString: 'mongodb://fakeUsername:password@mdbgo.dev:21017/fakeDbName'
     };
@@ -52,6 +53,7 @@ describe('Receiver: database', () => {
                 type: 'table',
                 value: [{
                     'Connection String': 'mongodb://fakeUsername:password@mdbgo.dev:21017/fakeDbName',
+                    'Hostname': 'fakehost.mdbgo.com',
                     'Database': 'mongodb',
                     'Description': 'fakeDesc',
                     'Name': 'fakeDbName',

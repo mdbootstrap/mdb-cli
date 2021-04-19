@@ -166,7 +166,6 @@ class FtpPublishStrategy {
             const archive = helpers.archiveProject('zip', { zlib: { level: 9 } });
             const http = new HttpWrapper();
             const request  = http.createRequest({
-                port: config.port,
                 hostname: config.host,
                 path: '/project/publish',
                 method: 'POST',

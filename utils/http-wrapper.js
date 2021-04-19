@@ -3,6 +3,7 @@
 const config = require('../config');
 const packageJson = require('../package.json');
 const http = config.env === 'dev' ? require('http') : require('https');
+const apiPath = config.env === 'dev' ? '/api-tst' : '/api';
 
 class HttpWrapper {
 
@@ -12,6 +13,9 @@ class HttpWrapper {
 
         if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
         else options.headers = { 'x-mdb-cli-version': packageJson.version };
+
+        if (options.hostname === config.host)
+            options.path = `${apiPath}${options.path}`;
 
         return http.request(options, response => {
 
@@ -26,6 +30,9 @@ class HttpWrapper {
 
         if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
         else options.headers = { 'x-mdb-cli-version': packageJson.version };
+
+        if (options.hostname === config.host)
+            options.path = `${apiPath}${options.path}`;
 
         return http.request(options, response => {
 
@@ -54,6 +61,9 @@ class HttpWrapper {
 
         if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
         else options.headers = { 'x-mdb-cli-version': packageJson.version };
+
+        if (options.hostname === config.host)
+            options.path = `${apiPath}${options.path}`;
 
         return new Promise((resolve, reject) => {
 

@@ -123,6 +123,19 @@ describe('Command: init', () => {
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.receiver.result]);
     });
 
+    it('should call startWizard method and print form if --wizard flag provided', async () => {
+
+        const wizzardStub = sandbox.spy(InitCommand.prototype, 'startWizard');
+        context = new Context('', 'init', '', ['--wizard']);
+        command = new InitCommand(context);
+
+        command.receiver = { init: initStub };
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(wizzardStub);
+    });
+
     it('should call help method if receiver is undefined', async () => {
 
         const helpMethodSpy = sandbox.spy(InitCommand.prototype, 'help');
