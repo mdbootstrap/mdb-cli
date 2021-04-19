@@ -14,7 +14,6 @@ class RepoReceiver extends Receiver {
         this.context.authenticateUser();
 
         this.options = {
-            port: config.port,
             hostname: config.host,
             path: '/repo/create',
             headers: { Authorization: `Bearer ${this.context.userToken}`, 'Content-Type': 'application/json' }

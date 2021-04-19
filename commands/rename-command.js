@@ -1,10 +1,10 @@
 'use strict';
 
 const Command = require('./command');
-const FrontendReceiver = require('../receivers/frontend-receiver');
 const BackendReceiver = require('../receivers/backend-receiver');
+const FrontendReceiver = require('../receivers/frontend-receiver');
+const WordpressReceiver = require('../receivers/wordpress-receiver');
 const Entity = require('../models/entity');
-const helpers = require('../helpers');
 
 
 class RenameCommand extends Command {
@@ -20,21 +20,8 @@ class RenameCommand extends Command {
     async execute() {
 
         if (this.receiver.flags.help) return this.help();
-        const projectName = this.receiver.getProjectName();
-        const confirmed = await helpers.createConfirmationPrompt(`Project ${projectName} will be deleted and then published again. Proceed?`, true);
-        if (confirmed) {
-            const deleted = await this.receiver.delete(projectName);
-            this.printResult([this.receiver.result]);
-            if (deleted) {
-                const renamed = await this.receiver.rename();
-                this.printResult([this.receiver.result]);
-                if (renamed) {
-                    this.receiver.clearResult();
-                    await this.receiver.publish();
-                    this.printResult([this.receiver.result]);
-                }
-            }
-        }
+        await this.receiver.rename();
+        this.printResult([this.receiver.result]);
     }
 
     setReceiver(ctx) {
@@ -57,6 +44,10 @@ class RenameCommand extends Command {
                 this.receiver = new FrontendReceiver(ctx);
                 break;
 
+            case Entity.Wordpress:
+                this.receiver = new WordpressReceiver(ctx);
+                break;
+
             default:
                 ctx.entity = Entity.Frontend;
                 this.receiver = new FrontendReceiver(ctx);
@@ -67,9 +58,9 @@ class RenameCommand extends Command {
     }
 
     help() {
-        this.results.addTextLine('Change the project name locally and on public server. Project will be deleted and then published again.');
+        this.results.addTextLine('Change the project name locally and on public server.');
         this.results.addTextLine('\nUsage: mdb [entity] rename');
-        this.results.addTextLine('\nAvailable entities: frontend (default), backend');
+        this.results.addTextLine('\nAvailable entities: frontend (default), backend, wordpress');
         this.results.addTextLine('\nFlags:');
         this.results.addTextLine('  -n, --name \tProject name');
         this.results.addTextLine('  --new-name \tNew project name');

@@ -19,7 +19,6 @@ class BackendReceiver extends Receiver {
         this.context.authenticateUser();
 
         this.options = {
-            port: config.port,
             hostname: config.host,
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
@@ -432,21 +431,6 @@ class BackendReceiver extends Receiver {
         }
     }
 
-    async rename() {
-        this.clearResult();
-        const newName = this.flags['new-name'] || await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
-        if (this.context.packageJsonConfig.name) {
-            const packageJsonPath = path.join(process.cwd(), 'package.json');
-            await helpers.serializeJsonFile(packageJsonPath, { ...this.context.packageJsonConfig, ...{ name: newName } });
-        }
-        this.context.mdbConfig.setValue('projectName', newName);
-        this.context.mdbConfig.setValue('meta.type', 'backend');
-        this.context.mdbConfig.save();
-        this.context._loadPackageJsonConfig();
-        this.result.addAlert('green', 'Success', `Project name successfully changed to ${newName}`);
-        return true;
-    }
-
     async restart() {
         const projects = await this.getBackendProjects();
         if (projects.length === 0) {
@@ -495,10 +479,6 @@ class BackendReceiver extends Receiver {
         const projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
         this.context.mdbConfig.setValue('projectName', projectName);
         this.context.mdbConfig.save();
-    }
-
-    getProjectName() {
-        return this.context.packageJsonConfig.name || this.context.mdbConfig.getValue('projectName');
     }
 }
 

@@ -24,6 +24,11 @@ class InitCommand extends Command {
 
         this.starterCode = '';
 
+        this.context.registerNonArgFlags(['wizard']);
+        this.context.registerFlagExpansions({
+            '-w': '--wizard'
+        });
+
         this.setReceiver();
     }
 
@@ -32,7 +37,14 @@ class InitCommand extends Command {
         const flags = this.context.getParsedFlags();
         if (flags.help) return this.help();
 
-        if (this.receiver) {
+        if (flags.wizard) {
+            await this.startWizard();
+
+            if (this.receiver)
+                await this.receiver.init(this.starterCode);
+
+            this.printResult([this.receiver ? this.receiver.result : this.results]);
+        } else if (this.receiver) {
 
             await this.receiver.init();
             this.printResult([this.receiver.result]);
@@ -86,6 +98,140 @@ class InitCommand extends Command {
         }
     }
 
+    async startWizard() {
+
+        const projectTypeChoices = await this._getProjectTypeOptions();
+        const projectType = this.entity || await helpers.createListPrompt('Choose project type:', projectTypeChoices);
+
+        switch (projectType) {
+            case 'frontend':
+                await this.frontendWizardForm();
+                break;
+            case 'backend':
+                await this.backendWizardForm();
+                break;
+            case 'blank':
+                this.entity = 'blank';
+                this.setReceiver();
+                break;
+            case 'wordpress':
+                await this.wordpressWizardForm();
+                break;
+        }
+    }
+
+    _getProjectTypeOptions() {
+
+        return [
+            { name: 'Frontend', short: 'Frontend', value: 'frontend' },
+            { name: 'Backend', short: 'Backend', value: 'backend' },
+            { name: 'Blank', short: 'Blank', value: 'blank' },
+            { name: 'Wordpress', short: 'Wordpress', value: 'wordpress' }
+        ];
+    }
+
+    async frontendWizardForm() {
+
+        const frontChoices = [
+            { name: 'Standard', short: 'Standard', value: 'Standard' },
+            { name: 'jQuery', short: 'jQuery', value: 'jQuery' },
+            { name: 'Angular', short: 'Angular', value: 'Angular' },
+            { name: 'React', short: 'React', value: 'React' },
+            { name: 'Vue', short: 'Vue', value: 'Vue' },
+        ];
+        const frontTechnology = await helpers.createListPrompt('Choose technology:', frontChoices);
+
+        const licenseChoices = [
+            { name: 'Free', short: 'Free', value: 'Free' },
+        ];
+
+        if (frontTechnology !== 'Standard')
+            licenseChoices.push({ name: 'Pro', short: 'Pro', value: 'Pro' });
+        else
+            licenseChoices.push({ name: 'Essential', short: 'Essential', value: 'Essential' }, { name: 'Advanced', short: 'Advanced', value: 'Advanced' });
+
+        const licenseType = await helpers.createListPrompt('Choose license:', licenseChoices);
+
+        const versionChoices = [
+            frontTechnology !== 'Standard' ?
+                { name: 'MDB 4', short: 'MDB 4', value: 'MDB4' } :
+                { name: 'MDB 5', short: 'MDB 5', value: 'MDB5' }
+        ];
+
+        const technology = 'frontend';
+        const mdbVersion = await helpers.createListPrompt('Choose MDB version:', versionChoices);
+        const availableStarters = await this._getStartersOptions([], technology);
+
+        const starter = availableStarters.find(o => o.license === licenseType && o.category === mdbVersion && o.type === technology && o.displayName === frontTechnology);
+
+        if (!starter.available) {
+            return this.results.addAlert('red', 'Error', 'You cannot create project with provided specification. Please visit https://mdbootstrap.com/my-orders/ or run `mdb starters -a` and make sure it is available for you.');
+        } else if (!starter) {
+            return this.results.addAlert('red', 'Error', 'We could not initialize any starter with given criteria. Please run `mdb [entity] init` and choose one of the available starters.');
+        }
+
+        this.starterCode = starter.code;
+        this.entity = technology;
+        this.receiver = new FrontendReceiver(this.context);
+    }
+
+    async backendWizardForm() {
+
+        const technology = 'backend';
+        const backendChoices = [
+            { name: 'Node', short: 'Node', value: 'node' },
+            { name: 'PHP', short: 'PHP', value: 'php' },
+        ];
+
+        const backendTechnology = await helpers.createListPrompt('Choose technology:', backendChoices);
+        const availableStarters = await this._getStartersOptions([], technology);
+        const backendStarters = availableStarters
+            .filter(o => o.type === technology && o.code.includes(backendTechnology) && o.available)
+            .map(o => ({ name: o.displayName, short: o.code, value: o.code }));
+
+        if (!backendStarters.length) {
+            return this.results.addAlert('red', 'Error', 'You cannot create project with provided specification. Please visit https://mdbootstrap.com/my-orders/ or run `mdb starters -a` and make sure it is available for you.');
+        }
+
+        const starter = await helpers.createListPrompt('Choose starter:', backendStarters);
+
+        if (!starter) {
+            return this.results.addAlert('red', 'Error', 'We could not initialize any starter with given criteria. Please run `mdb [entity] init` and choose one of the available starters.');
+        }
+
+        this.starterCode = starter;
+        this.entity = technology;
+        this.receiver = new BackendReceiver(this.context);
+    }
+    async wordpressWizardForm() {
+
+        const technology = 'wordpress';
+        const licenseChoices = [
+            { name: 'Free', short: 'Free', value: 'Free' },
+            { name: 'Essential', short: 'Essential', value: 'Essential' }
+        ];
+
+        const licenseType = await helpers.createListPrompt('Choose license:', licenseChoices);
+        const availableStarters = await this._getStartersOptions([], technology);
+        const wordpressStarters = availableStarters
+            .filter(o => o.type === technology && o.license === licenseType && o.available)
+            .map(o => ({ name: o.displayName, short: o.code, value: o.code }));
+
+        if (!wordpressStarters.length) {
+            return this.results.addAlert('red', 'Error', 'You cannot create project with provided specification. Please visit https://mdbootstrap.com/my-orders/ or run `mdb starters -a` and make sure it is available for you.');
+        }
+
+        const starter = await helpers.createListPrompt('Choose starter:', wordpressStarters);
+
+        if (!starter) {
+            return this.results.addAlert('red', 'Error', 'We could not initialize any starter with given criteria. Please run `mdb [entity] init` and choose one of the available starters.');
+        }
+
+        this.starterCode = starter;
+        this.entity = technology;
+        this.receiver = new WordpressReceiver(this.context);
+    }
+
     async detectReceiver() {
 
         this.results.on('mdb.cli.live.output', msg => this.printResult([msg]));
@@ -120,14 +266,13 @@ class InitCommand extends Command {
         else if (entity === 'wordpress') this.receiver = new WordpressReceiver(ctx);
     }
 
-    async _getStartersOptions(flags) {
+    async _getStartersOptions(flags, technology = null) {
 
         this.context.authenticateUser();
 
         const options = {
-            port: config.port,
             hostname: config.host,
-            path: `/packages/starters?${!flags.all ? 'available=true' : ''}`,
+            path: `/packages/starters?${technology ? 'type=' + technology + '&' : ''}${!flags.all ? 'available=true' : ''}`,
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
         const result = await new Receiver(this.context).http.get(options);
@@ -160,8 +305,9 @@ class InitCommand extends Command {
         this.results.addTextLine('\nUsage: mdb [entity] init [options]');
         this.results.addTextLine('\nAvailable entities: starter, blank, frontend, backend, wordpress, database, repo');
         this.results.addTextLine('\nOptions:');
-        this.results.addTextLine('   -n, --name     \tSet the name of your project right after initializing it');
-        this.results.addTextLine(`  -db, --database \tSet type of database. Avaliable options: ${config.databases.join(', ')}`);
+        this.results.addTextLine('   -n, --name      \tSet the name of your project right after initializing it');
+        this.results.addTextLine(`   -db, --database \tSet type of database. Avaliable options: ${config.databases.join(', ')}`);
+        this.results.addTextLine('   -w, --wizard   \tCreate new project with wizard');
         this.printResult([this.results]);
     }
 }

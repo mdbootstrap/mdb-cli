@@ -16,7 +16,6 @@ class OrderReceiver extends Receiver {
         this.result.liveTextLine('Fetching orders...');
 
         const result = await this.http.get({
-            port: config.port,
             hostname: config.host,
             path: '/orders/read',
             headers: { Authorization: `Bearer ${this.context.userToken}` }

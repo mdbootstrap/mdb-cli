@@ -20,7 +20,6 @@ class WordpressReceiver extends Receiver {
         this.context.authenticateUser();
 
         this.options = {
-            port: config.port,
             hostname: config.host,
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };

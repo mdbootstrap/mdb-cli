@@ -13,7 +13,6 @@ class DatabaseReceiver extends Receiver {
         this.context.authenticateUser();
 
         this.options = {
-            port: config.port,
             hostname: config.host,
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
@@ -41,6 +40,7 @@ class DatabaseReceiver extends Receiver {
                 'Database': db.database,
                 'Name': db.name,
                 'Username': db.username,
+                'Hostname': db.host,
                 'Connection String': db.connectionString,
                 'Description': db.description
             }));

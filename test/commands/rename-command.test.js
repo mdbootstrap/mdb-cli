@@ -5,6 +5,7 @@ const Command = require('../../commands/command');
 const RenameCommand = require('../../commands/rename-command');
 const BackendReceiver = require('../../receivers/backend-receiver');
 const FrontendReceiver = require('../../receivers/frontend-receiver');
+const WordpressReceiver = require('../../receivers/wordpress-receiver');
 const sandbox = require('sinon').createSandbox();
 const helpers = require('../../helpers');
 
@@ -37,6 +38,15 @@ describe('Command: rename', () => {
 
             expect(command.receiver).to.be.an.instanceOf(FrontendReceiver);
             expect(command.receiver.context.entity).to.be.eq('frontend');
+        });
+
+        it('if entity is wordpress', () => {
+
+            context = new Context('wordpress', 'rename', '', []);
+            command = new RenameCommand(context);
+
+            expect(command.receiver).to.be.an.instanceOf(WordpressReceiver);
+            expect(command.receiver.context.entity).to.be.eq('wordpress');
         });
 
         it('if entity is undefined', () => {
@@ -86,58 +96,15 @@ describe('Command: rename', () => {
             publishStub = sandbox.stub(command.receiver, 'publish');
         });
 
-        it('should rename project', async () => {
+        it('should rename project and print result', async () => {
 
             promptStub.resolves(true);
-            deleteStub.resolves(true);
             renameStub.resolves(true);
-            publishStub.resolves();
 
             await command.execute();
 
-            sandbox.assert.calledOnceWithExactly(deleteStub, 'fake-name');
             sandbox.assert.calledOnce(renameStub);
-            sandbox.assert.calledOnce(publishStub);
-            sandbox.assert.calledThrice(printResultStub);
-        });
-
-        it('should abort if user does not confirm', async () => {
-
-            promptStub.resolves(false);
-
-            await command.execute();
-
-            sandbox.assert.notCalled(deleteStub);
-            sandbox.assert.notCalled(renameStub);
-            sandbox.assert.notCalled(publishStub);
-            sandbox.assert.notCalled(printResultStub);
-        });
-
-        it('should abort if deletion fails', async () => {
-
-            promptStub.resolves(true);
-            deleteStub.resolves(false);
-
-            await command.execute();
-
-            sandbox.assert.calledOnceWithExactly(deleteStub, 'fake-name');
-            sandbox.assert.notCalled(renameStub);
-            sandbox.assert.notCalled(publishStub);
             sandbox.assert.calledOnce(printResultStub);
-        });
-
-        it('should abort if rename fails', async () => {
-
-            promptStub.resolves(true);
-            deleteStub.resolves(true);
-            renameStub.resolves(false);
-
-            await command.execute();
-
-            sandbox.assert.calledOnceWithExactly(deleteStub, 'fake-name');
-            sandbox.assert.calledOnce(renameStub);
-            sandbox.assert.notCalled(publishStub);
-            sandbox.assert.calledTwice(printResultStub);
         });
 
         it('should call help method and print result if --help flag is used', async () => {
