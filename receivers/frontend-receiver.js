@@ -49,7 +49,7 @@ class FrontendReceiver extends Receiver {
             projects = projects.map(p => {
 
                 const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
-                const projectURL = `https://${config.projectsDomain}/${p.userNicename}/${p.projectName}/`;
+                const projectURL = `https://${config.projectsDomain}/${p.user.userNicename}/${p.projectName}/`;
 
                 return {
                     'Project Name': p.projectName,
@@ -306,7 +306,7 @@ class FrontendReceiver extends Receiver {
         try {
 
             if (project.repoUrl && !this.flags.ftp) {
-                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.userNicename}@`);
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userNicename}@`);
                 result = await this.git.clone(repoUrlWithNicename);
             } else {
                 await helpers.eraseDirectories(path.join(process.cwd(), projectName));

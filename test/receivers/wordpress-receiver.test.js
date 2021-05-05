@@ -14,7 +14,7 @@ describe('Receiver: wordpress', () => {
 
     const fakeProject = {
         projectId: 1,
-        userNicename: 'fakeuser',
+        user: { userNicename: 'fakeuser' },
         projectName: 'fakeproject',
         domainName: null,
         publishDate: '2019-06-24T06:49:53.000Z',
@@ -64,7 +64,7 @@ describe('Receiver: wordpress', () => {
 
             const fakeProject1 = {
                 projectId: 1,
-                userNicename: 'fakeuser1',
+                user: { userNicename: 'fakeuser1' },
                 projectName: 'fakeproject1',
                 domainName: null,
                 publishDate: '2019-06-24T06:49:53.000Z',
@@ -75,7 +75,7 @@ describe('Receiver: wordpress', () => {
             };
             const fakeProject2 = {
                 projectId: 2,
-                userNicename: 'fakeuser2',
+                user: { userNicename: 'fakeuser2' },
                 projectName: 'fakeproject2',
                 domainName: null,
                 publishDate: '2019-06-24T06:49:53.000Z',

@@ -111,7 +111,7 @@ describe('Command: get', () => {
             const fakeProject = {
                 projectName: 'fakeProjectName',
                 repoUrl: 'https://git.mdbgo.com/fakeuser/fakeproject.git',
-                userNicename: 'fakeUser'
+                user: { userNicename: 'fakeUser' }
             };
 
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeProjectName');
