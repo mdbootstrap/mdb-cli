@@ -339,7 +339,7 @@ class BackendReceiver extends Receiver {
         try {
 
             if (project.repoUrl && !this.flags.ftp) {
-                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.userNicename}@`);
+                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userNicename}@`);
                 result = await this.git.clone(repoUrlWithNicename);
             } else {
                 await helpers.eraseDirectories(path.join(process.cwd(), projectName));
