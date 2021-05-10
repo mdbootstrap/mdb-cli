@@ -28,7 +28,7 @@ class ConfigCommand extends Command {
                 this.printResult([this.databaseReceiver.result]);
                 break;
             case Entity.Config:
-                this.configReceiver.changeConfig();
+                await this.configReceiver.changeConfig();
                 this.printResult([this.configReceiver.result]);
                 break;
             default:

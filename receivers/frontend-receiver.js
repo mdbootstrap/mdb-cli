@@ -5,6 +5,7 @@ const open = require('open');
 const config = require('../config');
 const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
+const CliStatus = require('../models/cli-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const PipelinePublishStrategy = require('./strategies/publish/pipeline-publish-strategy');
 const helpers = require('../helpers');
@@ -26,7 +27,7 @@ class FrontendReceiver extends Receiver {
         this.projectName = '';
         this.starterCode = '';
 
-        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help']);
+        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help', 'override']);
         this.context.registerFlagExpansions({
             '-t': '--test',
             '-o': '--open',
@@ -36,6 +37,8 @@ class FrontendReceiver extends Receiver {
 
         this.flags = this.context.getParsedFlags();
         this.args = this.context.args;
+
+        this._publishRetries = 0;
     }
 
     async list() {
@@ -49,7 +52,7 @@ class FrontendReceiver extends Receiver {
             projects = projects.map(p => {
 
                 const deletedFromFTP = p.projectMeta.some(m => m.metaKey === '_uploaded_to_ftp' && m.metaValue === '0');
-                const projectURL = `https://${config.projectsDomain}/${p.user.userNicename}/${p.projectName}/`;
+                const projectURL = p.domainName ? `https://${p.domainName}` : `https://${config.projectsDomain}/${p.user.userNicename}/${p.projectName}/`;
 
                 return {
                     'Project Name': p.projectName,
@@ -110,6 +113,7 @@ class FrontendReceiver extends Receiver {
         this.context.mdbConfig.setValue('projectName', this.projectName);
         this.context.mdbConfig.setValue('meta.starter', this.starterCode);
         this.context.mdbConfig.setValue('meta.type', 'frontend');
+        this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
         this.context.mdbConfig.save(projectPath);
         this.context._loadPackageJsonConfig(projectPath);
         await helpers.createJenkinsfile(projectPath, this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test);
@@ -202,6 +206,11 @@ class FrontendReceiver extends Receiver {
             }
         }
 
+        if (!this.context.mdbConfig.getValue('hash')) {
+            this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
+            this.context.mdbConfig.save();
+        }
+
         if (this.flags.ftp || this.context.mdbConfig.getValue('publishMethod') === 'ftp') {
             const strategy = new FtpPublishStrategy(this.context, this.result);
             await this._handlePublication(strategy);
@@ -228,20 +237,6 @@ class FrontendReceiver extends Receiver {
         }
     }
 
-    async _handlePublication(strategy) {
-
-        try {
-            const response = await strategy.publish();
-
-            const { message, url } = JSON.parse(response.body);
-            this.result.addTextLine(message);
-
-            if (this.flags.open && !!url) open(url);
-        } catch (e) {
-            this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
-        }
-    }
-
     async createPackageJson(cwd) {
         await this.context.loadPackageManager();
         return this.context.packageManager.init(cwd);
@@ -250,6 +245,36 @@ class FrontendReceiver extends Receiver {
     async runTests() {
         await this.context.loadPackageManager();
         return this.context.packageManager.test();
+    }
+
+    async _handlePublication(strategy) {
+
+        this._publishRetries++;
+        if (this._publishRetries > 5) {
+            return this.result.addAlert('red', 'Error', 'Too many retries. Try again running the publish command.');
+        }
+
+        try {
+            const response = await strategy.publish();
+
+            const { message, url } = JSON.parse(response.body);
+            this.result.addTextLine(message);
+            this.result.addTextLine('');
+            this.result.addAlert('blue', 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
+
+            if (this.flags.open && !!url) open(url);
+        } catch (e) {
+            if (e.statusCode === CliStatus.CONFLICT && e.message.includes('project name')) {
+                this.result.liveAlert('red', 'Error', e.message);
+                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
+                this.context.setPackageJsonValue('name', this.projectName);
+                this.context.mdbConfig.setValue('projectName', this.projectName);
+                this.context.mdbConfig.save();
+                await this._handlePublication(strategy);
+            } else {
+                this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
+            }
+        }
     }
 
     async delete(projectToDelete = this.flags.name) {
@@ -261,7 +286,7 @@ class FrontendReceiver extends Receiver {
 
         const choices = projects.map(p => ({ name: p.projectName }));
         const projectName = projectToDelete || await helpers.createListPrompt('Choose project', choices);
-        const projectExists = projects.some(p => p.projectName == projectName);
+        const projectExists = projects.some(p => p.projectName === projectName);
         if (!projectExists) {
             this.result.addTextLine(`Project ${projectName} not found.`);
             return false;

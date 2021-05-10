@@ -2,7 +2,7 @@
 
 const config = require('../config');
 const packageJson = require('../package.json');
-const http = config.env === 'dev' ? require('http') : require('https');
+const http = require('https');
 const apiPath = config.env === 'dev' ? '/api-tst' : '/api';
 
 class HttpWrapper {

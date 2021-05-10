@@ -5,6 +5,7 @@ const open = require('open');
 const config = require('../config');
 const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
+const CliStatus = require('../models/cli-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
@@ -23,7 +24,7 @@ class BackendReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['follow', 'ftp', 'ftp-only', 'open', 'remove', 'test', 'help']);
+        this.context.registerNonArgFlags(['follow', 'ftp', 'ftp-only', 'open', 'remove', 'test', 'help', 'override']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
@@ -36,6 +37,8 @@ class BackendReceiver extends Receiver {
 
         this.flags = this.context.getParsedFlags();
         this.args = this.context.args;
+
+        this._publishRetries = 0;
     }
 
     async list() {
@@ -116,6 +119,7 @@ class BackendReceiver extends Receiver {
         this.context.mdbConfig.setValue('projectName', this.projectName);
         this.context.mdbConfig.setValue('meta.starter', this.starterCode);
         this.context.mdbConfig.setValue('meta.type', 'backend');
+        this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
         this.context.mdbConfig.save(projectPath);
         this.context._loadPackageJsonConfig(projectPath);
         await helpers.createJenkinsfile(projectPath, this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test);
@@ -185,6 +189,12 @@ class BackendReceiver extends Receiver {
             this.context.mdbConfig.setValue('meta.type', 'backend');
             this.context.mdbConfig.save();
         }
+
+        if (!this.context.mdbConfig.getValue('hash')) {
+            this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
+            this.context.mdbConfig.save();
+        }
+
         const platform = this.flags.platform || this.context.mdbConfig.getValue('backend.platform');
 
         if (!platform) {
@@ -235,21 +245,7 @@ class BackendReceiver extends Receiver {
             await this.askForProjectName();
         }
 
-        const strategy = new FtpPublishStrategy(this.context, this.result);
-
-        try {
-            const response = await strategy.publish();
-
-            const { message, url } = JSON.parse(response.body);
-            this.result.addTextLine(message);
-
-            if (this.flags.open && !!url) open(url);
-        } catch (e) {
-            this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
-            return;
-        }
-
-        this.result.addAlert('blue', 'Info', 'Since we need to install dependencies and run your app, it may take a few moments until it will be available.');
+        await this._handlePublication(packageJsonEmpty, isNodePlatform);
     }
 
     async createPackageJson() {
@@ -260,6 +256,46 @@ class BackendReceiver extends Receiver {
     async runTests() {
         await this.context.loadPackageManager();
         return this.context.packageManager.test();
+    }
+
+    async _handlePublication(packageJsonEmpty, isNodePlatform) {
+
+        this._publishRetries++;
+        if (this._publishRetries > 5) {
+            return this.result.addAlert('red', 'Error', 'Too many retries. Try again running the publish command.');
+        }
+
+        const strategy = new FtpPublishStrategy(this.context, this.result);
+
+        try {
+            const response = await strategy.publish();
+
+            const { message, url } = JSON.parse(response.body);
+            this.result.addTextLine(message);
+
+            if (this.flags.open && !!url) open(url);
+        } catch (e) {
+            if (e.statusCode === CliStatus.CONFLICT && e.message.includes('project name')) {
+                this.result.liveAlert('red', 'Error', e.message);
+                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
+
+                if (!packageJsonEmpty && isNodePlatform) {
+                    this.context.setPackageJsonValue('name', this.projectName);
+                }
+
+                this.context.mdbConfig.setValue('projectName', this.projectName);
+                this.context.mdbConfig.save();
+                await this._handlePublication(packageJsonEmpty, isNodePlatform);
+            } else {
+                this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
+            }
+
+            return;
+        }
+
+        this.result.addAlert('blue', 'Info', 'Since we need to install dependencies and run your app, it may take a few moments until it will be available.');
+        this.result.addTextLine('');
+        this.result.addAlert('blue', 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
     }
 
     async delete(projectToDelete = this.flags.name) {
