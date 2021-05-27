@@ -1,37 +1,52 @@
 'use strict';
 
 const Receiver = require('./receiver');
+const NormalConfigStrategy = require('./strategies/config/normal-config-strategy');
+const DomainConfigStrategy = require('./strategies/config/domain-config-strategy');
+const ProjectNameConfigStrategy = require('./strategies/config/project-name-config-strategy');
 
 class ConfigReceiver extends Receiver {
 
     constructor(context) {
         super(context);
 
-        this.context.registerNonArgFlags(['unset']);
+        this.strategy = null;
+        this.context.registerNonArgFlags(['unset', 'enable-ssl']);
     }
 
-    changeConfig() {
+    async changeConfig() {
         const [name, value] = this.context.args;
         const flags = this.context.getParsedFlags();
+        this.setStrategy(name);
 
-        if (flags.unset) {
-            this.context.mdbConfig.unsetValue(name);
-            this.result.addTextLine(`Config key '${name}' has been deleted.`);
-        } else {
-            if (name === 'domain') this.validateDomain(value);
-            this.context.mdbConfig.setValue(name, value);
-            this.result.addTextLine(`Config value '${name}' has been set to '${value}'.`);
+        try {
+            if (flags.unset) {
+                this.strategy.unsetValue(name);
+                this.result.addTextLine(`Config key '${name}' has been deleted.`);
+            } else {
+                await this.strategy.setValue(name, value);
+                this.result.addTextLine(`Config value '${name}' has been set to '${this.context.mdbConfig.getValue(name)}'.`);
+            }
+        } catch (e) {
+            this.result.addAlert('red', 'Error', `Could not change config: ${e.message}`);
         }
-
-        this.context.mdbConfig.save();
     }
 
-    validateDomain(value) {
+    setStrategy(name) {
 
-        if (!/^(?=.{4,255}$)([a-zA-Z0-9_]([a-zA-Z0-9_-]{0,61}[a-zA-Z0-9_])?\.){1,126}[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/.test(value)) {
-            throw new Error('Invalid domain name. Do not add the http(s):// part. If you are using *.mdbgo.io subdomain, don\'t omit the .mdbgo.io part as it won\'t work without it.');
+        switch (name) {
+            case 'domain':
+                this.strategy = new DomainConfigStrategy(this.context, this.result);
+                break;
+
+            case 'projectName':
+                this.strategy = new ProjectNameConfigStrategy(this.context, this.result);
+                break;
+
+            default:
+                this.strategy = new NormalConfigStrategy(this.context, this.result);
+                break;
         }
-        this.result.addAlert('yellow', 'Warning!', 'To update the domain name on the remote server, you must publish your project again.');
     }
 }
 

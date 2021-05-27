@@ -4,8 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const fse = require('fs-extra');
 const Ora = require('ora');
-const open = require('open');
-const atob = require('atob');
 
 const HttpWrapper = require('../../../utils/http-wrapper');
 
@@ -19,25 +17,33 @@ class FtpPublishStrategy {
         this.userToken = context.userToken;
         this.context = context;
         this.result = result;
-        this.packageJsonConfig = context.packageJsonConfig;
 
         this.flags = context.getParsedFlags();
 
-        this.metaData = {
-            packageName: context.mdbConfig.getValue('meta.starter') || '',
-            projectName: this.packageJsonConfig.name || context.mdbConfig.getValue('projectName') || '',
-            starter: this.flags.variant || context.mdbConfig.getValue('meta.starter') || '',
-            domain: this.packageJsonConfig.domainName || context.mdbConfig.getValue('domain') || '',
-            platform: context.mdbConfig.getValue('backend.platform') || ''
-        };
+        this._loadMetaData(context);
 
         this.cwd = process.cwd();
         this.sent = 0;
     }
 
     async publish() {
+
+        this._loadMetaData(this.context);
+
         return this.buildProject()
             .then(() => this.uploadFiles());
+    }
+
+    _loadMetaData(context) {
+        this.packageJsonConfig = context.packageJsonConfig;
+        this.metaData = {
+            packageName: context.mdbConfig.getValue('meta.starter') || '',
+            projectName: this.packageJsonConfig.name || context.mdbConfig.getValue('projectName') || '',
+            starter: this.flags.variant || context.mdbConfig.getValue('meta.starter') || '',
+            domain: this.packageJsonConfig.domainName || context.mdbConfig.getValue('domain') || '',
+            platform: context.mdbConfig.getValue('backend.platform') || '',
+            hash: context.mdbConfig.getValue('hash') || ''
+        };
     }
 
     async buildProject() {
@@ -76,20 +82,16 @@ class FtpPublishStrategy {
 
         } else if (isReact) {
 
-            const token = this.userToken;
-            const [, jwtBody] = token.split('.');
-            const username = JSON.parse(atob(jwtBody)).name;
-
             const appJsPath = path.join(this.cwd, 'src', 'App.js');
 
             if (fs.existsSync(appJsPath)) {
 
                 let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/${username}/${packageJson.name}/dist'`);
+                appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/dist'`);
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
             }
 
-            packageJson.homepage = `https://${config.projectsDomain}/${username}/${packageJson.name}/dist/`;
+            packageJson.homepage = `https://${this.metaData.domain}/dist/`;
             await helpers.serializeJsonFile('package.json', packageJson);
 
             result = await this.runBuildScript();
@@ -97,7 +99,7 @@ class FtpPublishStrategy {
             if (fs.existsSync(appJsPath)) {
 
                 let appJsFile = fs.readFileSync(appJsPath, 'utf8');
-                const regex = new RegExp(`<Router basename='/${username}/${packageJson.name}/dist'`, 'g');
+                const regex = new RegExp(`<Router basename='/dist'`, 'g');
                 appJsFile = appJsFile.replace(regex, '<Router');
                 fs.writeFileSync(appJsPath, appJsFile, 'utf8');
             }
@@ -162,6 +164,8 @@ class FtpPublishStrategy {
             headers['x-mdb-cli-project-name'] = this.metaData.projectName;
             headers['x-mdb-cli-package-name'] = this.metaData.packageName;
             headers['x-mdb-cli-domain-name'] = this.metaData.domain;
+            headers['x-mdb-cli-dot-mdb-hash'] = this.metaData.hash;
+            headers['x-mdb-cli-override'] = this.flags.override || '';
 
             const archive = helpers.archiveProject('zip', { zlib: { level: 9 } });
             const http = new HttpWrapper();
@@ -174,7 +178,7 @@ class FtpPublishStrategy {
 
                 if (err) {
                     spinner.stop();
-                    return reject(err.message);
+                    return reject({ message: err.message, statusCode: err.statusCode });
                 }
 
                 this.convertToMb(archive.pointer());
@@ -199,7 +203,7 @@ class FtpPublishStrategy {
 
             archive.glob('**', {
                 cwd: this.cwd,
-                ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**', '.mdb'],
+                ignore: ['node_modules/**', '.git/**', '.gitignore', 'Dockerfile', '.dockerignore', '.idea/**'],
                 dot: true
             });
             archive.finalize();

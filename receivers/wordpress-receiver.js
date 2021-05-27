@@ -7,6 +7,7 @@ const { Separator } = inquirer;
 const config = require('../config');
 const Receiver = require('./receiver');
 const ProjectStatus = require('../models/project-status');
+const CliStatus = require('../models/cli-status');
 const FtpPublishStrategy = require('./strategies/publish/ftp-publish-strategy');
 const HttpWrapper = require('../utils/http-wrapper');
 const helpers = require('../helpers');
@@ -27,7 +28,7 @@ class WordpressReceiver extends Receiver {
         this.projectName = '';
         this.starterCode = '';
 
-        this.context.registerNonArgFlags(['advanced', 'open', 'ftp', 'follow', 'help']);
+        this.context.registerNonArgFlags(['advanced', 'open', 'ftp', 'follow', 'help', 'override']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
@@ -38,6 +39,8 @@ class WordpressReceiver extends Receiver {
 
         this.flags = this.context.getParsedFlags();
         this.args = this.context.args;
+
+        this._publishRetries = 0;
     }
 
     async list() {
@@ -100,6 +103,7 @@ class WordpressReceiver extends Receiver {
 
             this.context.mdbConfig.setValue('meta.starter', this.starterCode);
             this.context.mdbConfig.setValue('meta.type', 'wordpress');
+            this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
             this.context.mdbConfig.save(helpers.getThemeName(this.starterCode));
 
             this.result.addAlert('green', 'Success', result);
@@ -157,28 +161,12 @@ class WordpressReceiver extends Receiver {
         const email = this.context.mdbConfig.getValue('wordpress.email');
         const username = this.context.mdbConfig.getValue('wordpress.username') || 'admin';
 
-        try {
-            const strategy = new FtpPublishStrategy(this.context, this.result);
-            const response = await strategy.publish();
-
-            const firstPublication = response.statusCode === 201;
-            if (firstPublication) {
-                this.result.liveTextLine('Files uploaded, running your project...');
-                const payload = {
-                    pageType: pageVariant,
-                    pageName: projectName,
-                    email,
-                    username,
-                    password: wpData.password,
-                    repeatPassword: wpData.repeatPassword
-                };
-                await this._createWpPage(payload);
-            } else {
-                this.result.addTextLine(response.body);
-            }
-        } catch (e) {
-            this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
+        if (!this.context.mdbConfig.getValue('hash')) {
+            this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
+            this.context.mdbConfig.save();
         }
+
+        await this._handlePublication(pageVariant, projectName, email, username, wpData);
     }
 
     async _getPageVariant() {
@@ -211,6 +199,45 @@ class WordpressReceiver extends Receiver {
         return wpData;
     }
 
+    async _handlePublication(pageVariant, projectName, email, username, wpData) {
+
+        this._publishRetries++;
+        if (this._publishRetries > 5) {
+            return this.result.addAlert('red', 'Error', 'Too many retries. Try again running the publish command.');
+        }
+
+        try {
+            const strategy = new FtpPublishStrategy(this.context, this.result);
+            const response = await strategy.publish();
+
+            const firstPublication = response.statusCode === 201;
+            if (firstPublication) {
+                this.result.liveTextLine('Files uploaded, running your project...');
+                const payload = {
+                    pageType: pageVariant,
+                    pageName: projectName,
+                    email,
+                    username,
+                    password: wpData.password,
+                    repeatPassword: wpData.repeatPassword
+                };
+                await this._createWpPage(payload);
+            } else {
+                this.result.addTextLine(response.body);
+            }
+        } catch (e) {
+            if (e.statusCode === CliStatus.CONFLICT && e.message.includes('project name')) {
+                this.result.liveAlert('red', 'Error', e.message);
+                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
+                this.context.mdbConfig.setValue('projectName', this.projectName);
+                this.context.mdbConfig.save();
+                await this._handlePublication(pageVariant, projectName, email, username, wpData);
+            } else {
+                this.result.addAlert('red', 'Error', `Could not publish: ${e.message || e}`);
+            }
+        }
+    }
+
     async _createWpPage(payload) {
         this.options.path = '/project/wordpress';
         this.options.data = JSON.stringify(payload);
@@ -229,6 +256,8 @@ class WordpressReceiver extends Receiver {
             this.result.addAlert('yellow', 'Note', 'Please write down your username and password now, as we will not show it again.\n');
             this.result.addAlert('turquoise', 'Username:', payload.username);
             this.result.addAlert('turquoise', 'Password:', password);
+            this.result.addTextLine('');
+            this.result.addAlert('blue', 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
         } catch (e) {
             this.result.addAlert('red', 'Error', `Could not create WordPress page: ${e.message}`);
         }

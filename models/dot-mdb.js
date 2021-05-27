@@ -13,6 +13,7 @@ module.exports = {
         username: true
     },
     projectName: true,
+    hash: true,
     domain: true,
     publishMethod: true,
     packageManager: true,

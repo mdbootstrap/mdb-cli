@@ -291,6 +291,8 @@ describe('Receiver: frontend', () => {
             const loadPackageJsonStub = sandbox.stub(context, '_loadPackageJsonConfig').callsFake(() => {
                 receiver.context.packageJsonConfig = { name: 'fakename' };
             });
+
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.result, 'liveTextLine');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
@@ -310,6 +312,8 @@ describe('Receiver: frontend', () => {
             const createPackageJsonStub = sandbox.stub(receiver, 'createPackageJson').rejects();
             const loadPackageJsonStub = sandbox.stub(context, '_loadPackageJsonConfig');
             const printAlertStub = sandbox.stub(receiver.result, 'addAlert');
+
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
             receiver.context.packageJsonConfig = {};
@@ -328,6 +332,8 @@ describe('Receiver: frontend', () => {
 
             const createPackageJsonStub = sandbox.stub(receiver, 'createPackageJson').resolves();
             const loadPackageJsonStub = sandbox.stub(context, '_loadPackageJsonConfig');
+
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.result, 'liveTextLine');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
@@ -352,6 +358,7 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
 
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
             const runTestsStub = sandbox.stub(receiver, 'runTests').resolves('Success');
             const printAlertStub = sandbox.stub(receiver.result, 'addAlert');
@@ -370,6 +377,7 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
 
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
             const runTestsStub = sandbox.stub(receiver, 'runTests').rejects();
             const printAlertStub = sandbox.stub(receiver.result, 'addAlert');
@@ -385,6 +393,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
             const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body: '{}' });
@@ -399,6 +408,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = 'ftp';
 
@@ -416,6 +426,7 @@ describe('Receiver: frontend', () => {
 
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = '';
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('git.mdbgo.com');
             sandbox.stub(helpers, 'createConfirmationPrompt').resolves(true);
 
@@ -431,8 +442,10 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context.mdbConfig, 'getValue')
+                .withArgs('hash').returns('fakehash')
+                .withArgs('publishMethod').returns('pipeline');
             receiver.context.packageJsonConfig = { name: 'fakename' };
-            receiver.context.mdbConfig.mdbConfig.publishMethod = 'pipeline';
 
             const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body: '{}' });
 
@@ -448,6 +461,7 @@ describe('Receiver: frontend', () => {
 
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = '';
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('git.mdbgo.com');
             sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
 
@@ -465,6 +479,7 @@ describe('Receiver: frontend', () => {
 
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = '';
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
 
             const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();

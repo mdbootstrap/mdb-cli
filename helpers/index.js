@@ -11,6 +11,7 @@ const { eraseDirectories } = require('./erase-directories');
 const { removeFolder } = require('./remove-folder');
 const { serializeJsonFile } = require('./serialize-json-file');
 const { getThemeName } = require('./get-theme-name');
+const { generateRandomString } = require('./generate-random-string');
 
 
 module.exports = {
@@ -24,5 +25,6 @@ module.exports = {
     eraseDirectories,
     getThemeName,
     removeFolder,
-    serializeJsonFile
+    serializeJsonFile,
+    generateRandomString
 };

@@ -381,7 +381,9 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
-            sandbox.stub(context.mdbConfig, 'getValue').withArgs('meta.starter').returns(undefined);
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('meta.starter').returns(undefined)
+                .withArgs('hash').returns('fakehash');
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
 
             const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
@@ -399,7 +401,9 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
-            sandbox.stub(context.mdbConfig, 'getValue').withArgs('meta.starter').returns('fakeStarter');
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('meta.starter').returns('fakeStarter')
+                .withArgs('hash').returns('fakehash');
             const promptStub = sandbox.stub(helpers, 'createListPrompt').resolves('fakeVariant');
 
             await receiver._getPageVariant();
@@ -412,7 +416,9 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
-            sandbox.stub(context.mdbConfig, 'getValue').withArgs('projectName').returns(undefined);
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns(undefined)
+                .withArgs('hash').returns('fakehash');
             const askStub = sandbox.stub(receiver, 'askWpCredentials').resolves({ pageName: 'fakeProjectName', email: 'fakeEmail', username: 'fakeUsername' });
             const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
             const saveStub = sandbox.stub(context.mdbConfig, 'save');
@@ -431,7 +437,9 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], ['--advanced']);
             receiver = new WordpressReceiver(context);
 
-            sandbox.stub(context.mdbConfig, 'getValue').withArgs('projectName').returns(undefined);
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns(undefined)
+                .withArgs('hash').returns('fakehash');
             const askStub = sandbox.stub(receiver, 'askWpCredentials').resolves({ pageName: 'fakeProjectName', email: 'fakeEmail', username: 'fakeUsername' });
             const setValueStub = sandbox.stub(context.mdbConfig, 'setValue');
             const saveStub = sandbox.stub(context.mdbConfig, 'save');
@@ -455,7 +463,8 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(context.mdbConfig, 'getValue')
                 .withArgs('projectName').returns('fakeName')
                 .withArgs('wordpress.email').resolves('fakeEmail')
-                .withArgs('wordpress.username').resolves('fakeUsername');
+                .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('hash').returns('fakehash');
 
             const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 201 });
             const createStub = sandbox.stub(receiver, '_createWpPage').resolves();
@@ -476,7 +485,8 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(context.mdbConfig, 'getValue')
                 .withArgs('projectName').returns('fakeName')
                 .withArgs('wordpress.email').resolves('fakeEmail')
-                .withArgs('wordpress.username').resolves('fakeUsername');
+                .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('hash').returns('fakehash');
 
             const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 200 });
             const createStub = sandbox.stub(receiver, '_createWpPage').resolves();
@@ -495,6 +505,7 @@ describe('Receiver: wordpress', () => {
             receiver = new WordpressReceiver(context);
 
             sandbox.stub(receiver.http, 'post').resolves({ body: JSON.stringify({ message: 'fake', url: 'fakeUrl', password: 'fake' }) });
+            sandbox.stub(context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
 
             const openStub = sandbox.stub(open, 'call');
             const alertStub = sandbox.stub(receiver.result, 'addAlert');
@@ -517,7 +528,8 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(context.mdbConfig, 'getValue')
                 .withArgs('projectName').returns('fakeName')
                 .withArgs('wordpress.email').resolves('fakeEmail')
-                .withArgs('wordpress.username').resolves('fakeUsername');
+                .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('hash').returns('fakehash');
 
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').rejects(new Error('fake error'));
 
@@ -536,6 +548,7 @@ describe('Receiver: wordpress', () => {
             receiver = new WordpressReceiver(context);
 
             sandbox.stub(receiver.http, 'post').rejects(new Error('fake error'));
+            sandbox.stub(context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
 
             const alertStub = sandbox.stub(receiver.result, 'addAlert');
 

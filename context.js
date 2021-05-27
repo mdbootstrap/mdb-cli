@@ -137,6 +137,17 @@ class Context {
         }
     }
 
+    setPackageJsonValue(key, value, cwd = process.cwd()) {
+        const settingsPath = path.join(cwd, 'package.json');
+        this.packageJsonConfig[key] = value;
+
+        try {
+            fs.writeFileSync(settingsPath, JSON.stringify(this.packageJsonConfig, null, 2), 'utf8');
+        } catch (e) {
+            throw new Error(`Could not save package.json key '${key}': ${e.message}`);
+        }
+    }
+
     _loadPackageJsonConfig(cwd = process.cwd()) {
         const settingsPath = path.join(cwd, 'package.json');
 
