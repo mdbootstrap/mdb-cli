@@ -1,10 +1,10 @@
 'use strict';
 
 import config from "../config";
-//@ts-ignore
-import packageJson from "../../package.json";
 import http, {RequestOptions} from "https";
 import {ClientRequest, IncomingHttpHeaders, IncomingMessage} from "http";
+
+const packageJson = require('../package.json');
 
 export type CustomOkResponse = { body: string, headers: IncomingHttpHeaders, statusCode: number };
 export type CustomErrorResponse = { message: string, statusCode: number };
