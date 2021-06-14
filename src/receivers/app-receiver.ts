@@ -61,7 +61,7 @@ class AppReceiver extends Receiver {
 
     getVersion(): void {
         //@ts-ignore
-        const { version } = require('../package.json');
+        const { version } = config.env === 'test' ? require('../../package.json') : require('../package.json');
         this.result.addTextLine('Version: ' + version);
     }
 
