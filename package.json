@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -8,7 +8,7 @@
     "url": "https://github.com/mdbootstrap/mdb-cli.git"
   },
   "scripts": {
-    "test": "mocha -r ts-node/register",
+    "test": "NODE_ENV=\"test\" mocha -r ts-node/register",
     "test:coverage": "nyc --reporter=text -e .ts -x \"**/*.test.ts\" npm run test",
     "compile": "./node_modules/pkg/lib-es5/bin.js -c package.json src/dist/index.js --targets node6",
     "lint": "./node_modules/.bin/eslint ./src",
@@ -27,10 +27,13 @@
     "@types/archiver": "^5.1.0",
     "@types/atob": "^2.1.2",
     "@types/btoa": "^1.2.3",
+    "@types/chai": "^4.2.17",
     "@types/fs-extra": "^9.0.11",
     "@types/inquirer": "^7.3.1",
+    "@types/mocha": "^8.2.2",
     "@types/node": "^15.0.1",
     "@types/progress": "^2.0.3",
+    "@types/sinon": "^10.0.0",
     "@types/sinon-chai": "^3.2.5",
     "@types/unzipper": "^0.10.3",
     "chai": "^4.2.0",
@@ -44,12 +47,10 @@
     "sinon": "^7.3.1",
     "sinon-chai": "^3.5.0",
     "ts-node": "^9.1.1",
-    "type-fest": "^1.0.2"
+    "type-fest": "^1.0.2",
+    "typescript": "^4.2.4"
   },
   "dependencies": {
-    "@types/chai": "^4.2.17",
-    "@types/mocha": "^8.2.2",
-    "@types/sinon": "^10.0.0",
     "archiver": "^3.0.0",
     "atob": "^2.1.2",
     "babel-polyfill": "^6.26.0",
@@ -61,7 +62,6 @@
     "open": "^7.3.0",
     "ora": "^3.4.0",
     "progress": "^2.0.3",
-    "typescript": "^4.2.4",
     "unzipper": "^0.9.7"
   },
   "pkg": {

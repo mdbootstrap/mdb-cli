@@ -4,7 +4,7 @@ import config from "../config";
 import http, {RequestOptions} from "https";
 import {ClientRequest, IncomingHttpHeaders, IncomingMessage} from "http";
 
-const packageJson = require('../package.json');
+const packageJson = config.env === 'test' ? require('../../package.json') : require('../package.json');
 
 export type CustomOkResponse = { body: string, headers: IncomingHttpHeaders, statusCode: number };
 export type CustomErrorResponse = { message: string, statusCode: number };
