@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "3.4.1",
+  "version": "3.4.2",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -14,7 +14,8 @@
     "lint": "./node_modules/.bin/eslint ./src",
     "lintfix": "./node_modules/.bin/eslint ./src --fix",
     "jsdoc": "./node_modules/.bin/jsdoc ./src/",
-    "build": "tsc"
+    "build": "tsc",
+    "postbuild": "node src/postbuild.js"
   },
   "bin": {
     "mdb": "src/dist/index.js"
