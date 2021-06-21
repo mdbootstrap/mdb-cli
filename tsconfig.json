@@ -17,6 +17,7 @@
     "./src"
   ],
   "exclude": [
-    "./src/test/"
+    "./src/test/",
+    "./src/postbuild.js"
   ]
 }
