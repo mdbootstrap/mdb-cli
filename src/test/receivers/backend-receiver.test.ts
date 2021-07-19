@@ -2,7 +2,8 @@ import config from '../../config';
 import Context from '../../context';
 import helpers from '../../helpers';
 import { Project } from '../../models/project';
-import HttpWrapper, { CustomOkResponse } from '../../utils/http-wrapper';
+import HttpWrapper, { CustomOkResponse, CustomErrorResponse } from '../../utils/http-wrapper';
+import FtpPublishStrategy from '../../receivers/strategies/publish/ftp-publish-strategy';
 import BackendReceiver from '../../receivers/backend-receiver';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
@@ -670,6 +671,93 @@ describe('Receiver: backend', () => {
             const projectName = receiver.getProjectName();
 
             expect(projectName).to.be.eq(undefined);
+        });
+    });
+
+    describe('Method: askForProjectName', () => {
+
+        it('should get and save project name', async () => {
+
+            const context = new Context('backend', '', [], []);
+            const receiver = new BackendReceiver(context);
+            const askStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
+            const setValueStub = sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            const saveStub = sandbox.stub(receiver.context.mdbConfig, 'save');
+
+            await receiver.askForProjectName();
+
+            sandbox.assert.calledOnce(askStub);
+            sandbox.assert.calledOnce(setValueStub);
+            sandbox.assert.calledOnce(saveStub);
+        });
+    });
+
+    describe('Method: publish', () => {
+
+        let publishStub: SinonStub, textPromptStub: SinonStub;
+
+        beforeEach(() => {
+
+            publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish');
+            textPromptStub = sandbox.stub(helpers, 'createTextPrompt');
+        });
+
+        it('should use FtpPublishStrategy to upload files and show prompt if project name conflict error', async () => {
+
+            context = new Context('backend', 'publish', [], []);
+            receiver = new BackendReceiver(context);
+            receiver.context.packageJsonConfig.name = 'fakeProjectName';
+
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('backend.platform').returns('node12');
+            sandbox.stub(receiver.context, 'setPackageJsonValue');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+            textPromptStub.resolves('fakeProjectName');
+            publishStub.onFirstCall().rejects({ statusCode: 409, message: 'project name' } as CustomErrorResponse);
+            publishStub.onSecondCall().resolves({ body: JSON.stringify({ message: '', url: '' }) } as CustomOkResponse);
+
+            await receiver.publish();
+
+            sandbox.assert.calledOnce(textPromptStub);
+            sandbox.assert.calledTwice(publishStub);
+        });
+
+        it('should use FtpPublishStrategy to upload files and show prompt if domain name conflict error', async () => {
+
+            context = new Context('backend', 'publish', [], []);
+            receiver = new BackendReceiver(context);
+            receiver.context.packageJsonConfig.name = 'fakeProjectName';
+
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('backend.platform').returns('node12');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+            textPromptStub.resolves('fake.domain');
+            publishStub.onFirstCall().rejects({ statusCode: 403, message: 'domain name' } as CustomErrorResponse);
+            publishStub.onSecondCall().resolves({ body: JSON.stringify({ message: '', url: '' }) } as CustomOkResponse);
+
+            await receiver.publish();
+
+            sandbox.assert.calledOnce(textPromptStub);
+            sandbox.assert.calledTwice(publishStub);
+        });
+
+        it('should use FtpPublishStrategy to upload files and reject if unknown error', async () => {
+
+            context = new Context('backend', 'publish', [], []);
+            receiver = new BackendReceiver(context);
+            receiver.context.packageJsonConfig.name = 'fakeProjectName';
+
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
+            const getValueStub = sandbox.stub(receiver.context.mdbConfig, 'getValue');
+            getValueStub.withArgs('backend.platform').returns('node12');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+            publishStub.onFirstCall().rejects({ statusCode: 500, message: 'Fake error' } as CustomErrorResponse);
+
+            await receiver.publish();
+
+            sandbox.assert.calledOnce(publishStub);
+            expect(alertStub).to.have.been.calledWith('red');
         });
     });
 });

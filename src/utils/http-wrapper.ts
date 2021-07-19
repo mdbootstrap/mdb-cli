@@ -12,15 +12,13 @@ export type CustomRequestOptions = RequestOptions & { data?: string | object };
 
 class HttpWrapper {
 
-    private apiPath = config.env === 'dev' ? '/api-tst' : '/api';
-
     createRawRequest(options: CustomRequestOptions, callback?: (response: IncomingMessage) => void): ClientRequest {
 
         if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
         else options.headers = { 'x-mdb-cli-version': packageJson.version };
 
         if (options.hostname === config.host)
-            options.path = `${this.apiPath}${options.path}`;
+            options.path = `${config.apiPath}${options.path}`;
 
         return http.request(options, (response: IncomingMessage) => {
 
@@ -37,7 +35,7 @@ class HttpWrapper {
         else options.headers = { 'x-mdb-cli-version': packageJson.version };
 
         if (options.hostname === config.host)
-            options.path = `${this.apiPath}${options.path}`;
+            options.path = `${config.apiPath}${options.path}`;
 
         return http.request(options, (response: IncomingMessage) => {
 
@@ -68,7 +66,7 @@ class HttpWrapper {
         else options.headers = { 'x-mdb-cli-version': packageJson.version };
 
         if (options.hostname === config.host)
-            options.path = `${this.apiPath}${options.path}`;
+            options.path = `${config.apiPath}${options.path}`;
 
         return new Promise((resolve, reject) => {
 

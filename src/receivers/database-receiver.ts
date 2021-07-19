@@ -5,8 +5,7 @@ import config from '../config';
 import Context from '../context';
 import Receiver from './receiver';
 import helpers from '../helpers';
-import { Database } from '../models/database';
-import { OutputColor } from '../models/output-color';
+import { Database, OutputColor } from '../models';
 import { CustomRequestOptions } from '../utils/http-wrapper';
 
 

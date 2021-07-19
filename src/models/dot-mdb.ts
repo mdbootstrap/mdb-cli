@@ -1,5 +1,3 @@
-'use strict';
-
 export interface DotMdb {
     meta?: {
         starter?: string,

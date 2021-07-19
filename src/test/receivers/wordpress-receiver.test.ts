@@ -4,9 +4,8 @@ import Context from '../../context';
 import helpers from '../../helpers';
 import WordpressReceiver, { WpCredentials, CreateWpPayload } from '../../receivers/wordpress-receiver';
 import FtpPublishStrategy from '../../receivers/strategies/publish/ftp-publish-strategy';
-import HttpWrapper, { CustomOkResponse } from '../../utils/http-wrapper';
+import HttpWrapper, { CustomOkResponse, CustomErrorResponse } from '../../utils/http-wrapper';
 import { ProjectStatus } from '../../models/project-status';
-import { Project } from '../../models/project';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 
@@ -103,9 +102,9 @@ describe('Receiver: wordpress', () => {
                 'Repository': 'fake.repo.url',
                 'URL': 'Unavailable'
             }];
-            sandbox.stub(WordpressReceiver.prototype, 'getWordpressProjects').resolves([fakeProject1 as Project, fakeProject2 as Project]);
             context = new Context('wordpress', '', [], []);
             receiver = new WordpressReceiver(context);
+            sandbox.stub(receiver.http, 'get').resolves({ body: JSON.stringify([fakeProject1, fakeProject2]) } as CustomOkResponse);
 
             await receiver.list();
 
@@ -477,6 +476,62 @@ describe('Receiver: wordpress', () => {
 
             expect(publishStub).to.have.been.calledOnce;
             expect(createStub).to.have.been.calledOnce;
+        });
+
+        it('should use FtpPublishStrategy to upload files and show prompt if projectName conflict error', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
+            sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns('fakeName')
+                .withArgs('wordpress.email').resolves('fakeEmail')
+                .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('hash').returns('fakehash');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+
+            const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
+            const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 201 } as CustomOkResponse);
+            const createStub = sandbox.stub(receiver, '_createWpPage');
+            createStub.onFirstCall().rejects({ statusCode: 409, message: 'project name' } as CustomErrorResponse);
+            createStub.onSecondCall().resolves();
+
+            await receiver.publish();
+
+            expect(createStub).to.have.been.calledTwice;
+            expect(publishStub).to.have.been.calledTwice;
+            expect(textPromptStub).to.have.been.calledOnce;
+        });
+
+        it('should use FtpPublishStrategy to upload files and show prompt if domain conflict error', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
+            sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
+            sandbox.stub(context.mdbConfig, 'getValue')
+                .withArgs('projectName').returns('fakeName')
+                .withArgs('wordpress.email').resolves('fakeEmail')
+                .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('hash').returns('fakehash');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+
+            const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fake.domain');
+            const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 201 } as CustomOkResponse);
+            const createStub = sandbox.stub(receiver, '_createWpPage');
+            createStub.onFirstCall().rejects({ statusCode: 409, message: 'domain name' } as CustomErrorResponse);
+            createStub.onSecondCall().resolves();
+
+            await receiver.publish();
+
+            expect(createStub).to.have.been.calledTwice;
+            expect(publishStub).to.have.been.calledTwice;
+            expect(textPromptStub).to.have.been.calledOnce;
         });
 
         it('should use FtpPublishStrategy to upload files and not call API if 200 returned', async function () {

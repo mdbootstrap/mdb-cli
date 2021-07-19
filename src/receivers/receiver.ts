@@ -7,7 +7,7 @@ import helpers from '../helpers';
 import HttpWrapper, {CustomRequestOptions} from '../utils/http-wrapper';
 import CommandResult from '../utils/command-result';
 import GitManager from '../utils/managers/git-manager';
-import { OutputColor } from '../models/output-color';
+import { OutputColor } from '../models';
 
 abstract class Receiver {
 
@@ -100,6 +100,10 @@ abstract class Receiver {
 
     getProjectName() {
         return this.context.packageJsonConfig.name || this.context.mdbConfig.getValue('projectName');
+    }
+
+    protected validateDomain(val: string): boolean {
+        return /^(?=.{4,255}$)([a-zA-Z0-9_]([a-zA-Z0-9_-]{0,61}[a-zA-Z0-9_])?\.){1,126}[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/.test(val);
     }
 }
 

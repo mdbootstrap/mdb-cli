@@ -2,7 +2,7 @@
 
 import Context from '../context';
 import Receiver from './receiver';
-import { OutputColor } from '../models/output-color';
+import { OutputColor } from '../models';
 import NormalConfigStrategy from './strategies/config/normal-config-strategy';
 import DomainConfigStrategy from './strategies/config/domain-config-strategy';
 import ProjectNameConfigStrategy from './strategies/config/project-name-config-strategy';

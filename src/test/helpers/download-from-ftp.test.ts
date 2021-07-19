@@ -13,7 +13,7 @@ describe('Helper: downloadFromFTP', () => {
 
     const sandbox = createSandbox();
 
-    const fakePort = 0,
+    const fakePort = '0',
         fakeHost = 'fakeHost',
         fakeHeaders = { fake: 'fakeHeader' },
         fakeDestination = 'fake/dest/folder';

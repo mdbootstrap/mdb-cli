@@ -4,15 +4,13 @@ import path from "path";
 import fs from "fs";
 import fse from "fs-extra";
 import Ora from "ora";
-import atob from "atob";
-import HttpWrapper, {CustomOkResponse} from "../../../utils/http-wrapper";
-import Context from "../../../context";
+import { OutgoingHttpHeaders } from "http";
+import HttpWrapper, { CustomOkResponse } from "../../../utils/http-wrapper";
+import { MdbGoPackageJson, OutputColor } from "../../../models";
 import CommandResult from "../../../utils/command-result";
+import Context from "../../../context";
 import config from "../../../config";
 import helpers from "../../../helpers";
-import {OutputColor} from "../../../models/output-color";
-import {OutgoingHttpHeaders} from "http";
-import {MdbGoPackageJson} from "../../../models/package-json";
 
 class FtpPublishStrategy {
 
@@ -180,7 +178,7 @@ class FtpPublishStrategy {
 
             const archive = helpers.archiveProject('zip', { zlib: { level: 9 } });
             const http = new HttpWrapper();
-            const request  = http.createRequest({
+            const request = http.createRequest({
                 hostname: config.host,
                 path: '/project/publish',
                 method: 'POST',

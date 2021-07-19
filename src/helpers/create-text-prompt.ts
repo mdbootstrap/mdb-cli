@@ -2,7 +2,7 @@
 
 import inquirer from 'inquirer';
 
-async function createTextPrompt(message: string, invalidMessage: string): Promise<string> {
+async function createTextPrompt(message: string, invalidMessage: string, validate: ((v: string) => boolean) | null = null): Promise<string> {
 
     const result = await inquirer.createPromptModule()([{
         type: 'text',
@@ -10,7 +10,7 @@ async function createTextPrompt(message: string, invalidMessage: string): Promis
         name: 'answer',
         validate: (value: string) => {
             /* istanbul ignore next */
-            const valid = Boolean(value);
+            const valid = validate ? validate(value) : Boolean(value);
             /* istanbul ignore next */
             return valid || invalidMessage;
         }

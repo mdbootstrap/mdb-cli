@@ -1,20 +1,17 @@
 'use strict';
 
-import {Separator} from 'inquirer';
-import open from 'open';
-import config from '../config';
-import Receiver from './receiver';
-import {ProjectStatus} from '../models/project-status';
-import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
-import PipelinePublishStrategy from './strategies/publish/pipeline-publish-strategy';
-import helpers from '../helpers';
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
+import open from 'open';
+import { Separator } from 'inquirer';
+import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
+import PipelinePublishStrategy from './strategies/publish/pipeline-publish-strategy';
+import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
+import Receiver from './receiver';
+import helpers from '../helpers';
 import Context from "../context";
-import {OutputColor} from "../models/output-color";
-import {StarterOption} from "../models/starter-option";
-import {Project} from "../models/project";
-import {CliStatus} from "../models/cli-status";
+import config from '../config';
+
 
 class FrontendReceiver extends Receiver {
 
@@ -274,6 +271,12 @@ class FrontendReceiver extends Receiver {
                 this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
                 this.context.setPackageJsonValue('name', this.projectName);
                 this.context.mdbConfig.setValue('projectName', this.projectName);
+                this.context.mdbConfig.save();
+                await this._handlePublication(strategy);
+            } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
+                this.result.liveAlert(OutputColor.Red, 'Error', e.message);
+                const domain = await helpers.createTextPrompt('Enter new domain name', 'Invalid domain name. Do not add the http(s):// part. If you are using *.mdbgo.io subdomain, don\'t omit the .mdbgo.io part as it won\'t work without it.', this.validateDomain);
+                this.context.mdbConfig.setValue('domain', domain);
                 this.context.mdbConfig.save();
                 await this._handlePublication(strategy);
             } else {

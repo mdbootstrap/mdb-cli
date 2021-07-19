@@ -1,11 +1,11 @@
 'use strict';
 
+import fs from 'fs';
+import path from 'path';
+import { OutputColor } from '../models';
 import Receiver from './receiver';
 import helpers from '../helpers';
 import Context from '../context';
-import { OutputColor } from '../models/output-color';
-import path from 'path';
-import fs from 'fs';
 
 class BlankReceiver extends Receiver {
 

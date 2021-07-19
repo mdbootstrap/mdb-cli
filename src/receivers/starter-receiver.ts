@@ -3,8 +3,7 @@
 import config from '../config';
 import Context from '../context';
 import Receiver from './receiver';
-import { OutputColor } from '../models/output-color';
-import { StarterOption } from '../models/starter-option';
+import { OutputColor, StarterOption } from '../models';
 
 
 class StarterReceiver extends Receiver {

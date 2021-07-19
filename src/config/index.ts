@@ -1,7 +1,10 @@
 'use strict';
 
-import path from "path";
-import {homedir} from "os";
+import { config } from 'dotenv';
+import { homedir } from 'os';
+import { join } from 'path';
+
+config({ path: join(__dirname, '..', '.env') });
 
 const env = process.env.NODE_ENV || 'prd';
 const gitlabUrl = process.env.GITLAB_URL || 'https://git.mdbgo.com';
@@ -20,9 +23,10 @@ export default {
     databases: databases.split(','),
     backendTechnologies: technologies.split(','),
     tokenFile: '.auth',
-    tokenDir: path.join(homedir(), '.mdbcli'),
+    tokenDir: join(homedir(), '.mdbcli'),
     port: process.env.PORT || 3033,
     host: process.env.HOST || 'apps.mdbootstrap.com',
+    apiPath: process.env.API_PATH || '/api',
     auth: {
         social: {
             google: {
