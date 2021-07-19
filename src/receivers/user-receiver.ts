@@ -3,8 +3,7 @@
 import atob from 'atob';
 import Context from '../context';
 import Receiver from './receiver';
-import AuthMethod from '../models/auth-method';
-import { OutputColor } from '../models/output-color';
+import { AuthMethod, OutputColor } from '../models';
 import NormalAuthStrategy from './strategies/auth/normal-auth-strategy';
 import GoogleAuthStrategy from './strategies/auth/google-auth-strategy';
 import FacebookAuthStrategy from './strategies/auth/facebook-auth-strategy';

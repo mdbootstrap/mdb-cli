@@ -3,19 +3,15 @@
 import fs from 'fs';
 import path from 'path';
 import open from 'open';
-import {Separator} from 'inquirer';
-import config from '../config';
-import Context from '../context';
-import Receiver from './receiver';
-import {Project} from '../models/project';
-import {ProjectMeta} from '../models/project-meta';
-import {OutputColor} from '../models/output-color';
-import {ProjectStatus} from '../models/project-status';
-import {StarterOption} from '../models/starter-option';
+import { Separator } from 'inquirer';
+import { CliStatus, OutputColor, Project, ProjectMeta, ProjectStatus, StarterOption } from '../models';
 import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
 import HttpWrapper from '../utils/http-wrapper';
+import Receiver from './receiver';
+import Context from '../context';
 import helpers from '../helpers';
-import {CliStatus} from "../models/cli-status";
+import config from '../config';
+
 
 class BackendReceiver extends Receiver {
 
@@ -297,6 +293,12 @@ class BackendReceiver extends Receiver {
                 }
 
                 this.context.mdbConfig.setValue('projectName', this.projectName);
+                this.context.mdbConfig.save();
+                await this._handlePublication(packageJsonEmpty, isNodePlatform);
+            } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
+                this.result.liveAlert(OutputColor.Red, 'Error', e.message);
+                const domain = await helpers.createTextPrompt('Enter new domain name', 'Invalid domain name. Do not add the http(s):// part. If you are using *.mdbgo.io subdomain, don\'t omit the .mdbgo.io part as it won\'t work without it.', this.validateDomain);
+                this.context.mdbConfig.setValue('domain', domain);
                 this.context.mdbConfig.save();
                 await this._handlePublication(packageJsonEmpty, isNodePlatform);
             } else {

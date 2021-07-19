@@ -1,20 +1,13 @@
-'use strict';
-
+import path from 'path';
 import open from 'open';
-import inquirer, {Separator} from 'inquirer';
-
+import inquirer, { Separator } from 'inquirer';
 import config from '../config';
-import Receiver from './receiver';
-import {ProjectStatus} from '../models/project-status';
+import helpers from '../helpers';
+import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
 import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
 import HttpWrapper from '../utils/http-wrapper';
-import helpers from '../helpers';
-import path from 'path';
-import Context from "../context";
-import {Project} from "../models/project";
-import {OutputColor} from "../models/output-color";
-import {StarterOption} from "../models/starter-option";
-import {CliStatus} from "../models/cli-status";
+import Receiver from './receiver';
+import Context from '../context';
 
 export type WpCredentials = { pageName: string, username?: string, password?: string, repeatPassword?: string, email?: string };
 export type CreateWpPayload = WpCredentials & { pageType: string };
@@ -237,6 +230,12 @@ class WordpressReceiver extends Receiver {
                 this.result.liveAlert(OutputColor.Red, 'Error', e.message);
                 this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
                 this.context.mdbConfig.setValue('projectName', this.projectName);
+                this.context.mdbConfig.save();
+                await this._handlePublication(pageVariant, projectName, email, username, wpData);
+            } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
+                this.result.liveAlert(OutputColor.Red, 'Error', e.message);
+                const domain = await helpers.createTextPrompt('Enter new domain name', 'Invalid domain name. Do not add the http(s):// part. If you are using *.mdbgo.io subdomain, don\'t omit the .mdbgo.io part as it won\'t work without it.', this.validateDomain);
+                this.context.mdbConfig.setValue('domain', domain);
                 this.context.mdbConfig.save();
                 await this._handlePublication(pageVariant, projectName, email, username, wpData);
             } else {

@@ -3,7 +3,7 @@
 import config from '../config';
 import Context from '../context';
 import Receiver from './receiver';
-import { Order } from '../models/order';
+import { Order } from '../models';
 
 class OrderReceiver extends Receiver {
 

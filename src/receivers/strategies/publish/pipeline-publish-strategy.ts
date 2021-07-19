@@ -3,12 +3,10 @@
 import Context from "../../../context";
 import CommandResult from "../../../utils/command-result";
 import GitManager from "../../../utils/managers/git-manager";
-import HttpWrapper, {CustomRequestOptions} from "../../../utils/http-wrapper";
-import {MdbGoPackageJson} from "../../../models/package-json";
-
+import HttpWrapper, { CustomRequestOptions } from "../../../utils/http-wrapper";
+import { MdbGoPackageJson, OutputColor } from "../../../models";
 import helpers from "../../../helpers";
 import config from "../../../config";
-import {OutputColor} from "../../../models/output-color";
 
 class PipelinePublishStrategy {
 

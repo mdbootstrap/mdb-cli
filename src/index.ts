@@ -5,11 +5,8 @@ import CommandInvoker from './command-invoker';
 import CommandResult from './utils/command-result';
 import { OutputColor } from './models/output-color';
 import OutputPrinter from './utils/output-printer';
-import path from 'path';
 
 require('babel-polyfill');
-
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 if (!process.version.match(/v[1-9][0-9]/)) {
 

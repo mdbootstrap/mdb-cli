@@ -6,7 +6,7 @@ import { Project } from '../../models/project';
 import FrontendReceiver from '../../receivers/frontend-receiver';
 import FtpPublishStrategy from '../../receivers/strategies/publish/ftp-publish-strategy';
 import PipelinePublishStrategy from '../../receivers/strategies/publish/pipeline-publish-strategy';
-import { CustomOkResponse } from '../../utils/http-wrapper';
+import { CustomOkResponse, CustomErrorResponse } from '../../utils/http-wrapper';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 
@@ -421,6 +421,49 @@ describe('Receiver: frontend', () => {
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledOnce;
+        });
+
+        it('should call FtpPublishStrategy#publish() method and show prompt if projectName conflict error', async function () {
+
+            context = new Context('frontend', 'publish', [], ['--ftp']);
+            receiver = new FrontendReceiver(context);
+            receiver.context.packageJsonConfig = { name: 'fakename' };
+            
+            const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
+            sandbox.stub(receiver.context, 'setPackageJsonValue');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish');
+            ftpPublishStub.onFirstCall().rejects({ message: 'project name', statusCode: 409 } as CustomErrorResponse);
+            ftpPublishStub.onSecondCall().resolves({ body: '{}' } as CustomOkResponse);
+
+            await receiver.publish();
+
+            expect(ftpPublishStub).to.have.been.calledTwice;
+            expect(textPromptStub).to.have.been.calledOnce;
+        });
+
+        it('should call FtpPublishStrategy#publish() method and show prompt if domain conflict error', async function () {
+
+            context = new Context('frontend', 'publish', [], ['--ftp']);
+            receiver = new FrontendReceiver(context);
+            receiver.context.packageJsonConfig = { name: 'fakename' };
+            
+            const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fake.domain');
+            sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish');
+            ftpPublishStub.onFirstCall().rejects({ message: 'domain name', statusCode: 409 } as CustomErrorResponse);
+            ftpPublishStub.onSecondCall().resolves({ body: '{}' } as CustomOkResponse);
+
+            await receiver.publish();
+
+            expect(ftpPublishStub).to.have.been.calledTwice;
+            expect(textPromptStub).to.have.been.calledOnce;
         });
 
         it('should call PipelinePublishStrategy#publish() method if current git remote is git.mdbgo.com and user agreed', async function () {
