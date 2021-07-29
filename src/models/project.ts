@@ -12,5 +12,8 @@ export interface Project {
     projectMeta: ProjectMeta[]
     user: {
         userNicename: string
+    },
+    role: {
+        name: string
     }
 }

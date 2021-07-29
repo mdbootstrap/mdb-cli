@@ -60,7 +60,8 @@ class FrontendReceiver extends Receiver {
                     'Project URL': deletedFromFTP ? 'Unavailable' : projectURL,
                     'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
                     'Edited': new Date(p.editDate).toLocaleString(),
-                    'Repository': p.repoUrl ? p.repoUrl : '-'
+                    'Repository': p.repoUrl ? p.repoUrl : '-',
+                    'Role': p.role.name
                 }
             });
 

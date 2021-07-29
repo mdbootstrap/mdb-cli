@@ -69,7 +69,8 @@ class BackendReceiver extends Receiver {
                     'Edited': new Date(p.editDate).toLocaleString(),
                     'Technology': technology,
                     'Repository': p.repoUrl ? p.repoUrl : '-',
-                    'URL': isUp && !deletedFromFTP ? url : 'Unavailable'
+                    'URL': isUp && !deletedFromFTP ? url : 'Unavailable',
+                    'Role': p.role.name
                 }
             });
 

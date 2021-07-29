@@ -22,7 +22,7 @@ describe('Receiver: Config', () => {
 
         new ConfigReceiver(context);
 
-        expect(registerStub).to.have.been.calledWith(['enable-ssl', 'global', 'unset']);
+        expect(registerStub).to.have.been.calledWith(['enable-ssl', 'global', 'leave', 'unset', 'list']);
     });
 
     it('should call unsetValue() method with provided argument', function () {

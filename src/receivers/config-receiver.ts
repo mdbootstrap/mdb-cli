@@ -6,15 +6,17 @@ import { OutputColor } from '../models';
 import NormalConfigStrategy from './strategies/config/normal-config-strategy';
 import DomainConfigStrategy from './strategies/config/domain-config-strategy';
 import ProjectNameConfigStrategy from './strategies/config/project-name-config-strategy';
+import MemberConfigStrategy from "./strategies/config/member-config-strategy";
 
 class ConfigReceiver extends Receiver {
 
-    private strategy!: NormalConfigStrategy | DomainConfigStrategy | ProjectNameConfigStrategy;
+    private strategy!: NormalConfigStrategy | DomainConfigStrategy | ProjectNameConfigStrategy | MemberConfigStrategy;
 
     constructor(context: Context) {
         super(context);
 
-        this.context.registerNonArgFlags(['enable-ssl', 'global', 'unset']);
+        this.context.registerNonArgFlags(['enable-ssl', 'global', 'leave', 'unset', 'list']);
+        this.context.registerFlagExpansions({ '-ls': '--list' })
     }
 
     async changeConfig(): Promise<void> {
@@ -24,11 +26,12 @@ class ConfigReceiver extends Receiver {
 
         try {
             if (flags.unset) {
-                this.strategy.unsetValue(name);
-                this.result.addTextLine(`Config key '${name}' has been deleted.`);
+                const result = await this.strategy.unsetValue(name, value);
+                this.result.addTextLine(result || `Config key '${name}' has been deleted.`);
             } else {
-                await this.strategy.setValue(name, value);
-                this.result.addTextLine(`Config value '${name}' has been set to '${this.context.mdbConfig.getValue(name)}'.`);
+                const result = await this.strategy.setValue(name, value);
+                if (Array.isArray(result)) this.result.addTable(result);
+                else this.result.addTextLine(result || `Config value '${name}' has been set to '${this.context.mdbConfig.getValue(name)}'.`);
             }
         } catch (e) {
             this.result.addAlert(OutputColor.Red, 'Error', `Could not change config: ${e.message}`);
@@ -44,6 +47,10 @@ class ConfigReceiver extends Receiver {
 
             case 'projectName':
                 this.strategy = new ProjectNameConfigStrategy(this.context, this.result);
+                break;
+
+            case 'member':
+                this.strategy = new MemberConfigStrategy(this.context, this.result);
                 break;
 
             default:

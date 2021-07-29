@@ -57,7 +57,8 @@ describe('Receiver: frontend', () => {
                 editDate: '2019-06-24T06:49:53.000Z',
                 repoUrl: null,
                 status: 'published',
-                projectMeta: []
+                projectMeta: [],
+                role: { name: 'owner' }
             };
             const fakeProject2 = {
                 projectId: 2,
@@ -68,20 +69,23 @@ describe('Receiver: frontend', () => {
                 editDate: '2019-06-24T06:49:53.000Z',
                 repoUrl: 'fake.repo.url',
                 status: 'created',
-                projectMeta: [{ metaKey: '_uploaded_to_ftp', metaValue: '0' }]
+                projectMeta: [{ metaKey: '_uploaded_to_ftp', metaValue: '0' }],
+                role: { name: 'owner' }
             };
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
                 'Project URL': `https://fake.domain/fakeuser1/fakeproject1/`,
                 'Published': new Date(fakeProject1.publishDate).toLocaleString(),
                 'Edited': new Date(fakeProject1.editDate).toLocaleString(),
-                'Repository': '-'
+                'Repository': '-',
+                'Role': 'owner'
             }, {
                 'Project Name': 'fakeproject2',
                 'Project URL': 'Unavailable',
                 'Published': '-',
                 'Edited': new Date(fakeProject1.editDate).toLocaleString(),
-                'Repository': 'fake.repo.url'
+                'Repository': 'fake.repo.url',
+                'Role': 'owner'
             }];
             sandbox.stub(FrontendReceiver.prototype, 'getFrontendProjects').resolves([fakeProject1 as Project, fakeProject2 as Project]);
             context = new Context('frontend', 'list', [], []);

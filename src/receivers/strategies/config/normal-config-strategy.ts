@@ -1,27 +1,32 @@
 import Context from '../../../context';
 import CommandResult from '../../../utils/command-result';
+import ConfigStrategy from "./config-strategy";
 
-class NormalConfigStrategy {
+class NormalConfigStrategy extends ConfigStrategy {
 
     private context: Context;
     private result: CommandResult;
 
     constructor(context: Context, result: CommandResult) {
+        super();
+
         this.context = context;
         this.result = result;
     }
 
-    setValue(name: string, value: string): void {
+    setValue(name: string, value: string): string {
         this._validate(name, value);
         const global = this._getGlobalFlag();
         this.context.mdbConfig.setValue(name, value, global);
         this.context.mdbConfig.save(process.cwd(), global);
+        return '';
     }
 
-    unsetValue(name: string): void {
+    unsetValue(name: string): string {
         const global = this._getGlobalFlag();
         this.context.mdbConfig.unsetValue(name, global);
         this.context.mdbConfig.save(process.cwd(), global);
+        return '';
     }
 
     private _getGlobalFlag(): boolean {

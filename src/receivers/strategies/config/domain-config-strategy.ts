@@ -6,8 +6,9 @@ import { OutputColor } from '../../../models/output-color';
 import CommandResult from "../../../utils/command-result";
 import PublishCommand from '../../../commands/publish-command';
 import HttpWrapper, {CustomRequestOptions} from '../../../utils/http-wrapper';
+import ConfigStrategy from "./config-strategy";
 
-class DomainConfigStrategy {
+class DomainConfigStrategy extends ConfigStrategy {
 
     private context: Context;
     private result: CommandResult;
@@ -15,6 +16,8 @@ class DomainConfigStrategy {
     private flags: { [key: string]: string | boolean } = {};
 
     constructor(context: Context, result: CommandResult) {
+        super();
+
         this.context = context;
         this.result = result;
 
@@ -28,7 +31,7 @@ class DomainConfigStrategy {
         this.flags = context.getParsedFlags();
     }
 
-    setValue(name: string, value: string): Promise<void> {
+    setValue(name: string, value: string): Promise<string> {
 
         this._validateDomain(value);
 
@@ -39,10 +42,11 @@ class DomainConfigStrategy {
         return this._verifyDomainName(value)
             .then(({ domain }) => this.context.mdbConfig.setValue(name, domain))
             .then(() => this.context.mdbConfig.save())
-            .then(() => this._publish());
+            .then(() => this._publish())
+            .then(() => '');
     }
 
-    unsetValue(name: string): Promise<void> {
+    unsetValue(name: string): Promise<string> {
 
         return this._unsetDomain()
             .then(({ url }) => {
@@ -58,7 +62,8 @@ class DomainConfigStrategy {
                     this.result.addAlert(OutputColor.Yellow, 'Warning', `Since this is a ${type} project we had to reset your domain name to the default one. Your project is now available at: ${url}`);
                 }
             })
-            .then(() => this.context.mdbConfig.save());
+            .then(() => this.context.mdbConfig.save())
+            .then(() => '');
     }
 
     _validateDomain(value: string): void {
@@ -68,7 +73,7 @@ class DomainConfigStrategy {
         }
     }
 
-    async enableSsl(domain: string): Promise<void> {
+    async enableSsl(domain: string): Promise<string> {
         this.options.path = `/project/certificate`;
         this.options.data = JSON.stringify({ domainName: domain });
         this.options.headers!['Content-Length'] = Buffer.byteLength(this.options.data);
@@ -77,7 +82,7 @@ class DomainConfigStrategy {
         const http = new HttpWrapper();
 
         await http.post(this.options);
-        this.result.addAlert(OutputColor.Green, 'Success', 'Certificate successfully enabled. Now you need to configure your DNS in order to finalize the configuration.');
+        return 'Certificate successfully enabled. Now you need to configure your DNS in order to finalize the configuration.';
     }
 
     async _verifyDomainName(value: string): Promise<{ domain: string }> {
