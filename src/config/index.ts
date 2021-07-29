@@ -12,6 +12,7 @@ const projectsDomain = process.env.PROJECTS_DOMAIN || 'mdbgo.io';
 const technologies = process.env.BACKEND_TECHNOLOGIES || 'node8,node10,node12,php7.2,php7.3,php7.4,php-laravel';
 const databases = process.env.DATABASES || 'mysql8,mongodb';
 const mdbgoPipelinePublicBranch = process.env.MDBGO_PIPELINE_PUBLIC_BRANCH || 'mdbgo/public';
+const memberRoles = process.env.MEMBER_ROLES || 'owner,developer,reporter';
 
 process.env['NODE_NO_WARNINGS'] = '1';
 
@@ -22,6 +23,7 @@ export default {
     projectsDomain,
     databases: databases.split(','),
     backendTechnologies: technologies.split(','),
+    memberRoles: memberRoles.split(','),
     tokenFile: '.auth',
     tokenDir: join(homedir(), '.mdbcli'),
     port: process.env.PORT || 3033,

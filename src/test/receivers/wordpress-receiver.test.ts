@@ -74,7 +74,8 @@ describe('Receiver: wordpress', () => {
                 editDate: '2019-06-24T06:49:53.000Z',
                 repoUrl: null,
                 status: 'wordpress',
-                projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology1' }, { metaKey: '_container_port', metaValue: '12345' }]
+                projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology1' }, { metaKey: '_container_port', metaValue: '12345' }],
+                role: { name: 'owner' }
             };
             const fakeProject2 = {
                 projectId: 2,
@@ -85,7 +86,8 @@ describe('Receiver: wordpress', () => {
                 editDate: '2019-06-24T06:49:53.000Z',
                 repoUrl: 'fake.repo.url',
                 status: 'wordpress',
-                projectMeta: []
+                projectMeta: [],
+                role: { name: 'owner' }
             };
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
@@ -93,14 +95,16 @@ describe('Receiver: wordpress', () => {
                 'Edited': new Date(fakeProject1.editDate).toLocaleString(),
                 'Technology': 'faketechnology1',
                 'Repository': '-',
-                'URL': 'http://fake.domain:12345'
+                'URL': 'http://fake.domain:12345',
+                'Role': 'owner'
             }, {
                 'Project Name': 'fakeproject2',
                 'Published': new Date(fakeProject2.publishDate).toLocaleString(),
                 'Edited': new Date(fakeProject2.editDate).toLocaleString(),
                 'Technology': undefined,
                 'Repository': 'fake.repo.url',
-                'URL': 'Unavailable'
+                'URL': 'Unavailable',
+                'Role': 'owner'
             }];
             context = new Context('wordpress', '', [], []);
             receiver = new WordpressReceiver(context);
