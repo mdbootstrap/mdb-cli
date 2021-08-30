@@ -10,6 +10,8 @@ deserializeJsonFile('./package.json').then(fileContent => {
     fileContent.scripts.test = 'echo "Error: no test specified" && exit 1';
     fileContent.bin.mdb = './index.js';
     fs.writeFileSync('dist/package.json', JSON.stringify(fileContent, null, 2));
+    fs.copyFileSync('README.md', 'dist/README.md');
+    fs.copyFileSync('.env', 'dist/.env');
 }).catch(err => {
     console.error(err);
 });

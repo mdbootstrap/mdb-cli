@@ -471,6 +471,7 @@ describe('Receiver: wordpress', () => {
                 .withArgs('projectName').returns('fakeName')
                 .withArgs('wordpress.email').resolves('fakeEmail')
                 .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('publishMethod').resolves('ftp')
                 .withArgs('hash').returns('fakehash');
 
             const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 201 } as CustomOkResponse);
@@ -493,6 +494,7 @@ describe('Receiver: wordpress', () => {
                 .withArgs('projectName').returns('fakeName')
                 .withArgs('wordpress.email').resolves('fakeEmail')
                 .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('publishMethod').resolves('ftp')
                 .withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
             sandbox.stub(receiver.context.mdbConfig, 'save');
@@ -521,6 +523,7 @@ describe('Receiver: wordpress', () => {
                 .withArgs('projectName').returns('fakeName')
                 .withArgs('wordpress.email').resolves('fakeEmail')
                 .withArgs('wordpress.username').resolves('fakeUsername')
+                .withArgs('publishMethod').resolves('ftp')
                 .withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
             sandbox.stub(receiver.context.mdbConfig, 'save');

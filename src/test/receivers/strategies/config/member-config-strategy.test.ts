@@ -88,7 +88,7 @@ describe('Strategy: MemberConfigStrategy', () => {
 
         it('should add member', async function () {
 
-            context = new Context('', '', [], ['--role', 'guest']);
+            context = new Context('', '', [], ['--role', 'reporter']);
             strategy = new MemberConfigStrategy(context, result);
 
             const mock = sandbox.mock(strategy);
@@ -102,7 +102,7 @@ describe('Strategy: MemberConfigStrategy', () => {
 
         it('should throw http connection error durnig adding member', async function () {
 
-            context = new Context('', '', [], ['--role', 'guest']);
+            context = new Context('', '', [], ['--role', 'reporter']);
             strategy = new MemberConfigStrategy(context, result);
             sandbox.stub(HttpWrapper.prototype, 'post').rejects(new Error('Fake error.'))
 

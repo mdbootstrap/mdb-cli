@@ -3,8 +3,8 @@
 import fs from "fs";
 import path from "path";
 import config from "./config";
-import {MdbGoPackageJson} from "./models/package-json";
-import {PackageManagers} from "./models/package-managers";
+import { MdbGoPackageJson } from "./models/package-json";
+import { PackageManagers } from "./models/package-managers";
 import PackageManager from "./utils/managers/package-manager";
 import PackageManagerLoader from "./utils/managers/package-manager-loader";
 import DotMdbConfigManager from "./utils/managers/dot-mdb-config-manager";
@@ -81,7 +81,7 @@ class Context {
             f = f.slice(2);
 
             if (this._isNonArgFlag(f)) {
-               parsedFlags[f] = true;
+                parsedFlags[f] = true;
             } else {
                 parsedFlags[f] = this._consumeNextFlag(flags);
             }
@@ -136,13 +136,14 @@ class Context {
         }
     }
 
-    authenticateUser(): void {
+    authenticateUser(throwError = true): void {
         try {
             this.userToken = fs.readFileSync(path.join(config.tokenDir, config.tokenFile), 'utf8');
         } catch (e) {
-            throw new Error('Please login first');
+            if (throwError) throw new Error('Please login first');
         }
     }
+
     setPackageJsonValue(key: keyof MdbGoPackageJson, value: string, cwd = process.cwd()) {
         const settingsPath = path.join(cwd, 'package.json');
         // @ts-ignore

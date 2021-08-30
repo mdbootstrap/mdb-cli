@@ -53,7 +53,7 @@ class GitManager {
         return this._task(['merge', branchName], '', 'Problem with git branch merge.');
     }
 
-    pull(branchName: string) {
+    pull(branchName: string, printResult: boolean = true) {
 
         return new Promise<void>((resolve, reject) => {
 
@@ -63,12 +63,12 @@ class GitManager {
 
             gitPull.stdout?.on('data', data => {
                 result = `\n${data}`;
-                console.log(result);
+                if (printResult) console.log(result);
             });
 
             gitPull.stderr?.on('data', data => {
                 result = `\n${data}`;
-                console.error(result);
+                if (printResult) console.error(result);
             });
 
             gitPull.on('exit', code => {

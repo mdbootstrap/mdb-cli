@@ -143,6 +143,7 @@ describe('Command: init', () => {
     it('should call help method if receiver is undefined', async () => {
 
         const helpMethodSpy = sandbox.spy(InitCommand.prototype, 'help');
+        // @ts-ignore
         sandbox.stub(InitCommand.prototype, '_getStartersOptions').resolves(fakeStarter);
         createListPromptStub.resolves('fakeCode');
         context = new Context('fake', 'init', [], []);

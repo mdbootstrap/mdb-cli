@@ -17,8 +17,7 @@ async function createJenkinsfile(cwd: string, simple: boolean): Promise<boolean>
     stages {
         stage('Tests') {
             steps {
-                sh 'npm i'
-                sh 'npm test'
+                echo 'Doing nothing...'
             }
         }
     }
