@@ -19,11 +19,13 @@ class FrontendReceiver extends Receiver {
     private starterCode = '';
     private readonly args: string[];
     private _publishRetries = 0;
+    private loggedin = false;
 
-    constructor(context: Context) {
+    constructor(context: Context, requireAuth = true) {
         super(context);
 
-        this.context.authenticateUser();
+        this.context.authenticateUser(requireAuth);
+        this.loggedin = !!this.context.userToken;
 
         this.options = {
             hostname: config.host,
@@ -137,7 +139,9 @@ class FrontendReceiver extends Receiver {
     }
 
     async _getFrontendStartersOptions(): Promise<StarterOption[]> {
-        this.options.path = `/packages/starters?type=frontend${!this.flags.all ? '&available=true' : ''}`;
+        const queryParamAvailable = !this.flags.all ? '&available=true' : '';
+        const freeStarters = this.loggedin ? '' : '/free';
+        this.options.path = `/packages/starters${freeStarters}?type=frontend${queryParamAvailable}`;
         const result = await this.http.get(this.options);
         return JSON.parse(result.body);
     }
@@ -174,7 +178,8 @@ class FrontendReceiver extends Receiver {
     }
 
     async downloadProjectStarter(projectPath: string): Promise<string> {
-        this.options.path = `/packages/download/${this.starterCode}`;
+        const freeStarters = this.loggedin ? '' : '/free';
+        this.options.path = `/packages/download${freeStarters}/${this.starterCode}`;
         const result = await helpers.downloadFromFTP(this.http, this.options, projectPath);
         return result;
     }
@@ -211,6 +216,11 @@ class FrontendReceiver extends Receiver {
 
         if (!this.context.mdbConfig.getValue('hash')) {
             this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
+            this.context.mdbConfig.save();
+        }
+
+        if (!this.context.mdbConfig.getValue('projectName')) {
+            this.context.mdbConfig.setValue('projectName', this.context.packageJsonConfig.name as string);
             this.context.mdbConfig.save();
         }
 
@@ -264,6 +274,9 @@ class FrontendReceiver extends Receiver {
             this.result.addTextLine(message);
             this.result.addTextLine('');
             this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
+
+            if (strategy instanceof PipelinePublishStrategy)
+                this.result.addAlert(OutputColor.Blue, 'Info', 'It may take a while to deploy your app because of running pipeline. You can check pipeline status at https://jenkins.mdbgo.com/');
 
             if (this.flags.open && !!url) open(url);
         } catch (e) {

@@ -8,14 +8,17 @@ import { OutputColor, StarterOption } from '../models';
 
 class StarterReceiver extends Receiver {
 
+    private loggedin = false;
+
     constructor(context: Context) {
         super(context);
 
-        this.context.authenticateUser();
+        this.context.authenticateUser(false);
+        this.loggedin = !!this.context.userToken;
 
         this.options = {
             hostname: config.host,
-            headers: { Authorization: `Bearer ${this.context.userToken}` }
+            ...this.loggedin && { headers: { Authorization: `Bearer ${this.context.userToken}` } }
         };
 
         this.context.registerFlagExpansions({
@@ -27,15 +30,19 @@ class StarterReceiver extends Receiver {
 
     async list(): Promise<void> {
 
-        this.result.liveTextLine('Fetching starters...');
+        if (!this.loggedin)
+            this.result.liveAlert(OutputColor.Yellow, '\nWarning!', 'You are not logged in, it will show only free starters as available.');
+
+        this.result.liveTextLine('\nFetching starters...');
 
         try {
             this._validateOnlyFlag();
 
             const queryParamType = this.flags.only ? `type=${this.flags.only}` : '';
             const queryParamAvailable = !this.flags.all ? 'available=true' : '';
+            const freeStarters = this.loggedin ? '' : '/free';
 
-            this.options.path = `/packages/starters?${queryParamType}&${queryParamAvailable}`;
+            this.options.path = `/packages/starters${freeStarters}?${queryParamType}&${queryParamAvailable}`;
             const { body: response } = await this.http.get(this.options);
             const starters = JSON.parse(response);
 
@@ -54,13 +61,13 @@ class StarterReceiver extends Receiver {
         }
     }
 
-    _validateOnlyFlag(): void {
+    private _validateOnlyFlag(): void {
         if (!!this.flags.only && !['frontend', 'backend', 'wordpress'].includes(this.flags.only as string)) {
             throw new Error('Invalid value for --only flag');
         }
     }
 
-    _buildStartersMap(options: StarterOption[]) {
+    private _buildStartersMap(options: StarterOption[]) {
         return options.reduce<{ [key: string]: { name: string, short: string, value: string }[] }>((res, curr) => {
             res[`${curr.category} ${curr.license}`] = res[`${curr.category} ${curr.license}`] || [];
 
@@ -74,7 +81,7 @@ class StarterReceiver extends Receiver {
         }, {});
     }
 
-    _printStartersMap(color: OutputColor, header: string, map: any): void {
+    private _printStartersMap(color: OutputColor, header: string, map: any): void {
 
         this.result.addTextLine('');
         this.result.addAlert(color, header, '\n');

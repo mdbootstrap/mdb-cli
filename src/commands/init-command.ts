@@ -1,6 +1,6 @@
 'use strict';
 
-import {Separator} from "inquirer";
+import { Separator } from "inquirer";
 import config from "../config";
 import helpers from "../helpers";
 import Command from "./command";
@@ -15,8 +15,8 @@ import Receiver from "../receivers/receiver";
 import Entity from "../models/entity";
 import Context from "../context";
 import CommandResult from "../utils/command-result";
-import {OutputColor} from "../models/output-color";
-import {StarterOption} from "../models/starter-option";
+import { OutputColor } from "../models/output-color";
+import { StarterOption } from "../models/starter-option";
 
 class InitCommand extends Command {
 
@@ -75,12 +75,12 @@ class InitCommand extends Command {
                 break;
 
             case Entity.Frontend:
-                this.receiver = new FrontendReceiver(ctx);
+                this.receiver = new FrontendReceiver(ctx, false);
                 this.receiver.result.on('mdb.cli.live.output', (msg: CommandResult) => this.printResult([msg]));
                 break;
 
             case Entity.Backend:
-                this.receiver = new BackendReceiver(ctx);
+                this.receiver = new BackendReceiver(ctx, false);
                 break;
 
             case Entity.Database:
@@ -97,7 +97,7 @@ class InitCommand extends Command {
                 break;
 
             case Entity.Wordpress:
-                this.receiver = new WordpressReceiver(ctx);
+                this.receiver = new WordpressReceiver(ctx, false);
                 this.receiver.result.on('mdb.cli.live.output', (msg: CommandResult) => this.printResult([msg]));
                 break;
         }
@@ -125,7 +125,7 @@ class InitCommand extends Command {
         }
     }
 
-    _getProjectTypeOptions() {
+    private _getProjectTypeOptions() {
 
         return [
             { name: 'Frontend', short: 'Frontend', value: 'frontend' },
@@ -169,15 +169,14 @@ class InitCommand extends Command {
 
         const starter = availableStarters.find(o => o.license === licenseType && o.category === mdbVersion && o.type === technology && o.displayName === frontTechnology);
 
-        if (!starter!.available) {
-            return this.results.addAlert(OutputColor.Red, 'Error', 'You cannot create project with provided specification. Please visit https://mdbootstrap.com/my-orders/ or run `mdb starters -a` and make sure it is available for you.');
-        } else if (!starter) {
+        if (!starter)
             return this.results.addAlert(OutputColor.Red, 'Error', 'We could not initialize any starter with given criteria. Please run `mdb [entity] init` and choose one of the available starters.');
-        }
+        else if (!starter.available)
+            return this.results.addAlert(OutputColor.Red, 'Error', 'You cannot create project with provided specification. Please visit https://mdbootstrap.com/my-orders/ or run `mdb starters -a` and make sure it is available for you.');
 
         this.starterCode = starter.code;
         this.entity = technology;
-        this.receiver = new FrontendReceiver(this.context);
+        this.receiver = new FrontendReceiver(this.context, false);
     }
 
     async backendWizardForm(): Promise<void> {
@@ -206,8 +205,9 @@ class InitCommand extends Command {
 
         this.starterCode = starter;
         this.entity = technology;
-        this.receiver = new BackendReceiver(this.context);
+        this.receiver = new BackendReceiver(this.context, false);
     }
+
     async wordpressWizardForm(): Promise<void> {
 
         const technology = 'wordpress';
@@ -234,7 +234,7 @@ class InitCommand extends Command {
 
         this.starterCode = starter;
         this.entity = technology;
-        this.receiver = new WordpressReceiver(this.context);
+        this.receiver = new WordpressReceiver(this.context, false);
     }
 
     async detectReceiver(): Promise<void> {
@@ -266,25 +266,30 @@ class InitCommand extends Command {
         const { type: entity } = starter;
         ctx.entity = entity;
 
-        if (entity === 'frontend') this.receiver = new FrontendReceiver(ctx);
-        else if (entity === 'backend') this.receiver = new BackendReceiver(ctx);
-        else if (entity === 'wordpress') this.receiver = new WordpressReceiver(ctx);
+        if (entity === 'frontend') this.receiver = new FrontendReceiver(ctx, false);
+        else if (entity === 'backend') this.receiver = new BackendReceiver(ctx, false);
+        else if (entity === 'wordpress') this.receiver = new WordpressReceiver(ctx, false);
     }
 
-    async _getStartersOptions(flags: { [key: string]: string | boolean }, technology?: string): Promise<StarterOption[]> {
+    private async _getStartersOptions(flags: { [key: string]: string | boolean }, technology?: string): Promise<StarterOption[]> {
 
-        this.context.authenticateUser();
+        this.context.authenticateUser(false);
+
+        const queryParamType = technology ? `type=${technology}` : '';
+        const queryParamAvailable = !flags.all ? 'available=true' : '';
+        const loggedin = this.context.userToken;
+        const freeStarters = loggedin ? '' : '/free';
 
         const options = {
             hostname: config.host,
-            path: `/packages/starters?${technology ? 'type=' + technology + '&' : ''}${!flags.all ? 'available=true' : ''}`,
-            headers: { Authorization: `Bearer ${this.context.userToken}` }
+            path: `/packages/starters${freeStarters}?${queryParamType}&${queryParamAvailable}`,
+            ...loggedin && { headers: { Authorization: `Bearer ${this.context.userToken}` } }
         };
         const result = await new StarterReceiver(this.context).http.get(options);
         return JSON.parse(result.body);
     }
 
-    _buildStartersList(options: StarterOption[]) {
+    private _buildStartersList(options: StarterOption[]) {
 
         const starters = options.reduce<{ [key: string]: { name: string, short: string, value: string }[] }>((res, curr) => {
             res[`${curr.category} ${curr.license}`] = res[`${curr.category} ${curr.license}`] || [];

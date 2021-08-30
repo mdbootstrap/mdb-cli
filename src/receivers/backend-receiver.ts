@@ -11,6 +11,7 @@ import Receiver from './receiver';
 import Context from '../context';
 import helpers from '../helpers';
 import config from '../config';
+import PipelinePublishStrategy from "./strategies/publish/pipeline-publish-strategy";
 
 
 class BackendReceiver extends Receiver {
@@ -19,11 +20,13 @@ class BackendReceiver extends Receiver {
     private starterCode: string = '';
     private projectName: string = '';
     private _publishRetries = 0;
+    private loggedin = false;
 
-    constructor(context: Context) {
+    constructor(context: Context, requireAuth = true) {
         super(context);
 
-        this.context.authenticateUser();
+        this.context.authenticateUser(requireAuth);
+        this.loggedin = !!this.context.userToken;
 
         this.options = {
             hostname: config.host,
@@ -148,7 +151,9 @@ class BackendReceiver extends Receiver {
     }
 
     async _getBackendStartersOptions(): Promise<any> {
-        this.options.path = `/packages/starters?type=backend${!this.flags.all ? '&available=true' : ''}`;
+        const queryParamAvailable = !this.flags.all ? '&available=true' : '';
+        const freeStarters = this.loggedin ? '' : '/free';
+        this.options.path = `/packages/starters${freeStarters}?type=backend${queryParamAvailable}`;
         const result = await this.http.get(this.options);
         return JSON.parse(result.body);
     }
@@ -185,7 +190,8 @@ class BackendReceiver extends Receiver {
     }
 
     async downloadProjectStarter(projectPath: string): Promise<string> {
-        this.options.path = `/packages/download/${this.starterCode}`;
+        const freeStarters = this.loggedin ? '' : '/free';
+        this.options.path = `/packages/download${freeStarters}/${this.starterCode}`;
         const result = await helpers.downloadFromFTP(this.http, this.options, projectPath);
         return result;
     }
@@ -269,12 +275,32 @@ class BackendReceiver extends Receiver {
 
     async _handlePublication(packageJsonEmpty: boolean, isNodePlatform: boolean): Promise<void> {
 
+        const publishMethod = this.context.mdbConfig.getValue('publishMethod');
+
         this._publishRetries++;
         if (this._publishRetries > 5) {
             return this.result.addAlert(OutputColor.Red, 'Error', 'Too many retries. Try again running the publish command.');
         }
 
-        const strategy = new FtpPublishStrategy(this.context, this.result);
+        let strategy: FtpPublishStrategy | PipelinePublishStrategy = new FtpPublishStrategy(this.context, this.result);
+
+        if (this.flags.ftp || publishMethod === 'ftp') {
+            strategy = new FtpPublishStrategy(this.context, this.result);
+        } else if (publishMethod === 'pipeline') {
+            strategy = new PipelinePublishStrategy(this.context, this.result, this.git, this.http, this.options);
+        } else {
+            const remoteUrl = this.git.getCurrentRemoteUrl();
+            if (remoteUrl !== '') {
+
+                const useGitlab = await helpers.createConfirmationPrompt(
+                    'This project seems to be created on MDB Go GitLab server. Do you want to use our pipeline to publish your project now?'
+                );
+
+                if (useGitlab) {
+                    strategy = new PipelinePublishStrategy(this.context, this.result, this.git, this.http, this.options);
+                }
+            }
+        }
 
         try {
             const response = await strategy.publish();

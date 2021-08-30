@@ -16,6 +16,7 @@ describe('Command: config', () => {
     beforeEach(() => {
 
         printResultStub = sandbox.stub(Command.prototype, 'printResult');
+        sandbox.stub(Context.prototype, 'authenticateUser');
     });
 
     afterEach(() => {

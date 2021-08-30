@@ -25,11 +25,15 @@ class RepoReceiver extends Receiver {
 
     async init() {
 
-        const projectName = await this._getProjectName();
+        let projectName = await this._getProjectName();
         const simple = this.context.packageJsonConfig.scripts && this.context.packageJsonConfig.scripts.test ? true : false;
         const created = await helpers.createJenkinsfile(process.cwd(), simple);
         if (created) {
             this.result.liveTextLine('Created required file: Jenkinsfile. Proceeding...');
+        }
+
+        if (!projectName) {
+            projectName = await this._askForProjectName();
         }
 
         const url = await this._createGitLabPipeline(projectName as string);
@@ -49,7 +53,8 @@ class RepoReceiver extends Receiver {
     async _getProjectName(): Promise<string | undefined> {
 
         let projectName = this.context.mdbConfig.getValue('projectName') || this.context.packageJsonConfig.name;
-        if (!projectName) {
+        const isWp = this.context.mdbConfig.getValue('meta.type') === 'wordpress';
+        if (!projectName && !isWp) {
             this.result.liveTextLine('package.json file is required. Creating...');
 
             try {
@@ -107,6 +112,15 @@ class RepoReceiver extends Receiver {
             await this.git.commit('.', 'Initial commit');
             await this.git.push('master');
         }
+    }
+
+    async _askForProjectName() {
+        let projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
+        projectName = projectName.trim().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
+        this.context.mdbConfig.setValue('projectName', projectName);
+        this.context.mdbConfig.save();
+
+        return projectName;
     }
 }
 

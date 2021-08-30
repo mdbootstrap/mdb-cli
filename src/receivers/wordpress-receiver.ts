@@ -8,9 +8,10 @@ import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
 import HttpWrapper from '../utils/http-wrapper';
 import Receiver from './receiver';
 import Context from '../context';
+import PipelinePublishStrategy from "./strategies/publish/pipeline-publish-strategy";
 
 export type WpCredentials = { pageName: string, username?: string, password?: string, repeatPassword?: string, email?: string };
-export type CreateWpPayload = WpCredentials & { pageType: string };
+export type CreateWpPayload = WpCredentials & { pageType: string, dummy: boolean };
 
 class WordpressReceiver extends Receiver {
 
@@ -18,24 +19,27 @@ class WordpressReceiver extends Receiver {
     private starterCode = '';
     private readonly args: string[];
     private _publishRetries = 0;
+    private loggedin = false;
 
-    constructor(context: Context) {
+    constructor(context: Context, requireAuth = true) {
         super(context);
 
-        this.context.authenticateUser();
+        this.context.authenticateUser(requireAuth);
+        this.loggedin = !!this.context.userToken;
 
         this.options = {
             hostname: config.host,
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['advanced', 'open', 'ftp', 'follow', 'help', 'override']);
+        this.context.registerNonArgFlags(['advanced', 'open', 'ftp', 'follow', 'help', 'override', 'dummy']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
             '-c': '--advanced',
             '-o': '--open',
-            '-h': '--help'
+            '-h': '--help',
+            '-d': '--dummy'
         });
 
         this.flags = this.context.getParsedFlags();
@@ -98,9 +102,7 @@ class WordpressReceiver extends Receiver {
         }
 
         try {
-            this.options.path = `/packages/download/${this.starterCode}`;
-            const result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
-
+            const result = await this.downloadProjectStarter(process.cwd());
             this.context.mdbConfig.setValue('meta.starter', this.starterCode);
             this.context.mdbConfig.setValue('meta.type', 'wordpress');
             this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
@@ -110,6 +112,13 @@ class WordpressReceiver extends Receiver {
         } catch (e) {
             this.result.addAlert(OutputColor.Red, 'Error', `Could not initialize: ${e.message || e}`);
         }
+    }
+
+    async downloadProjectStarter(projectPath: string): Promise<string> {
+        const freeStarters = this.loggedin ? '' : '/free';
+        this.options.path = `/packages/download${freeStarters}/${this.starterCode}`;
+        const result = await helpers.downloadFromFTP(this.http, this.options, projectPath);
+        return result;
     }
 
     async chooseStarter(choices: (typeof Separator | { name: string, value: string })[], options: StarterOption[]) {
@@ -128,7 +137,9 @@ class WordpressReceiver extends Receiver {
     }
 
     async _getWordpressStartersOptions(): Promise<StarterOption[]> {
-        this.options.path = `/packages/starters?type=wordpress${!this.flags.all ? '&available=true' : ''}`;
+        const queryParamAvailable = !this.flags.all ? '&available=true' : '';
+        const freeStarters = this.loggedin ? '' : '/free';
+        this.options.path = `/packages/starters${freeStarters}?type=wordpress${queryParamAvailable}`;
         const result = await this.http.get(this.options);
         return JSON.parse(result.body);
     }
@@ -158,16 +169,34 @@ class WordpressReceiver extends Receiver {
         const pageVariant = await this._getPageVariant();
         const wpData = await this._getWpData();
 
-        const projectName = this.context.mdbConfig.getValue('projectName');
-        const email = this.context.mdbConfig.getValue('wordpress.email');
-        const username = this.context.mdbConfig.getValue('wordpress.username') || 'admin';
-
         if (!this.context.mdbConfig.getValue('hash')) {
             this.context.mdbConfig.setValue('hash', helpers.generateRandomString());
             this.context.mdbConfig.save();
         }
 
-        await this._handlePublication(pageVariant, projectName as string, email as string, username, wpData);
+        let strategy: FtpPublishStrategy | PipelinePublishStrategy = new FtpPublishStrategy(this.context, this.result);
+
+        if (this.flags.ftp || this.context.mdbConfig.getValue('publishMethod') === 'ftp') {
+            strategy = new FtpPublishStrategy(this.context, this.result);
+        } else if (this.context.mdbConfig.getValue('publishMethod') === 'pipeline') {
+            strategy = new PipelinePublishStrategy(this.context, this.result, this.git, this.http, this.options);
+        } else {
+
+            const remoteUrl = this.git.getCurrentRemoteUrl();
+
+            if (remoteUrl !== '') {
+
+                const useGitlab = await helpers.createConfirmationPrompt(
+                    'This project seems to be created on MDB Go GitLab server. Do you want to use our pipeline to publish your project now?'
+                );
+
+                if (useGitlab) {
+                    strategy = new PipelinePublishStrategy(this.context, this.result, this.git, this.http, this.options);
+                }
+            }
+        }
+
+        await this._handlePublication(pageVariant, wpData, strategy);
     }
 
     async _getPageVariant(): Promise<string> {
@@ -188,10 +217,13 @@ class WordpressReceiver extends Receiver {
 
     async _getWpData(): Promise<WpCredentials> {
         let wpData: WpCredentials = {} as WpCredentials;
-        if (!this.context.mdbConfig.getValue('projectName')) {
+        const projectName = this.context.mdbConfig.getValue('projectName');
+        if (!projectName || !this.context.mdbConfig.getValue('wordpress')) {
             wpData = await this.askWpCredentials(this.flags.advanced as boolean);
 
-            this.context.mdbConfig.setValue('projectName', wpData.pageName.trim().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''));
+            const pageName = wpData.pageName ? wpData.pageName.trim().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') : projectName;
+
+            this.context.mdbConfig.setValue('projectName', pageName as string);
             this.context.mdbConfig.setValue('wordpress.email', wpData.email as string);
             this.context.mdbConfig.setValue('wordpress.username', wpData.username as string);
             this.context.mdbConfig.save();
@@ -200,29 +232,41 @@ class WordpressReceiver extends Receiver {
         return wpData;
     }
 
-    async _handlePublication(pageVariant: string, projectName: string, email: string, username: string, wpData: WpCredentials) {
+    async _handlePublication(pageVariant: string, wpData: WpCredentials, strategy: FtpPublishStrategy | PipelinePublishStrategy) {
+
+        const projectName = this.context.mdbConfig.getValue('projectName') || '';
+        const email = this.context.mdbConfig.getValue('wordpress.email');
+        const username = this.context.mdbConfig.getValue('wordpress.username') || 'admin';
+        const withPipeline = this.context.mdbConfig.getValue('publishMethod') === 'pipeline';
 
         this._publishRetries++;
         if (this._publishRetries > 5) {
             return this.result.addAlert(OutputColor.Red, 'Error', 'Too many retries. Try again running the publish command.');
         }
 
+        const hasDummy = ['wp-essential-blog', 'wp-essential-ecommerce', 'wp-essential-blog-ecomm'].includes(pageVariant);
+        let dummy = this.flags.dummy as boolean;
+
+        if (dummy && !hasDummy) {
+            return this.result.addAlert(OutputColor.Red, 'Error', `This WordPress starter does not support -d|--dummy flag. Please remove it in order to proceed.`);
+        }
+
         try {
-            const strategy = new FtpPublishStrategy(this.context, this.result);
             const response = await strategy.publish();
 
             const firstPublication = response.statusCode === 201;
             if (firstPublication) {
                 this.result.liveTextLine('Files uploaded, running your project...');
-                const payload = {
+                const payload: CreateWpPayload = {
                     pageType: pageVariant,
                     pageName: projectName,
                     email,
                     username,
                     password: wpData.password,
-                    repeatPassword: wpData.repeatPassword
+                    repeatPassword: wpData.repeatPassword,
+                    dummy
                 };
-                await this._createWpPage(payload);
+                await this._createWpPage(payload, withPipeline);
             } else {
                 this.result.addTextLine(response.body);
             }
@@ -232,24 +276,26 @@ class WordpressReceiver extends Receiver {
                 this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
                 this.context.mdbConfig.setValue('projectName', this.projectName);
                 this.context.mdbConfig.save();
-                await this._handlePublication(pageVariant, projectName, email, username, wpData);
+                await this._handlePublication(pageVariant, wpData, strategy);
             } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
                 this.result.liveAlert(OutputColor.Red, 'Error', e.message);
                 const domain = await helpers.createTextPrompt('Enter new domain name', 'Invalid domain name. Do not add the http(s):// part. If you are using *.mdbgo.io subdomain, don\'t omit the .mdbgo.io part as it won\'t work without it.', this.validateDomain);
                 this.context.mdbConfig.setValue('domain', domain);
                 this.context.mdbConfig.save();
-                await this._handlePublication(pageVariant, projectName, email, username, wpData);
+                await this._handlePublication(pageVariant, wpData, strategy);
             } else {
                 this.result.addAlert(OutputColor.Red, 'Error', `Could not publish: ${e.message || e}`);
             }
         }
     }
 
-    async _createWpPage(payload: CreateWpPayload): Promise<void> {
+    async _createWpPage(payload: CreateWpPayload, withPipeline: boolean = false): Promise<void> {
         this.options.path = '/project/wordpress';
         this.options.data = JSON.stringify(payload);
         this.options.headers!['Content-Type'] = 'application/json';
         this.options.headers!['Content-Length'] = Buffer.byteLength(this.options.data);
+
+        if (withPipeline) this.options.headers!['x-mdb-cli-pipeline'] = 'true';
 
         try {
             const { body } = await this.http.post(this.options);
@@ -273,21 +319,23 @@ class WordpressReceiver extends Receiver {
     async askWpCredentials(advanced: boolean): Promise<WpCredentials> {
 
         const prompt = inquirer.createPromptModule();
+        const hasProjectName = this.context.mdbConfig.getValue('projectName');
 
         let passwordValue = '';
 
         return prompt([
-            {
-                type: 'text',
-                message: 'Enter page name',
-                name: 'pageName',
-                validate: (value) => {
-                    /* istanbul ignore next */
-                    const valid = Boolean(value) && /^[A-Za-z0-9_ ?!-:;+=]+$/.test(value);
-                    /* istanbul ignore next */
-                    return valid || 'Page name is invalid.';
-                }
-            },
+            ...(!hasProjectName ?
+                [{
+                    type: 'text',
+                    message: 'Enter page name',
+                    name: 'pageName',
+                    validate: (value: string) => {
+                        /* istanbul ignore next */
+                        const valid = Boolean(value) && /^[A-Za-z0-9_ ?!-:;+=]+$/.test(value);
+                        /* istanbul ignore next */
+                        return valid || 'Page name is invalid.';
+                    }
+                }] : []),
             ...(advanced ?
                 [{
                     type: 'text',

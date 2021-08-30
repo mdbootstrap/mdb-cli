@@ -73,7 +73,7 @@ class PipelinePublishStrategy {
         }
 
         await this.git.checkout(config.mdbgoPipelinePublicBranch);
-        await this.git.pull(config.mdbgoPipelinePublicBranch);
+        await this.git.pull(config.mdbgoPipelinePublicBranch, false).catch(() => null);
         await this.git.merge(currentBranch);
     }
 
@@ -95,11 +95,18 @@ class PipelinePublishStrategy {
         const repoUrl = this.git.getCurrentRemoteUrl();
         const domain = this.context.mdbConfig.getValue('domain');
         const projectName = this.context.mdbConfig.getValue('projectName');
+        const projectType = this.context.mdbConfig.getValue('meta.type');
 
         this.options.data = JSON.stringify({ repoUrl, domain });
         this.options.headers!['Content-Length'] = Buffer.byteLength(this.options.data);
         this.options.headers!['Content-Type'] = 'application/json';
         this.options.path = `/project/save/${projectName}`;
+
+        if (projectType === 'backend') {
+            this.options.headers!['x-mdb-cli-backend-technology'] = this.context.mdbConfig.getValue('backend.platform');
+        } else if(projectType === 'wordpress') {
+            this.options.headers!['x-mdb-cli-wp-starter'] = this.context.mdbConfig.getValue('meta.starter');
+        }
 
         return this.http.post(this.options);
     }

@@ -169,7 +169,7 @@ class FtpPublishStrategy {
             };
 
             if (this.context.entity === 'backend') headers['x-mdb-cli-backend-technology'] = this.flags.platform as string || this.metaData.platform as string;
-            if (this.context.entity === 'wordpress') headers['x-mdb-cli-wp-page'] = this.metaData.starter;
+            if (this.context.entity === 'wordpress') headers['x-mdb-cli-wp-starter'] = this.metaData.starter;
             headers['x-mdb-cli-project-name'] = this.metaData.projectName;
             headers['x-mdb-cli-package-name'] = this.metaData.packageName;
             headers['x-mdb-cli-domain-name'] = this.metaData.domain;
