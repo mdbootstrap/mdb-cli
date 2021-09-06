@@ -290,6 +290,8 @@ describe('Receiver: frontend', () => {
 
     describe('Method: publish', () => {
 
+        beforeEach(() => sandbox.stub(fs, 'writeFileSync'));
+
         it('should create package.json if the current packageJsonConfig is empty', async function () {
 
             context = new Context('frontend', 'publish', [], []);
@@ -432,7 +434,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
-            
+
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.context, 'setPackageJsonValue');
@@ -454,7 +456,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
-            
+
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fake.domain');
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');

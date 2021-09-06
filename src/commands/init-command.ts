@@ -137,34 +137,23 @@ class InitCommand extends Command {
 
     async frontendWizardForm(): Promise<void> {
 
+        const versionChoices = [{ name: 'MDB 4', short: 'MDB 4', value: 'MDB4' }, { name: 'MDB 5', short: 'MDB 5', value: 'MDB5' }];
+        const mdbVersion = await helpers.createListPrompt('Choose MDB version:', versionChoices);
+
         const frontChoices = [
-            { name: 'Standard', short: 'Standard', value: 'Standard' },
-            { name: 'jQuery', short: 'jQuery', value: 'jQuery' },
+            mdbVersion === 'MDB4' ? { name: 'jQuery', short: 'jQuery', value: 'jQuery' } : { name: 'Standard', short: 'Standard', value: 'Standard' },
             { name: 'Angular', short: 'Angular', value: 'Angular' },
             { name: 'React', short: 'React', value: 'React' },
             { name: 'Vue', short: 'Vue', value: 'Vue' },
         ];
         const frontTechnology = await helpers.createListPrompt('Choose technology:', frontChoices);
 
-        const licenseChoices = [
-            { name: 'Free', short: 'Free', value: 'Free' },
-        ];
-
-        if (frontTechnology !== 'Standard')
-            licenseChoices.push({ name: 'Pro', short: 'Pro', value: 'Pro' });
-        else
-            licenseChoices.push({ name: 'Essential', short: 'Essential', value: 'Essential' }, { name: 'Advanced', short: 'Advanced', value: 'Advanced' });
-
+        const licenseChoices = [{ name: 'Free', short: 'Free', value: 'Free' }];
+        if (mdbVersion === 'MDB4') licenseChoices.push({ name: 'Pro', short: 'Pro', value: 'Pro' });
+        else licenseChoices.push({ name: 'Essential', short: 'Essential', value: 'Essential' }, { name: 'Advanced', short: 'Advanced', value: 'Advanced' });
         const licenseType = await helpers.createListPrompt('Choose license:', licenseChoices);
 
-        const versionChoices = [
-            frontTechnology !== 'Standard' ?
-                { name: 'MDB 4', short: 'MDB 4', value: 'MDB4' } :
-                { name: 'MDB 5', short: 'MDB 5', value: 'MDB5' }
-        ];
-
         const technology = 'frontend';
-        const mdbVersion = await helpers.createListPrompt('Choose MDB version:', versionChoices);
         const availableStarters = await this._getStartersOptions({}, technology);
 
         const starter = availableStarters.find(o => o.license === licenseType && o.category === mdbVersion && o.type === technology && o.displayName === frontTechnology);
