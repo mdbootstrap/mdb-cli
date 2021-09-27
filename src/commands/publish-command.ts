@@ -33,6 +33,8 @@ class PublishCommand extends Command {
 
     setReceiver(ctx: Context): void {
 
+        this.requireDotMdb();
+
         if (!this.entity) {
             const type = ctx.mdbConfig.getValue('meta.type');
             if (type) {

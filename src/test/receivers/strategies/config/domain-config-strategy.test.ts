@@ -3,6 +3,7 @@ import Context from '../../../../context';
 import CommandResult from '../../../../utils/command-result';
 import DomainConfigStrategy from '../../../../receivers/strategies/config/domain-config-strategy';
 import PublishCommand from '../../../../commands/publish-command';
+import Command from '../../../../commands/command';
 import { createSandbox } from 'sinon';
 import inquirer from 'inquirer';
 import { expect } from 'chai';
@@ -153,6 +154,7 @@ describe('Strategy: DomainConfigStrategy', () => {
 
         strategy = new DomainConfigStrategy(ctx, res);
 
+        sandbox.stub(Command.prototype, 'requireDotMdb');
         sandbox.stub(ctx.mdbConfig, 'getValue').returns('frontend');
         const publish = sandbox.stub(PublishCommand.prototype, 'execute').resolves();
         await strategy._publish();

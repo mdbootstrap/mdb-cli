@@ -1,5 +1,6 @@
 'use strict';
 
+import fs from 'fs';
 import Context from '../../context';
 import Command from '../../commands/command';
 import ConfigCommand from '../../commands/config-command';
@@ -17,6 +18,8 @@ describe('Command: config', () => {
 
         printResultStub = sandbox.stub(Command.prototype, 'printResult');
         sandbox.stub(Context.prototype, 'authenticateUser');
+        sandbox.stub(Command.prototype, 'requireDotMdb');
+        sandbox.stub(fs, 'existsSync').returns(true);
     });
 
     afterEach(() => {
