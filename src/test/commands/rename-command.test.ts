@@ -1,5 +1,6 @@
 'use strict';
 
+import fs from 'fs';
 import Context from '../../context';
 import Command from '../../commands/command';
 import RenameCommand from '../../commands/rename-command';
@@ -29,6 +30,8 @@ describe('Command: rename', () => {
         helpSpy = sandbox.spy(RenameCommand.prototype, 'help');
         printResultStub = sandbox.stub(Command.prototype, 'printResult');
         sandbox.stub(Context.prototype, 'authenticateUser');
+        sandbox.stub(Command.prototype, 'requireDotMdb');
+        sandbox.stub(fs, 'existsSync').returns(true);
     });
 
     it('should call backend receiver rename() method and print result', async () => {

@@ -37,6 +37,7 @@ class ConfigCommand extends Command {
 
         switch (this.entity) {
             case Entity.Config:
+                this.requireDotMdb();
                 this.receiver = new ConfigReceiver(ctx);
                 break;
 

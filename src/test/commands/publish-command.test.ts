@@ -1,5 +1,6 @@
 'use strict';
 
+import fs from 'fs';
 import Context from '../../context';
 import Command from '../../commands/command';
 import PublishCommand from '../../commands/publish-command';
@@ -7,6 +8,7 @@ import BackendReceiver from '../../receivers/backend-receiver';
 import FrontendReceiver from '../../receivers/frontend-receiver';
 import WordpressReceiver from '../../receivers/wordpress-receiver';
 import { createSandbox, SinonStub } from 'sinon';
+import DotMdbConfigManager from '../../utils/managers/dot-mdb-config-manager';
 
 describe('Command: publish', () => {
 
@@ -18,6 +20,9 @@ describe('Command: publish', () => {
 
         printResultStub = sandbox.stub(Command.prototype, 'printResult');
         sandbox.stub(Context.prototype, 'authenticateUser');
+        sandbox.stub(Command.prototype, 'requireDotMdb');
+        sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(fs, 'writeFileSync');
     });
 
     afterEach(() => {
@@ -77,9 +82,10 @@ describe('Command: publish', () => {
 
     it('should call backend receiver publish() method and print result if entity is undefined but saved in config', async () => {
 
+        sandbox.stub(Context.prototype, 'loadPackageManager');
+        sandbox.stub(DotMdbConfigManager.prototype, 'getValue').withArgs('meta.type').returns('backend');
         const publishStub = sandbox.stub(BackendReceiver.prototype, 'publish');
         const context = new Context('', 'publish', [], []);
-        sandbox.stub(context.mdbConfig, 'getValue').withArgs('meta.type').returns('backend');
         const command = new PublishCommand(context);
 
         await command.execute();
