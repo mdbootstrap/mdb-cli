@@ -389,7 +389,7 @@ describe('Receiver: backend', () => {
         beforeEach(() => {
 
             requestStub = sandbox.stub(HttpWrapper.prototype, 'createRawRequest');
-            fakeRequest = { on: sandbox.stub(), end: sandbox.stub() };
+            fakeRequest = { on: sandbox.stub(), end: sandbox.stub(), write: sandbox.stub() };
             fakeResponse = { on: sandbox.stub() };
         });
 
@@ -475,12 +475,17 @@ describe('Receiver: backend', () => {
 
         it('should print live logs if -f flag is set', async () => {
 
+            sandbox.stub(config, 'apiUrl').value('http://fake.api.url');
+            const socket = { on: sandbox.stub(), id: 'fake.socket.id' } as any;
+            socket.on.withArgs('connected').yields();
+            socket.on.withArgs('logs').yields('fake logs');
             getBackendProjectsStub.resolves([fakeProject]);
             context = new Context('backend', 'logs', [], ['-f']);
             receiver = new BackendReceiver(context);
+            // @ts-ignore
+            sandbox.stub(receiver, 'getSocket').returns(socket);
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeproject');
             const liveTextLineStub = sandbox.stub(receiver.result, 'liveTextLine');
-            fakeResponse.on.withArgs('data').yields('fake logs');
             requestStub.returns(fakeRequest).yields(fakeResponse);
 
             await receiver.logs();

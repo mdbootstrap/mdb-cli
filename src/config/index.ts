@@ -13,6 +13,9 @@ const technologies = process.env.BACKEND_TECHNOLOGIES || 'node8,node10,node12,ph
 const databases = process.env.DATABASES || 'mysql8,mongodb';
 const mdbgoPipelinePublicBranch = process.env.MDBGO_PIPELINE_PUBLIC_BRANCH || 'mdbgo/public';
 const memberRoles = process.env.MEMBER_ROLES || 'owner,developer,reporter';
+const host = process.env.HOST || 'apps.mdbootstrap.com';
+const port = process.env.PORT || 3033;
+const apiPath = process.env.API_PATH || '/api';
 
 process.env['NODE_NO_WARNINGS'] = '1';
 
@@ -26,9 +29,10 @@ export default {
     memberRoles: memberRoles.split(','),
     tokenFile: '.auth',
     tokenDir: join(homedir(), '.mdbcli'),
-    port: process.env.PORT || 3033,
-    host: process.env.HOST || 'apps.mdbootstrap.com',
-    apiPath: process.env.API_PATH || '/api',
+    port,
+    host,
+    apiPath,
+    apiUrl: env === 'dev' ? process.env.API_URL : `https://${host}${apiPath}`,
     auth: {
         social: {
             google: {
