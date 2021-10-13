@@ -1,14 +1,15 @@
 import path from 'path';
 import open from 'open';
+import { io } from 'socket.io-client';
 import inquirer, { Separator } from 'inquirer';
-import config from '../config';
-import helpers from '../helpers';
 import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
+import PipelinePublishStrategy from './strategies/publish/pipeline-publish-strategy';
 import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
 import HttpWrapper from '../utils/http-wrapper';
 import Receiver from './receiver';
 import Context from '../context';
-import PipelinePublishStrategy from "./strategies/publish/pipeline-publish-strategy";
+import helpers from '../helpers';
+import config from '../config';
 
 export type WpCredentials = { pageName: string, username?: string, password?: string, repeatPassword?: string, email?: string };
 export type CreateWpPayload = WpCredentials & { pageType: string, dummy: boolean };
@@ -536,13 +537,26 @@ class WordpressReceiver extends Receiver {
 
         if (follow) {
 
-            const http = new HttpWrapper();
-            const request = http.createRawRequest(this.options, response => {
-                response.on('data', chunk => this.result.liveTextLine(Buffer.from(chunk).toString('utf8')));
-                response.on('error', err => { throw err; });
+            const io = this.getSocket();
+
+            io.on('connect_error', () => this.result.liveTextLine('Connection error, please try again a few minutes later...'));
+            io.on('logs', logs => this.result.liveTextLine(logs));
+            io.on('error', err => this.result.liveTextLine(err));
+            io.on('connected', () => {
+
+                const data = JSON.stringify({ socketId: io.id });
+                this.options.headers!['Content-Length'] = Buffer.byteLength(data);
+                this.options.headers!['Content-Type'] = 'application/json';
+
+                const http = new HttpWrapper();
+                const request = http.createRawRequest(this.options, response => {
+                    response.on('data', chunk => this.result.liveTextLine(Buffer.from(chunk).toString('utf8')));
+                    response.on('error', err => { throw err; });
+                });
+                request.on('error', err => { throw err; });
+                request.write(data, err => { if (err) throw err });
+                request.end();
             });
-            request.on('error', err => { throw err; });
-            request.end();
 
         } else {
 
@@ -610,6 +624,9 @@ class WordpressReceiver extends Receiver {
             .sort((a: Project, b: Project) => a.editDate < b.editDate);
     }
 
+    private getSocket() {
+        return io(config.apiUrl as string, { auth: { token: this.context.userToken }, timeout: 1000 });
+    }
 }
 
 export default WordpressReceiver;

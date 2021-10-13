@@ -11,6 +11,7 @@ import Receiver from './receiver';
 import Context from '../context';
 import helpers from '../helpers';
 import config from '../config';
+import { io } from 'socket.io-client';
 import PipelinePublishStrategy from "./strategies/publish/pipeline-publish-strategy";
 
 
@@ -489,13 +490,27 @@ class BackendReceiver extends Receiver {
 
         if (follow) {
 
-            const http = new HttpWrapper();
-            const request = http.createRawRequest(this.options, response => {
-                response.on('data', chunk => this.result.liveTextLine(Buffer.from(chunk).toString('utf8')));
-                response.on('error', err => { throw err; });
+            const io = this.getSocket();
+
+            io.on('connect_error', () => this.result.liveTextLine('Connection error, please try again a few minutes later...'));
+            io.on('logs', logs => this.result.liveTextLine(logs));
+            io.on('error', err => this.result.liveTextLine(err));
+            io.on('connected', () => {
+
+                const data = JSON.stringify({ socketId: io.id });
+                this.options.headers!['Content-Length'] = Buffer.byteLength(data);
+                this.options.headers!['Content-Type'] = 'application/json';
+
+                const http = new HttpWrapper();
+                const request = http.createRawRequest(this.options, response => {
+
+                    response.on('data', chunk => this.result.liveTextLine(Buffer.from(chunk).toString('utf8')));
+                    response.on('error', err => { throw err; });
+                });
+                request.on('error', err => { throw err; });
+                request.write(data, err => { if (err) throw err });
+                request.end();
             });
-            request.on('error', err => { throw err; });
-            request.end();
 
         } else {
 
@@ -559,6 +574,10 @@ class BackendReceiver extends Receiver {
         const projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
         this.context.mdbConfig.setValue('projectName', projectName);
         this.context.mdbConfig.save();
+    }
+
+    private getSocket() {
+        return io(config.apiUrl as string, { auth: { token: this.context.userToken }, timeout: 1000 });
     }
 }
 
