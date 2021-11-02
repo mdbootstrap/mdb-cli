@@ -1,9 +1,7 @@
-'use strict';
+import { SocialAuthStrategy } from './social-auth-strategy';
+import config from '../../../config';
 
-import SocialAuthStrategy from "./social-auth-strategy";
-import config from "../../../config";
-
-class GoogleAuthStrategy extends SocialAuthStrategy {
+export class GoogleAuthStrategy extends SocialAuthStrategy {
 
     get socialAuthUrl() {
         return config.auth.social.google.url as string;
@@ -13,5 +11,3 @@ class GoogleAuthStrategy extends SocialAuthStrategy {
         return this.login();
     }
 }
-
-export default GoogleAuthStrategy;

@@ -1,5 +1,5 @@
 import config from '../../../../config'
-import FacebookAuthStrategy from '../../../../receivers/strategies/auth/facebook-auth-strategy';
+import { FacebookAuthStrategy } from '../../../../receivers/strategies/auth';
 import { createSandbox } from 'sinon';
 import { expect } from 'chai';
 

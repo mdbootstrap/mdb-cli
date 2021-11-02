@@ -1,12 +1,10 @@
-'use strict';
-
 import fs from 'fs';
+import fse from 'fs-extra';
 import path from 'path';
 import open from 'open';
 import { Separator } from 'inquirer';
 import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
-import PipelinePublishStrategy from './strategies/publish/pipeline-publish-strategy';
-import FtpPublishStrategy from './strategies/publish/ftp-publish-strategy';
+import { FtpPublishStrategy, PipelinePublishStrategy} from './strategies/publish';
 import Receiver from './receiver';
 import helpers from '../helpers';
 import Context from "../context";
@@ -32,12 +30,13 @@ class FrontendReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help', 'override']);
+        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help', 'override', 'cwd']);
         this.context.registerFlagExpansions({
             '-t': '--test',
             '-o': '--open',
             '-n': '--name',
-            '-h': '--help'
+            '-h': '--help',
+            '.': '--cwd',
         });
 
         this.flags = this.context.getParsedFlags();
@@ -341,10 +340,12 @@ class FrontendReceiver extends Receiver {
         if (projects.length === 0) {
             return this.result.addTextLine('You don\'t have any projects yet.');
         }
-
+        const downloadToCurrentDir = this.flags.cwd as boolean || this.args.some(arg => arg === '.');
+        if (downloadToCurrentDir && fs.readdirSync(process.cwd()).length !== 0) {
+            return this.result.addAlert(OutputColor.Red, 'Error', 'Destination path `.` already exists and is not an empty directory.');
+        }
         const choices = projects.map(p => ({ name: p.projectName }));
-
-        const projectName = this.flags.name as string || this.args[0] || await helpers.createListPrompt('Choose project', choices);
+        const projectName = this.flags.name as string || this._getNameFromArgs() || await helpers.createListPrompt('Choose project', choices);
         const project = projects.find(p => p.projectName === projectName);
         if (!project) return this.result.addTextLine(`Project ${projectName} not found.`);
 
@@ -354,18 +355,28 @@ class FrontendReceiver extends Receiver {
 
             if (project.repoUrl && !this.flags.ftp) {
                 const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userNicename}@`);
-                result = await this.git.clone(repoUrlWithNicename);
+                result = await this.git.clone(repoUrlWithNicename, downloadToCurrentDir);
             } else {
-                await helpers.eraseDirectories(path.join(process.cwd(), projectName));
+                const projectPath = path.join(process.cwd(), projectName);
+                await helpers.eraseDirectories(projectPath);
                 const query = this.flags.force ? '?force=true' : '';
                 this.options.path = `/project/get/${projectName}${query}`;
                 result = await helpers.downloadFromFTP(this.http, this.options, process.cwd());
+                if (downloadToCurrentDir) {
+                    fse.copySync(projectPath, process.cwd());
+                    fse.removeSync(projectPath);
+                }
             }
 
             this.result.addAlert(OutputColor.Green, 'Success', result);
         } catch (err) {
             this.result.addAlert(OutputColor.Red, 'Error', `Could not download ${projectName}: ${err.message || err}`);
         }
+    }
+
+    private _getNameFromArgs() {
+        const args = this.args.filter(a => a !== '.');
+        return args[0];
     }
 }
 

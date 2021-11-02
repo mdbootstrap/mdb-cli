@@ -1,5 +1,3 @@
-'use strict';
-
 import helpers from '../../helpers';
 import Context from '../../context';
 import Command from '../../commands/command';
@@ -130,7 +128,7 @@ describe('Command: get', () => {
             await command.execute();
 
             sandbox.assert.calledOnce(gitStub);
-            sandbox.assert.calledOnceWithExactly(gitStub, 'https://fakeUser@git.mdbgo.com/fakeuser/fakeproject.git');
+            sandbox.assert.calledOnceWithExactly(gitStub, 'https://fakeUser@git.mdbgo.com/fakeuser/fakeproject.git', false);
         }
     });
 });

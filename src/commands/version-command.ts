@@ -1,5 +1,3 @@
-'use strict';
-
 import Command from "./command";
 import AppReceiver from "../receivers/app-receiver";
 import Context from "../context";

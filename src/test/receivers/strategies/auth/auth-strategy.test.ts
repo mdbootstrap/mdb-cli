@@ -1,7 +1,7 @@
 'use strict';
 
 import config from '../../../../config';
-import AuthStrategy from '../../../../receivers/strategies/auth/auth-strategy';
+import { AuthStrategy } from '../../../../receivers/strategies/auth';
 import fs from 'fs';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';

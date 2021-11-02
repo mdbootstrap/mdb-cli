@@ -1,5 +1,3 @@
-'use strict';
-
 import fs from 'fs';
 import Context from '../../context';
 import Command from '../../commands/command';
@@ -7,8 +5,8 @@ import PublishCommand from '../../commands/publish-command';
 import BackendReceiver from '../../receivers/backend-receiver';
 import FrontendReceiver from '../../receivers/frontend-receiver';
 import WordpressReceiver from '../../receivers/wordpress-receiver';
-import { createSandbox, SinonStub } from 'sinon';
 import DotMdbConfigManager from '../../utils/managers/dot-mdb-config-manager';
+import { createSandbox, SinonStub } from 'sinon';
 
 describe('Command: publish', () => {
 

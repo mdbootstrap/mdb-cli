@@ -1,12 +1,10 @@
-'use strict';
-
-import fs from "fs";
-import path from "path";
-import config from "../../../config";
+import fs from 'fs';
+import path from 'path';
+import config from '../../../config';
 
 const { tokenDir, tokenFile } = config;
 
-abstract class AuthStrategy {
+export abstract class AuthStrategy {
 
     abstract register(): Promise<string>;
 
@@ -52,5 +50,3 @@ abstract class AuthStrategy {
         }
     }
 }
-
-export default AuthStrategy;

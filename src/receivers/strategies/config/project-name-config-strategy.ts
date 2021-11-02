@@ -1,17 +1,10 @@
 import Context from '../../../context';
-import CommandResult from '../../../utils/command-result';
-import ConfigStrategy from "./config-strategy";
+import ConfigStrategy from './config-strategy';
 
-class ProjectNameConfigStrategy extends ConfigStrategy {
+export class ProjectNameConfigStrategy extends ConfigStrategy {
 
-    private context: Context;
-    private result: CommandResult;
-
-    constructor(context: Context, result: CommandResult) {
+    constructor(private readonly context: Context) {
         super();
-
-        this.context = context;
-        this.result = result;
     }
 
     async setValue(name: string, value: string): Promise<string> {
@@ -32,5 +25,3 @@ class ProjectNameConfigStrategy extends ConfigStrategy {
         return '';
     }
 }
-
-export default ProjectNameConfigStrategy;

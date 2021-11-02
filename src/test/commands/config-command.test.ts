@@ -1,5 +1,3 @@
-'use strict';
-
 import fs from 'fs';
 import Context from '../../context';
 import Command from '../../commands/command';

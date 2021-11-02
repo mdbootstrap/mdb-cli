@@ -1,9 +1,7 @@
-'use strict';
+import { SocialAuthStrategy } from './social-auth-strategy';
+import config from '../../../config';
 
-import SocialAuthStrategy from "./social-auth-strategy";
-import config from "../../../config";
-
-class TwitterAuthStrategy extends SocialAuthStrategy {
+export class TwitterAuthStrategy extends SocialAuthStrategy {
 
     get socialAuthUrl() {
         return config.auth.social.twitter.url as string;
@@ -13,5 +11,3 @@ class TwitterAuthStrategy extends SocialAuthStrategy {
         return this.login();
     }
 }
-
-export default TwitterAuthStrategy;

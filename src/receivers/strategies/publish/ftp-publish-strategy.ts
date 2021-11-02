@@ -1,57 +1,48 @@
-'use strict';
+import Ora from 'ora';
+import { join } from 'path';
+import { moveSync } from 'fs-extra';
+import { OutgoingHttpHeaders } from 'http';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
+import HttpWrapper, { CustomOkResponse } from '../../../utils/http-wrapper';
+import { MdbGoPackageJson, OutputColor, ParsedFlags } from '../../../models';
+import CommandResult from '../../../utils/command-result';
+import Context from '../../../context';
+import config from '../../../config';
+import helpers from '../../../helpers';
 
-import path from "path";
-import fs from "fs";
-import fse from "fs-extra";
-import Ora from "ora";
-import { OutgoingHttpHeaders } from "http";
-import HttpWrapper, { CustomOkResponse } from "../../../utils/http-wrapper";
-import { MdbGoPackageJson, OutputColor } from "../../../models";
-import CommandResult from "../../../utils/command-result";
-import Context from "../../../context";
-import config from "../../../config";
-import helpers from "../../../helpers";
-
-class FtpPublishStrategy {
+export class FtpPublishStrategy {
 
     private readonly userToken;
     private readonly cwd = process.cwd();
-    private readonly context;
 
     private packageJsonConfig!: MdbGoPackageJson;
-    private result;
-    private flags;
+    private flags: ParsedFlags;
     private metaData!: { [key: string]: string };
     private sent = '0';
 
-    constructor(context: Context, result: CommandResult) {
+    constructor(private readonly context: Context, private result: CommandResult) {
 
-        this.userToken = context.userToken;
-        this.context = context;
-        this.result = result;
+        this.userToken = this.context.userToken;
 
-        this.flags = context.getParsedFlags();
+        this.flags = this.context.getParsedFlags();
 
-        this._loadMetaData(context);
+        this._loadMetaData();
     }
 
     async publish() {
 
-        this._loadMetaData(this.context);
-
-        return this.buildProject()
-            .then(() => this.uploadFiles());
+        return this.buildProject().then(() => this.uploadFiles());
     }
 
-    _loadMetaData(context: Context): void {
-        this.packageJsonConfig = context.packageJsonConfig;
+    private _loadMetaData(): void {
+        this.packageJsonConfig = this.context.packageJsonConfig;
         this.metaData = {
-            packageName: context.mdbConfig.getValue('meta.starter') || '',
-            projectName: this.packageJsonConfig.name || context.mdbConfig.getValue('projectName') || '',
-            starter: this.flags.variant as string || context.mdbConfig.getValue('meta.starter') || '',
-            domain: this.packageJsonConfig.domainName || context.mdbConfig.getValue('domain') || '',
-            platform: context.mdbConfig.getValue('backend.platform') || '',
-            hash: context.mdbConfig.getValue('hash') || ''
+            packageName: this.context.mdbConfig.getValue('meta.starter') || '',
+            projectName: this.packageJsonConfig.name || this.context.mdbConfig.getValue('projectName') || '',
+            starter: this.flags.variant as string || this.context.mdbConfig.getValue('meta.starter') || '',
+            domain: this.packageJsonConfig.domainName || this.context.mdbConfig.getValue('domain') || '',
+            platform: this.context.mdbConfig.getValue('backend.platform') || '',
+            hash: this.context.mdbConfig.getValue('hash') || ''
         };
     }
 
@@ -59,8 +50,8 @@ class FtpPublishStrategy {
 
         let result = '';
 
-        const distPath = path.join(this.cwd, 'dist');
-        const buildPath = path.join(this.cwd, 'build');
+        const distPath = join(this.cwd, 'dist');
+        const buildPath = join(this.cwd, 'build');
         let packageJson = this.packageJsonConfig;
 
         if (!packageJson.scripts || !packageJson.scripts.build) {
@@ -73,31 +64,31 @@ class FtpPublishStrategy {
 
         if (isAngular) {
 
-            const angularJsonPath = path.join(this.cwd, 'angular.json');
+            const angularJsonPath = join(this.cwd, 'angular.json');
             const angularJson = await helpers.deserializeJsonFile(angularJsonPath);
 
             result = await this.runBuildScript();
 
-            const angularFolder = path.join('dist', angularJson.defaultProject);
-            const indexPath = path.join(this.cwd, angularFolder, 'index.html');
-            let indexHtml = fs.readFileSync(indexPath, 'utf8');
+            const angularFolder = join('dist', angularJson.defaultProject);
+            const indexPath = join(this.cwd, angularFolder, 'index.html');
+            let indexHtml = readFileSync(indexPath, 'utf8');
             indexHtml = indexHtml.replace(/<base href="\/">/g, '<base href=".">');
-            fs.writeFileSync(indexPath, indexHtml, 'utf8');
+            writeFileSync(indexPath, indexHtml, 'utf8');
 
-            const toRename = path.join(this.cwd, angularFolder);
+            const toRename = join(this.cwd, angularFolder);
 
-            fse.moveSync(toRename, buildPath, { overwrite: true });
-            fse.moveSync(buildPath, distPath, { overwrite: true });
+            moveSync(toRename, buildPath, { overwrite: true });
+            moveSync(buildPath, distPath, { overwrite: true });
 
         } else if (isReact) {
 
-            const appJsPath = path.join(this.cwd, 'src', 'App.js');
+            const appJsPath = join(this.cwd, 'src', 'App.js');
 
-            if (fs.existsSync(appJsPath)) {
+            if (existsSync(appJsPath)) {
 
-                let appJsFile = fs.readFileSync(appJsPath, 'utf8');
+                let appJsFile = readFileSync(appJsPath, 'utf8');
                 appJsFile = appJsFile.replace(/<Router/g, `<Router basename='/dist'`);
-                fs.writeFileSync(appJsPath, appJsFile, 'utf8');
+                writeFileSync(appJsPath, appJsFile, 'utf8');
             }
 
             packageJson.homepage = `https://${this.metaData.domain}/dist/`;
@@ -105,31 +96,31 @@ class FtpPublishStrategy {
 
             result = await this.runBuildScript();
 
-            if (fs.existsSync(appJsPath)) {
+            if (existsSync(appJsPath)) {
 
-                let appJsFile = fs.readFileSync(appJsPath, 'utf8');
+                let appJsFile = readFileSync(appJsPath, 'utf8');
                 const regex = new RegExp(`<Router basename='/dist'`, 'g');
                 appJsFile = appJsFile.replace(regex, '<Router');
-                fs.writeFileSync(appJsPath, appJsFile, 'utf8');
+                writeFileSync(appJsPath, appJsFile, 'utf8');
             }
 
             delete packageJson.homepage;
             await helpers.serializeJsonFile('package.json', packageJson);
 
-            if (fs.existsSync(buildPath)) {
+            if (existsSync(buildPath)) {
 
-                fse.moveSync(buildPath, distPath, { overwrite: true });
+                moveSync(buildPath, distPath, { overwrite: true });
             }
 
         } else if (isVue) {
 
-            const vueConfigFile = path.join(this.cwd, 'vue.config.js');
+            const vueConfigFile = join(this.cwd, 'vue.config.js');
 
-            if (!fs.existsSync(vueConfigFile)) {
+            if (!existsSync(vueConfigFile)) {
 
                 const vueConfigContent = 'module.exports = { publicPath: \'.\' }';
 
-                fs.writeFileSync(vueConfigFile, vueConfigContent, 'utf8');
+                writeFileSync(vueConfigFile, vueConfigContent, 'utf8');
             }
 
             result = await this.runBuildScript();
@@ -144,7 +135,7 @@ class FtpPublishStrategy {
                 'This is not MDB JARV project and there is no guarantee that it will work properly after publishing. In case of problems, please write to our support https://mdbootstrap.com/support/.'
             );
 
-            if (!fs.existsSync(distPath) && !fs.existsSync(buildPath)) {
+            if (!existsSync(distPath) && !existsSync(buildPath)) {
                 throw new Error('Build folder not found.');
             }
         }
@@ -157,7 +148,7 @@ class FtpPublishStrategy {
         return this.context.packageManager!.build(directoryPath);
     }
 
-    uploadFiles() {
+    private uploadFiles() {
 
         const spinner = Ora({ text: 'Uploading files' });
         spinner.start();
@@ -190,7 +181,7 @@ class FtpPublishStrategy {
                     return reject({ message: err.message, statusCode: err.statusCode });
                 }
 
-                this.convertToMb(archive.pointer());
+                this._convertToMb(archive.pointer());
 
                 spinner.succeed(`Uploading files | ${this.sent} Mb`);
 
@@ -204,7 +195,7 @@ class FtpPublishStrategy {
             archive.on('error', reject);
             archive.on('warning', (warn) => this.result.addAlert(OutputColor.Yellow, 'Warning', warn.data));
             archive.on('progress', () => {
-                this.convertToMb(archive.pointer());
+                this._convertToMb(archive.pointer());
                 spinner.text = `Uploading files | ${this.sent} Mb`;
             });
 
@@ -219,11 +210,9 @@ class FtpPublishStrategy {
         });
     }
 
-    convertToMb(pointer: number) {
+    private _convertToMb(pointer: number) {
 
         const num = pointer / Math.pow(1024, 2);
         this.sent = num.toFixed(3);
     }
 }
-
-export default FtpPublishStrategy;

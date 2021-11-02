@@ -1,5 +1,3 @@
-'use strict';
-
 import Command from "./command";
 import StarterReceiver from "../receivers/starter-receiver";
 import Context from "../context";
@@ -20,4 +18,4 @@ class StartersCommand extends Command {
 }
 
 module.exports = StartersCommand;
-export default StartersCommand
+export default StartersCommand;

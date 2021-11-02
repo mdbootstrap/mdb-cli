@@ -2,8 +2,7 @@ import inquirer from 'inquirer';
 import config from '../../../../config';
 import Receiver from '../../../../receivers/receiver';
 import HttpWrapper from '../../../../utils/http-wrapper';
-import AuthStrategy from '../../../../receivers/strategies/auth/auth-strategy';
-import NormalAuthStrategy from '../../../../receivers/strategies/auth/normal-auth-strategy';
+import { AuthStrategy, NormalAuthStrategy } from '../../../../receivers/strategies/auth';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 

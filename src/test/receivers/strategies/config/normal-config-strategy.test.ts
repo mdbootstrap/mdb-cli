@@ -1,7 +1,7 @@
 import config from '../../../../config';
 import Context from '../../../../context';
 import CommandResult from '../../../../utils/command-result';
-import NormalConfigStrategy from '../../../../receivers/strategies/config/normal-config-strategy';
+import { NormalConfigStrategy } from '../../../../receivers/strategies/config';
 import DotMdbConfigManager from '../../../../utils/managers/dot-mdb-config-manager';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
@@ -41,7 +41,7 @@ describe('Strategy: NormalConfigStrategy', () => {
 
             context = new Context('', '', [], []);
             context.registerNonArgFlags(['global']);
-            strategy = new NormalConfigStrategy(context, result);
+            strategy = new NormalConfigStrategy(context);
 
             try {
                 strategy.setValue('packageManager', 'value');
@@ -57,7 +57,7 @@ describe('Strategy: NormalConfigStrategy', () => {
 
             context = new Context('', '', [], []);
             context.registerNonArgFlags(['global']);
-            strategy = new NormalConfigStrategy(context, result);
+            strategy = new NormalConfigStrategy(context);
 
             try {
                 strategy.setValue('publishMethod', 'value');
@@ -73,7 +73,7 @@ describe('Strategy: NormalConfigStrategy', () => {
 
             context = new Context('', '', [], ['--global']);
             context.registerNonArgFlags(['global']);
-            strategy = new NormalConfigStrategy(context, result);
+            strategy = new NormalConfigStrategy(context);
 
             strategy.setValue('packageManager', 'npm');
 
@@ -85,7 +85,7 @@ describe('Strategy: NormalConfigStrategy', () => {
 
             context = new Context('', '', [], []);
             context.registerNonArgFlags(['global']);
-            strategy = new NormalConfigStrategy(context, result);
+            strategy = new NormalConfigStrategy(context);
 
             strategy.setValue('publishMethod', 'ftp');
 
@@ -100,7 +100,7 @@ describe('Strategy: NormalConfigStrategy', () => {
 
             context = new Context('', '', [], ['--global', '--unset']);
             context.registerNonArgFlags(['global', 'unset']);
-            strategy = new NormalConfigStrategy(context, result);
+            strategy = new NormalConfigStrategy(context);
 
             strategy.unsetValue('name');
 
@@ -112,7 +112,7 @@ describe('Strategy: NormalConfigStrategy', () => {
 
             context = new Context('', '', [], ['--unset']);
             context.registerNonArgFlags(['global', 'unset']);
-            strategy = new NormalConfigStrategy(context, result);
+            strategy = new NormalConfigStrategy(context);
 
             strategy.unsetValue('name');
 

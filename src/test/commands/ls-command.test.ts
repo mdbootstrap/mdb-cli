@@ -1,5 +1,3 @@
-'use strict';
-
 import Context from '../../context';
 import Command from '../../commands/command';
 import LsCommand from '../../commands/ls-command';

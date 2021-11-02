@@ -1,11 +1,7 @@
-'use strict';
-
 import Context from '../../context';
 import Command from '../../commands/command';
 import KillCommand from '../../commands/kill-command';
 import BackendReceiver from '../../receivers/backend-receiver';
-import DatabaseReceiver from '../../receivers/database-receiver';
-import FrontendReceiver from '../../receivers/frontend-receiver';
 import WordpressReceiver from '../../receivers/wordpress-receiver';
 import { createSandbox, SinonSpy, SinonStub } from 'sinon';
 

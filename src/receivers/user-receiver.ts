@@ -1,14 +1,8 @@
-'use strict';
-
 import atob from 'atob';
 import Context from '../context';
 import Receiver from './receiver';
 import { AuthMethod, OutputColor } from '../models';
-import NormalAuthStrategy from './strategies/auth/normal-auth-strategy';
-import GoogleAuthStrategy from './strategies/auth/google-auth-strategy';
-import FacebookAuthStrategy from './strategies/auth/facebook-auth-strategy';
-import TwitterAuthStrategy from './strategies/auth/twitter-auth-strategy';
-
+import { NormalAuthStrategy, GoogleAuthStrategy, FacebookAuthStrategy, TwitterAuthStrategy } from './strategies/auth';
 
 class UserReceiver extends Receiver {
 

@@ -1,22 +1,16 @@
 import Context from '../../../context';
-import CommandResult from '../../../utils/command-result';
 import HttpWrapper, { CustomRequestOptions } from '../../../utils/http-wrapper';
 import { Member, UserProject } from '../../../models/user-project';
 import ConfigStrategy from './config-strategy';
 import helpers from '../../../helpers';
 import config from '../../../config';
 
-class MemberConfigStrategy extends ConfigStrategy {
+export class MemberConfigStrategy extends ConfigStrategy {
 
-    private context: Context;
-    private result: CommandResult;
     private readonly options: CustomRequestOptions;
 
-    constructor(context: Context, result: CommandResult) {
+    constructor(private readonly context: Context) {
         super();
-
-        this.context = context;
-        this.result = result;
 
         this.context.authenticateUser();
 
@@ -116,5 +110,3 @@ class MemberConfigStrategy extends ConfigStrategy {
         return members;
     }
 }
-
-export default MemberConfigStrategy;

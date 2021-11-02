@@ -1,5 +1,3 @@
-'use strict';
-
 import Command from './command';
 import StarterReceiver from '../receivers/starter-receiver';
 import FrontendReceiver from '../receivers/frontend-receiver';
@@ -7,14 +5,13 @@ import BackendReceiver from '../receivers/backend-receiver';
 import WordpressReceiver from '../receivers/wordpress-receiver';
 import DatabaseReceiver from '../receivers/database-receiver';
 import OrderReceiver from '../receivers/order-receiver';
+import CommandResult from "../utils/command-result";
 import Entity from '../models/entity';
 import Context from "../context";
-import CommandResult from "../utils/command-result";
 
 
 class LsCommand extends Command {
 
-    private context: Context;
     private receiver!: StarterReceiver | FrontendReceiver | BackendReceiver | WordpressReceiver | DatabaseReceiver | OrderReceiver;
 
     private starterReceiver!: StarterReceiver;
@@ -24,10 +21,8 @@ class LsCommand extends Command {
     private databaseReceiver!: DatabaseReceiver;
     private orderReceiver!: OrderReceiver;
 
-    constructor(context: Context) {
+    constructor(protected readonly context: Context) {
         super(context);
-
-        this.context = context;
 
         this.checkFlags(context);
         this.setReceiver(context);

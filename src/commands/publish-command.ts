@@ -1,28 +1,23 @@
-'use strict';
-
 import Context from "../context";
 import Command from "./command";
 import FrontendReceiver from "../receivers/frontend-receiver";
 import BackendReceiver from "../receivers/backend-receiver";
 import WordpressReceiver from "../receivers/wordpress-receiver";
+import CommandResult from "../utils/command-result";
 import Entity from "../models/entity";
 import config from "../config";
-import CommandResult from "../utils/command-result";
 
 class PublishCommand extends Command {
 
     private receiver!: FrontendReceiver | BackendReceiver | WordpressReceiver;
-    private context: Context;
 
-    constructor(context: Context) {
+    constructor(protected context: Context) {
         super(context);
-
-        this.context = context;
-
-        this.setReceiver(context);
     }
 
     async execute(): Promise<void> {
+
+        await this.setReceiver();
 
         const flags = this.context.getParsedFlags();
         if (flags.help) return this.help();
@@ -31,35 +26,35 @@ class PublishCommand extends Command {
         this.printResult([this.receiver.result]);
     }
 
-    setReceiver(ctx: Context): void {
+    async setReceiver() {
 
-        this.requireDotMdb();
+        await this.requireDotMdb();
 
         if (!this.entity) {
-            const type = ctx.mdbConfig.getValue('meta.type');
+            const type = this.context.mdbConfig.getValue('meta.type');
             if (type) {
                 this.entity = type;
-                ctx.entity = type;
+                this.context.entity = type;
             }
         }
 
         switch (this.entity) {
 
             case Entity.Backend:
-                this.receiver = new BackendReceiver(ctx);
+                this.receiver = new BackendReceiver(this.context);
                 break;
 
             case Entity.Wordpress:
-                this.receiver = new WordpressReceiver(ctx);
+                this.receiver = new WordpressReceiver(this.context);
                 break;
 
             case Entity.Frontend:
-                this.receiver = new FrontendReceiver(ctx);
+                this.receiver = new FrontendReceiver(this.context);
                 break;
 
             default:
-                ctx.entity = Entity.Frontend;
-                this.receiver = new FrontendReceiver(ctx);
+                this.context.entity = Entity.Frontend;
+                this.receiver = new FrontendReceiver(this.context);
                 break;
         }
 

@@ -1,5 +1,3 @@
-'use strict';
-
 import Command from "./command";
 import OrderReceiver from "../receivers/order-receiver";
 import Context from "../context";

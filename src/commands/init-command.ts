@@ -1,5 +1,3 @@
-'use strict';
-
 import { Separator } from "inquirer";
 import config from "../config";
 import helpers from "../helpers";
@@ -11,7 +9,6 @@ import WordpressReceiver from "../receivers/wordpress-receiver";
 import DatabaseReceiver from "../receivers/database-receiver";
 import BlankReceiver from "../receivers/blank-receiver";
 import RepoReceiver from "../receivers/repo-receiver";
-import Receiver from "../receivers/receiver";
 import Entity from "../models/entity";
 import Context from "../context";
 import CommandResult from "../utils/command-result";
@@ -20,14 +17,11 @@ import { StarterOption } from "../models/starter-option";
 
 class InitCommand extends Command {
 
-    private readonly context: Context;
     private starterCode = '';
     private receiver!: StarterReceiver | FrontendReceiver | BackendReceiver | WordpressReceiver | DatabaseReceiver | BlankReceiver | RepoReceiver;
 
-    constructor(context: Context) {
+    constructor(protected readonly context: Context) {
         super(context);
-
-        this.context = context;
 
         this.context.registerNonArgFlags(['wizard']);
         this.context.registerFlagExpansions({

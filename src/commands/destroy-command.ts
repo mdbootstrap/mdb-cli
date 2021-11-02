@@ -1,6 +1,4 @@
-'use strict';
-
-import KillCommand from "./kill-command";
+import KillCommand from './kill-command';
 
 class DestroyCommand extends KillCommand { }
 

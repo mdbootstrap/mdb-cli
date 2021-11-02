@@ -1,5 +1,3 @@
-'use strict';
-
 import Command from './command';
 import ConfigReceiver from '../receivers/config-receiver';
 import DatabaseReceiver from '../receivers/database-receiver';
@@ -10,16 +8,16 @@ class ConfigCommand extends Command {
 
     private receiver: ConfigReceiver | DatabaseReceiver | null = null;
 
-    constructor(context: Context) {
+    constructor(protected readonly context: Context) {
         super(context);
 
         this.args = context.args;
         this.receiver = null;
-
-        this.setReceiver(context);
     }
 
     async execute(): Promise<void> {
+
+        await this.setReceiver();
 
         if (this.args.length === 0) {
             return this.help();
@@ -33,16 +31,16 @@ class ConfigCommand extends Command {
         }
     }
 
-    setReceiver(ctx: Context): void {
+    async setReceiver() {
 
         switch (this.entity) {
             case Entity.Config:
-                this.requireDotMdb();
-                this.receiver = new ConfigReceiver(ctx);
+                if (this.args[0] !== 'init') await this.requireDotMdb();
+                this.receiver = new ConfigReceiver(this.context);
                 break;
 
             case Entity.Database:
-                this.receiver = new DatabaseReceiver(ctx);
+                this.receiver = new DatabaseReceiver(this.context);
                 break;
         }
     }

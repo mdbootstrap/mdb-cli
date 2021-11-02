@@ -18,9 +18,9 @@ class GitManager {
         return this._task(['checkout', '-B', branchName], `Switched to branch ${branchName}.`, 'Problem with git branch change.');
     }
 
-    clone(repoUrl: string, projectName?: string) {
+    clone(repoUrl: string, toCurrentDir: boolean = false) {
 
-        const gitArgs = projectName ? ['clone', repoUrl, projectName] : ['clone', repoUrl];
+        const gitArgs = toCurrentDir ? ['clone', repoUrl, '.'] : ['clone', repoUrl];
         return this._task(gitArgs, 'Success.', 'There were some errors. Please try again.');
     }
 

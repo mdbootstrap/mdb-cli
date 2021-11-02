@@ -1,10 +1,9 @@
-'use strict';
-
 import Context from '../../context';
+import helpers from '../../helpers';
 import Command from '../../commands/command';
+import CommandResult from '../../utils/command-result';
 import { createSandbox } from 'sinon';
 import { expect } from 'chai';
-import CommandResult from '../../utils/command-result';
 import fs from 'fs';
 
 describe('Command: parent', () => {
@@ -59,7 +58,7 @@ describe('Command: parent', () => {
 
     describe('Method: requireDotMdb()', () => {
 
-        it('should require `.mdb` file', () => {
+        it('should require `.mdb` file', async () => {
 
             sandbox.stub(fs, 'existsSync').returns(true);
             sandbox.stub(process, 'cwd').returns('/test/location');
@@ -68,18 +67,16 @@ describe('Command: parent', () => {
             // @ts-ignore
             const command = new Command(context);
 
-            command.requireDotMdb();
-
             try {
 
-                command.requireDotMdb();
+                await command.requireDotMdb();
             } catch (err) {
 
                 sandbox.assert.fail('requireDotMdb() should not throw an error');
-            }            
+            }
         });
 
-        it('should throw if `.mdb` file found in wrong location', () => {
+        it('should throw if `.mdb` file found in wrong location', async () => {
 
             sandbox.stub(fs, 'existsSync').onFirstCall().returns(false).onSecondCall().returns(true);
             sandbox.stub(process, 'cwd').returns('/test/location');
@@ -90,7 +87,7 @@ describe('Command: parent', () => {
 
             try {
 
-                command.requireDotMdb();
+                await command.requireDotMdb();
             } catch (err) {
 
                 expect(err.message).to.include('Required .mdb file found at');
@@ -100,10 +97,11 @@ describe('Command: parent', () => {
             sandbox.assert.fail('requireDotMdb() should throw an error');
         });
 
-        it('should throw if `.mdb` file not found', () => {
+        it('should throw if `.mdb` file not found and user refused to create it', async () => {
 
-            sandbox.stub(fs, 'existsSync').returns(false);
+            sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
             sandbox.stub(process, 'cwd').returns('/test/location');
+            sandbox.stub(fs, 'existsSync').returns(false);
 
             const context = new Context('', '', [], []);
             // @ts-ignore
@@ -111,7 +109,7 @@ describe('Command: parent', () => {
 
             try {
 
-                command.requireDotMdb();
+                await command.requireDotMdb();
             } catch (err) {
 
                 expect(err.message).to.include('Required .mdb file not found');
@@ -119,6 +117,23 @@ describe('Command: parent', () => {
             }
 
             sandbox.assert.fail('requireDotMdb() should throw an error');
+        });
+
+        it('should create a `.mdb` if not found and user wanted to create one', async () => {
+
+            const ConfigCommand = require('../../commands/config-command');
+            const executeStub = sandbox.stub(ConfigCommand.prototype, 'execute');
+            sandbox.stub(helpers, 'createConfirmationPrompt').resolves(true);
+            sandbox.stub(process, 'cwd').returns('/test/location');
+            sandbox.stub(fs, 'existsSync').returns(false);
+
+            const context = new Context('', '', [], []);
+            // @ts-ignore
+            const command = new Command(context);
+
+            await command.requireDotMdb();
+
+            sandbox.assert.calledOnce(executeStub);
         });
     });
 });

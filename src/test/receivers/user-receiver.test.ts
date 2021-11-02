@@ -1,11 +1,7 @@
 import btoa from 'btoa';
 import Context from '../../context';
 import UserReceiver from '../../receivers/user-receiver';
-import AuthStrategy from '../../receivers/strategies/auth/auth-strategy';
-import NormalAuthStrategy from '../../receivers/strategies/auth/normal-auth-strategy';
-import GoogleAuthStrategy from '../../receivers/strategies/auth/google-auth-strategy';
-import FacebookAuthStrategy from '../../receivers/strategies/auth/facebook-auth-strategy';
-import TwitterAuthStrategy from '../../receivers/strategies/auth/twitter-auth-strategy';
+import { AuthStrategy, GoogleAuthStrategy, FacebookAuthStrategy, NormalAuthStrategy, TwitterAuthStrategy } from '../../receivers/strategies/auth';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 

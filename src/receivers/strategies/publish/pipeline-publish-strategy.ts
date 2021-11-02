@@ -1,40 +1,22 @@
-'use strict';
+import Context from '../../../context';
+import CommandResult from '../../../utils/command-result';
+import GitManager from '../../../utils/managers/git-manager';
+import HttpWrapper, { CustomRequestOptions } from '../../../utils/http-wrapper';
+import { OutputColor } from '../../../models';
+import helpers from '../../../helpers';
+import config from '../../../config';
 
-import Context from "../../../context";
-import CommandResult from "../../../utils/command-result";
-import GitManager from "../../../utils/managers/git-manager";
-import HttpWrapper, { CustomRequestOptions } from "../../../utils/http-wrapper";
-import { MdbGoPackageJson, OutputColor } from "../../../models";
-import helpers from "../../../helpers";
-import config from "../../../config";
-
-class PipelinePublishStrategy {
+export class PipelinePublishStrategy {
 
     private readonly cwd = process.cwd();
-    private readonly options: CustomRequestOptions;
 
-    private context: Context;
-    private result: CommandResult;
-
-    private packageJsonConfig: MdbGoPackageJson;
-
-    private flags;
-
-    private git: GitManager;
-    private http: HttpWrapper;
-
-    constructor(context: Context, result: CommandResult, git: GitManager, http: HttpWrapper, options: CustomRequestOptions) {
-
-        this.context = context;
-        this.result = result;
-        this.packageJsonConfig = context.packageJsonConfig;
-
-        this.flags = context.getParsedFlags();
-
-        this.git = git;
-        this.http = http;
-        this.options = options;
-    }
+    constructor(
+        private readonly context: Context,
+        private result: CommandResult,
+        private git: GitManager,
+        private http: HttpWrapper,
+        private readonly options: CustomRequestOptions
+    ) { }
 
     async publish() {
         const currentBranch = await this.git.currentBranch();
@@ -104,12 +86,10 @@ class PipelinePublishStrategy {
 
         if (projectType === 'backend') {
             this.options.headers!['x-mdb-cli-backend-technology'] = this.context.mdbConfig.getValue('backend.platform');
-        } else if(projectType === 'wordpress') {
+        } else if (projectType === 'wordpress') {
             this.options.headers!['x-mdb-cli-wp-starter'] = this.context.mdbConfig.getValue('meta.starter');
         }
 
         return this.http.post(this.options);
     }
 }
-
-export default PipelinePublishStrategy;

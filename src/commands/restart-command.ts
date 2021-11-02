@@ -1,11 +1,9 @@
-'use strict';
-
 import Command from "./command";
 import BackendReceiver from "../receivers/backend-receiver";
 import WordpressReceiver from "../receivers/wordpress-receiver";
+import CommandResult from "../utils/command-result";
 import Entity from "../models/entity";
 import Context from "../context";
-import CommandResult from "../utils/command-result";
 
 class RestartCommand extends Command {
 

@@ -1,11 +1,9 @@
-'use strict';
-
-import PipelinePublishStrategy from '../../../../receivers/strategies/publish/pipeline-publish-strategy';
+import config from '../../../../config';
 import Context from '../../../../context';
+import helpers from '../../../../helpers';
+import { PipelinePublishStrategy } from '../../../../receivers/strategies/publish';
 import GitManager from '../../../../utils/managers/git-manager';
 import HttpWrapper from '../../../../utils/http-wrapper';
-import helpers from '../../../../helpers';
-import config from '../../../../config';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 
