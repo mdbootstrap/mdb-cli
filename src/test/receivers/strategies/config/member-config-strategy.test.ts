@@ -4,7 +4,7 @@ import helpers from '../../../../helpers';
 import CommandResult from '../../../../utils/command-result';
 import HttpWrapper, { CustomOkResponse } from '../../../../utils/http-wrapper';
 import DotMdbConfigManager from '../../../../utils/managers/dot-mdb-config-manager';
-import MemberConfigStrategy from '../../../../receivers/strategies/config/member-config-strategy';
+import { MemberConfigStrategy } from '../../../../receivers/strategies/config';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 
@@ -44,7 +44,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw error if invalid email', async function () {
 
             context = new Context('', '', [], []);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
 
             try {
                 await strategy.setValue('member', 'value@');
@@ -59,7 +59,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw error if invalid username', async function () {
 
             context = new Context('', '', [], []);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
 
             try {
                 await strategy.setValue('member', '');
@@ -74,7 +74,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw error if invalid role', async function () {
 
             context = new Context('', '', [], ['--role', 'role']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
 
             try {
                 await strategy.setValue('member', 'ala');
@@ -89,7 +89,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should add member', async function () {
 
             context = new Context('', '', [], ['--role', 'reporter']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
 
             const mock = sandbox.mock(strategy);
             mock.expects('addMember').once().resolves();
@@ -103,7 +103,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw http connection error durnig adding member', async function () {
 
             context = new Context('', '', [], ['--role', 'reporter']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(HttpWrapper.prototype, 'post').rejects(new Error('Fake error.'))
 
             try {
@@ -119,7 +119,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should leave project', async function () {
 
             context = new Context('', '', [], ['--leave', 'true']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(helpers, 'createTextPrompt').resolves(projectName);
 
             const mock = sandbox.mock(strategy);
@@ -134,7 +134,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw error if provided wrong name', async function () {
 
             context = new Context('', '', [], ['--leave', 'true']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(helpers, 'createTextPrompt').resolves('');
 
             try {
@@ -150,7 +150,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw error if invalid project name', async function () {
 
             context = new Context('', '', [], ['--leave', 'true']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(context.mdbConfig, 'getValue').returns('?');
 
             try {
@@ -166,7 +166,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw http connection error durnig leaving project', async function () {
 
             context = new Context('', '', [], ['--leave', 'true']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(helpers, 'createTextPrompt').resolves(projectName);
             sandbox.stub(HttpWrapper.prototype, 'delete').rejects(new Error('Fake error.'))
 
@@ -183,7 +183,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should list project members', async function () {
 
             context = new Context('', '', [], ['--list', 'true']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(HttpWrapper.prototype, 'get').resolves({ body: '[]' } as CustomOkResponse);
 
             const res = await strategy.setValue('member', projectName);
@@ -194,7 +194,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should list project members if name not provided', async function () {
 
             context = new Context('', '', [], ['--list', 'true']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(HttpWrapper.prototype, 'get').resolves({ body: '[]' } as CustomOkResponse);
             sandbox.stub(context.mdbConfig, 'getValue').returns(projectName);
 
@@ -209,7 +209,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should unset config value by email', async function () {
 
             context = new Context('', '', [], ['--unset']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
 
             const mock = sandbox.mock(strategy);
             mock.expects('removeMember').once().resolves();
@@ -223,7 +223,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should unset config value by username', async function () {
 
             context = new Context('', '', [], ['--unset']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
 
             const mock = sandbox.mock(strategy);
             mock.expects('removeMember').once().resolves();
@@ -237,7 +237,7 @@ describe('Strategy: MemberConfigStrategy', () => {
         it('should throw http connection error', async function () {
 
             context = new Context('', '', [], ['--unset']);
-            strategy = new MemberConfigStrategy(context, result);
+            strategy = new MemberConfigStrategy(context);
             sandbox.stub(HttpWrapper.prototype, 'delete').rejects(new Error('Fake error.'))
 
             try {

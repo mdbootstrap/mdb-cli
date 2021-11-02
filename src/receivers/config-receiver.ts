@@ -3,14 +3,11 @@
 import Context from '../context';
 import Receiver from './receiver';
 import { OutputColor } from '../models';
-import NormalConfigStrategy from './strategies/config/normal-config-strategy';
-import DomainConfigStrategy from './strategies/config/domain-config-strategy';
-import ProjectNameConfigStrategy from './strategies/config/project-name-config-strategy';
-import MemberConfigStrategy from "./strategies/config/member-config-strategy";
+import { DomainConfigStrategy, InitConfigStrategy, MemberConfigStrategy, NormalConfigStrategy, ProjectNameConfigStrategy } from './strategies/config';
 
 class ConfigReceiver extends Receiver {
 
-    private strategy!: NormalConfigStrategy | DomainConfigStrategy | ProjectNameConfigStrategy | MemberConfigStrategy;
+    private strategy!: DomainConfigStrategy | InitConfigStrategy | MemberConfigStrategy | NormalConfigStrategy | ProjectNameConfigStrategy;
 
     constructor(context: Context) {
         super(context);
@@ -45,16 +42,20 @@ class ConfigReceiver extends Receiver {
                 this.strategy = new DomainConfigStrategy(this.context, this.result);
                 break;
 
-            case 'projectName':
-                this.strategy = new ProjectNameConfigStrategy(this.context, this.result);
+            case 'init':
+                this.strategy = new InitConfigStrategy(this.context);
                 break;
 
             case 'member':
-                this.strategy = new MemberConfigStrategy(this.context, this.result);
+                this.strategy = new MemberConfigStrategy(this.context);
+                break;
+
+            case 'projectName':
+                this.strategy = new ProjectNameConfigStrategy(this.context);
                 break;
 
             default:
-                this.strategy = new NormalConfigStrategy(this.context, this.result);
+                this.strategy = new NormalConfigStrategy(this.context);
                 break;
         }
     }

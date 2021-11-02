@@ -1,10 +1,10 @@
 import fs from 'fs';
 import fse from 'fs-extra';
 import btoa from 'btoa';
+import helpers from '../../../../helpers';
 import Context from '../../../../context';
 import CommandResult from '../../../../utils/command-result';
-import FtpPublishStrategy from '../../../../receivers/strategies/publish/ftp-publish-strategy';
-import helpers from '../../../../helpers';
+import { FtpPublishStrategy } from '../../../../receivers/strategies/publish';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 

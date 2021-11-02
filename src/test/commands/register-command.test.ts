@@ -1,5 +1,3 @@
-'use strict';
-
 import Context from '../../context';
 import Command from '../../commands/command';
 import RegisterCommand from '../../commands/register-command';

@@ -1,9 +1,7 @@
-'use strict';
-
 import Command from "./command";
 import UserReceiver from "../receivers/user-receiver";
-import Context from "../context";
 import CommandResult from "../utils/command-result";
+import Context from "../context";
 
 class RegisterCommand extends Command {
 

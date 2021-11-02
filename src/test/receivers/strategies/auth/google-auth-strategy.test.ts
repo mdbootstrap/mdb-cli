@@ -1,5 +1,5 @@
 import config from '../../../../config';
-import GoogleAuthStrategy from '../../../../receivers/strategies/auth/google-auth-strategy';
+import { GoogleAuthStrategy } from '../../../../receivers/strategies/auth';
 import { createSandbox } from 'sinon';
 import { expect } from 'chai';
 

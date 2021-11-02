@@ -7,6 +7,7 @@ export * from './output-color';
 export * from './output-message';
 export * from './package-json';
 export * from './package-managers';
+export * from './parsed-flags';
 export * from './project-meta';
 export * from './project-status';
 export * from './project';

@@ -1,9 +1,8 @@
 import config from '../../../../config';
-import TwitterAuthStrategy from '../../../../receivers/strategies/auth/twitter-auth-strategy';
+import helpers from '../../../../helpers';
+import { AuthStrategy, TwitterAuthStrategy } from '../../../../receivers/strategies/auth';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
-import AuthStrategy from "../../../../receivers/strategies/auth/auth-strategy";
-import helpers from "../../../../helpers";
 
 describe('Strategy: TwitterAuthStrategy', () => {
 

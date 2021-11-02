@@ -1,10 +1,9 @@
-'use strict';
-
 import { join } from 'path';
 import { existsSync } from 'fs';
 import OutputPrinter from '../utils/output-printer';
 import CommandResult from '../utils/command-result';
 import Context from '../context';
+import helpers from '../helpers';
 
 abstract class Command {
 
@@ -15,7 +14,7 @@ abstract class Command {
 
     private _output: OutputPrinter = new OutputPrinter();
 
-    protected constructor(context: Context) {
+    protected constructor(protected context: Context) {
         this.args = context.args;
         this.entity = context.entity;
         this.flags = context.rawFlags;
@@ -30,7 +29,7 @@ abstract class Command {
         this._output.print(results);
     }
 
-    requireDotMdb() {
+    async requireDotMdb() {
         let cwd = process.cwd();
         const requiredPath = join(cwd, '.mdb')
 
@@ -46,7 +45,16 @@ abstract class Command {
             if (dotMdbPath === '/.mdb' || dotMdbPath === '\\.mdb') break;
         }
 
-        throw new Error('Required .mdb file not found. Probably not an mdb project - please change directory or initialize new project with `mdb init` command.');
+        const confirmed = await helpers.createConfirmationPrompt('Required .mdb file not found. Create?', true);
+
+        if (!confirmed) {
+            throw new Error('Required .mdb file not found. Probably not an mdb project - please change directory or initialize new project with `mdb init` command.');
+        }
+
+        const context = new Context('config', 'config', ['init'], []);
+        const ConfigCommand = require('./config-command');
+        await new ConfigCommand(context).execute();
+        this.context.mdbConfig.load();
     }
 }
 

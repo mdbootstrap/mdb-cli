@@ -1,59 +1,56 @@
-'use strict';
-
 import Command from './command';
 import BackendReceiver from '../receivers/backend-receiver';
 import FrontendReceiver from '../receivers/frontend-receiver';
 import WordpressReceiver from '../receivers/wordpress-receiver';
+import CommandResult from "../utils/command-result";
 import Entity from '../models/entity';
 import Context from "../context";
-import CommandResult from "../utils/command-result";
 
 class RenameCommand extends Command {
 
     private receiver!: BackendReceiver | FrontendReceiver | WordpressReceiver;
 
-    constructor(context: Context) {
+    constructor(protected readonly context: Context) {
         super(context);
-
-        this.setReceiver(context);
     }
 
     async execute(): Promise<void> {
+        await this.setReceiver();
 
         if (this.receiver.flags.help) return this.help();
         await this.receiver.rename();
         this.printResult([this.receiver.result]);
     }
 
-    setReceiver(ctx: Context) {
+    async setReceiver() {
 
-        this.requireDotMdb();
+        await this.requireDotMdb();
 
         if (!this.entity) {
-            const type = ctx.mdbConfig.getValue('meta.type');
+            const type = this.context.mdbConfig.getValue('meta.type');
             if (type) {
                 this.entity = type;
-                ctx.entity = type;
+                this.context.entity = type;
             }
         }
 
         switch (this.entity) {
 
             case Entity.Backend:
-                this.receiver = new BackendReceiver(ctx);
+                this.receiver = new BackendReceiver(this.context);
                 break;
 
             case Entity.Frontend:
-                this.receiver = new FrontendReceiver(ctx);
+                this.receiver = new FrontendReceiver(this.context);
                 break;
 
             case Entity.Wordpress:
-                this.receiver = new WordpressReceiver(ctx);
+                this.receiver = new WordpressReceiver(this.context);
                 break;
 
             default:
-                ctx.entity = Entity.Frontend;
-                this.receiver = new FrontendReceiver(ctx);
+                this.context.entity = Entity.Frontend;
+                this.receiver = new FrontendReceiver(this.context);
                 break;
         }
 

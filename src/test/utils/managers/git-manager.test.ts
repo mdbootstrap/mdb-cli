@@ -186,13 +186,6 @@ describe('Utils: GitManager', () => {
             sandbox.assert.calledWith(taskStub, ['clone', 'repo.url'], 'Success.', 'There were some errors. Please try again.');
         });
 
-        it('git clone repo.url project_name', () => {
-
-            manager.clone('repo.url', 'project_name');
-
-            sandbox.assert.calledWith(taskStub, ['clone', 'repo.url', 'project_name'], 'Success.', 'There were some errors. Please try again.');
-        });
-
         it('git merge branch_name', () => {
 
             manager.merge('branch_name');

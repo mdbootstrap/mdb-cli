@@ -3,7 +3,7 @@ import Context from '../../context';
 import helpers from '../../helpers';
 import { Project } from '../../models/project';
 import HttpWrapper, { CustomOkResponse, CustomErrorResponse } from '../../utils/http-wrapper';
-import FtpPublishStrategy from '../../receivers/strategies/publish/ftp-publish-strategy';
+import { FtpPublishStrategy } from '../../receivers/strategies/publish';
 import BackendReceiver from '../../receivers/backend-receiver';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';

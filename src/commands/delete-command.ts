@@ -1,14 +1,11 @@
-'use strict';
-
-import Command from './command';
 import Context from '../context';
+import Command from './command';
 import Entity from '../models/entity';
 import CommandResult from '../utils/command-result';
 import BackendReceiver from '../receivers/backend-receiver';
 import DatabaseReceiver from '../receivers/database-receiver';
 import WordpressReceiver from '../receivers/wordpress-receiver';
 import FrontendReceiver from '../receivers/frontend-receiver';
-
 
 class DeleteCommand extends Command {
 

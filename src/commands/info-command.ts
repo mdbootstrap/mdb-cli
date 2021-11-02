@@ -1,23 +1,18 @@
-'use strict';
-
 import Command from "./command";
 import Receiver from "../receivers/receiver";
 import BackendReceiver from "../receivers/backend-receiver";
 import DatabaseReceiver from "../receivers/database-receiver";
 import WordpressReceiver from "../receivers/wordpress-receiver";
+import CommandResult from "../utils/command-result";
 import Entity from "../models/entity";
 import Context from "../context";
-import CommandResult from "../utils/command-result";
 
 class InfoCommand extends Command {
 
     private receiver: BackendReceiver | DatabaseReceiver | WordpressReceiver | null = null;
-    private readonly context: Context;
 
-    constructor(context: Context) {
+    constructor(protected readonly context: Context) {
         super(context);
-
-        this.context = context;
     }
 
     async execute(): Promise<void> {

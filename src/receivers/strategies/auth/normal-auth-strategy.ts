@@ -1,15 +1,11 @@
-'use strict';
+import inquirer from 'inquirer';
+import { AuthStrategy } from './auth-strategy';
+import HttpWrapper, { CustomRequestOptions } from '../../../utils/http-wrapper';
+import CommandResult from '../../../utils/command-result';
+import { ParsedFlags } from '../../../models';
+import config from '../../../config';
 
-import inquirer from "inquirer";
-import AuthStrategy from "./auth-strategy";
-import HttpWrapper, {CustomRequestOptions} from "../../../utils/http-wrapper";
-import config from "../../../config";
-import CommandResult from "../../../utils/command-result";
-
-class NormalAuthStrategy extends AuthStrategy {
-
-    public result: CommandResult;
-    public flags: { [key: string]: string };
+export class NormalAuthStrategy extends AuthStrategy {
 
     private options: CustomRequestOptions = {
         hostname: config.host,
@@ -19,11 +15,8 @@ class NormalAuthStrategy extends AuthStrategy {
         }
     };
 
-    constructor(flags: { [key: string]: string }, result: CommandResult) {
+    constructor(private readonly flags: ParsedFlags, private result: CommandResult) {
         super();
-
-        this.result = result;
-        this.flags = flags;
     }
 
     async login(): Promise<string> {
@@ -173,5 +166,3 @@ class NormalAuthStrategy extends AuthStrategy {
         this.options.headers!['Content-Length'] = Buffer.byteLength(this.options.data);
     }
 }
-
-export default NormalAuthStrategy;

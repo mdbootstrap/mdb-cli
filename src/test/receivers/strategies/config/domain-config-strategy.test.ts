@@ -1,7 +1,7 @@
 import config from '../../../../config';
 import Context from '../../../../context';
 import CommandResult from '../../../../utils/command-result';
-import DomainConfigStrategy from '../../../../receivers/strategies/config/domain-config-strategy';
+import { DomainConfigStrategy } from '../../../../receivers/strategies/config';
 import PublishCommand from '../../../../commands/publish-command';
 import Command from '../../../../commands/command';
 import { createSandbox } from 'sinon';

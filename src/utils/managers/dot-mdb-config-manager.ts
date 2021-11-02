@@ -10,7 +10,7 @@ class DotMdbConfigManager {
     public globalConfig: DotMdbGlobal = {};
 
     constructor() {
-        this._load();
+        this.load();
     }
 
     getValue(keyPath: string, global: boolean = false): string | undefined {
@@ -68,7 +68,7 @@ class DotMdbConfigManager {
         }
     }
 
-    private _load() {
+    load() {
         const settingsPath = path.join(process.cwd(), '.mdb');
         const globalSettingsPath = path.join(config.tokenDir, '.mdb');
 

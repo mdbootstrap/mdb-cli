@@ -1,5 +1,3 @@
-'use strict';
-
 import Command from "./command";
 import BackendReceiver from "../receivers/backend-receiver";
 import WordpressReceiver from "../receivers/wordpress-receiver";
@@ -13,8 +11,6 @@ class RunCommand extends Command {
 
     constructor(context: Context) {
         super(context);
-
-        this.receiver = null;
 
         this.setReceiver(context);
     }

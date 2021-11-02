@@ -1,25 +1,20 @@
 import inquirer from 'inquirer';
 import config from '../../../config';
-import Context from "../../../context";
+import Context from '../../../context';
 import Entity from '../../../models/entity';
-import { OutputColor } from '../../../models/output-color';
-import CommandResult from "../../../utils/command-result";
+import CommandResult from '../../../utils/command-result';
+import { OutputColor, ParsedFlags } from '../../../models';
 import PublishCommand from '../../../commands/publish-command';
-import HttpWrapper, {CustomRequestOptions} from '../../../utils/http-wrapper';
-import ConfigStrategy from "./config-strategy";
+import HttpWrapper, { CustomRequestOptions } from '../../../utils/http-wrapper';
+import ConfigStrategy from './config-strategy';
 
-class DomainConfigStrategy extends ConfigStrategy {
+export class DomainConfigStrategy extends ConfigStrategy {
 
-    private context: Context;
-    private result: CommandResult;
-    private options : CustomRequestOptions;
-    private flags: { [key: string]: string | boolean } = {};
+    private flags: ParsedFlags;
+    private options: CustomRequestOptions;
 
-    constructor(context: Context, result: CommandResult) {
+    constructor(private readonly context: Context, private result: CommandResult) {
         super();
-
-        this.context = context;
-        this.result = result;
 
         this.context.authenticateUser();
 
@@ -153,5 +148,3 @@ class DomainConfigStrategy extends ConfigStrategy {
         return publish.execute();
     }
 }
-
-export default DomainConfigStrategy;

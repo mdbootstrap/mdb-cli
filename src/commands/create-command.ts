@@ -1,6 +1,4 @@
-'use strict';
-
-import InitCommand from "./init-command";
+import InitCommand from './init-command';
 
 class CreateCommand extends InitCommand { }
 

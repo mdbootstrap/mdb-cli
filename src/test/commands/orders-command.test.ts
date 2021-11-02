@@ -1,5 +1,3 @@
-'use strict';
-
 import Context from '../../context';
 import Command from '../../commands/command';
 import OrdersCommand from '../../commands/orders-command';

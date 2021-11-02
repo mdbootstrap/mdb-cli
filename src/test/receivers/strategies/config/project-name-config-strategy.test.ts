@@ -1,8 +1,8 @@
 import config from '../../../../config';
 import Context from '../../../../context';
 import CommandResult from '../../../../utils/command-result';
-import ProjectConfigStrategy from '../../../../receivers/strategies/config/project-name-config-strategy';
 import DotMdbConfigManager from '../../../../utils/managers/dot-mdb-config-manager';
+import { ProjectNameConfigStrategy } from '../../../../receivers/strategies/config';
 import { createSandbox, SinonStub } from 'sinon';
 
 describe('Strategy: ProjectConfigStrategy', () => {
@@ -11,7 +11,7 @@ describe('Strategy: ProjectConfigStrategy', () => {
 
     let result: CommandResult,
         context: Context,
-        strategy: ProjectConfigStrategy,
+        strategy: ProjectNameConfigStrategy,
         loadPackageJsonConfig: SinonStub,
         setPackageJsonValue: SinonStub,
         save: SinonStub,
@@ -44,7 +44,7 @@ describe('Strategy: ProjectConfigStrategy', () => {
 
             context = new Context('', '', [], []);
             context.packageJsonConfig = {};
-            strategy = new ProjectConfigStrategy(context, result);
+            strategy = new ProjectNameConfigStrategy(context);
 
             strategy.setValue('projectName', 'fake-name');
 
@@ -57,7 +57,7 @@ describe('Strategy: ProjectConfigStrategy', () => {
 
             context = new Context('', '', [], []);
             context.packageJsonConfig = { name: '' };
-            strategy = new ProjectConfigStrategy(context, result);
+            strategy = new ProjectNameConfigStrategy(context);
 
             strategy.setValue('projectName', 'fake-name');
 
@@ -73,7 +73,7 @@ describe('Strategy: ProjectConfigStrategy', () => {
 
             context = new Context('', '', [], []);
             context.packageJsonConfig = {};
-            strategy = new ProjectConfigStrategy(context, result);
+            strategy = new ProjectNameConfigStrategy(context);
 
             strategy.unsetValue('projectName');
 

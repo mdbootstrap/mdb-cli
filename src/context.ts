@@ -3,6 +3,7 @@
 import fs from "fs";
 import path from "path";
 import config from "./config";
+import { ParsedFlags } from "./models";
 import { MdbGoPackageJson } from "./models/package-json";
 import { PackageManagers } from "./models/package-managers";
 import PackageManager from "./utils/managers/package-manager";
@@ -61,9 +62,9 @@ class Context {
         this._entity = entity;
     }
 
-    getParsedFlags(): { [key: string]: string | boolean } {
+    getParsedFlags(): ParsedFlags {
         const flags = this.rawFlags.slice();
-        const parsedFlags: { [key: string]: string | boolean } = {};
+        const parsedFlags: ParsedFlags = {};
 
         while (flags.length) {
             let f = this._consumeNextFlag(flags);
@@ -123,7 +124,7 @@ class Context {
     }
 
     private _isFlag(flag: string): boolean {
-        return flag.startsWith('-');
+        return flag.startsWith('-') || flag === '.';
     }
 
     async loadPackageManager(): Promise<void> {

@@ -1,10 +1,8 @@
-'use strict';
+import open from 'open';
+import { AuthStrategy } from './auth-strategy';
+import helpers from '../../../helpers';
 
-import open from "open";
-import AuthStrategy from "./auth-strategy";
-import helpers from "../../../helpers";
-
-abstract class SocialAuthStrategy extends AuthStrategy {
+export abstract class SocialAuthStrategy extends AuthStrategy {
 
     abstract get socialAuthUrl(): string;
 
@@ -23,5 +21,3 @@ abstract class SocialAuthStrategy extends AuthStrategy {
         return helpers.createTextPrompt('Enter text copied from web browser', 'It cannot be empty.');
     }
 }
-
-export default SocialAuthStrategy;
