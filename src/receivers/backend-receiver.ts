@@ -215,8 +215,9 @@ class BackendReceiver extends Receiver {
         }
 
         const isNodePlatform = platform.includes('node');
+        const requiresSpecificPort = ['node', 'python'].some((tech) => platform.includes(tech));
 
-        if (isNodePlatform) {
+        if (requiresSpecificPort) {
             this.result.liveAlert(OutputColor.Blue, 'Info', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The URL that your app is available at, will be provided to you after successful publish.');
         }
 
