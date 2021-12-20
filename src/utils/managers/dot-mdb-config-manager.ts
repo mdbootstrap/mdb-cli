@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import config from '../../config';
+import { ProjectEntry } from '../../models';
 
 import { DOT_MDB_SCHEME, DotMdb, DotMdbGlobal, DOT_MDB_GLOBAL_SCHEME } from "../../models/dot-mdb";
 
@@ -30,7 +31,7 @@ class DotMdbConfigManager {
         return temp as string;
     }
 
-    setValue(keyPath: string, value: string, global: boolean = false) {
+    setValue(keyPath: string, value: string | ProjectEntry[], global: boolean = false) {
 
         this.validateConfigKey(keyPath, global);
 
@@ -100,7 +101,7 @@ class DotMdbConfigManager {
         this._unsetKeyPathValue(object[pathSplit[0]] || {}, pathSplit.slice(1).join('.'));
     }
 
-    private _setKeyPathValue(object: DotMdb | DotMdbGlobal, keyPath: string, value: string) {
+    private _setKeyPathValue(object: DotMdb | DotMdbGlobal, keyPath: string, value: string | ProjectEntry[]) {
         const pathSplit = keyPath.split('.');
         if (pathSplit.length === 1) {
             // @ts-ignore

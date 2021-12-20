@@ -1,7 +1,8 @@
 import Context from "../context";
 import Command from "./command";
-import FrontendReceiver from "../receivers/frontend-receiver";
 import BackendReceiver from "../receivers/backend-receiver";
+import ComposeReceiver from "../receivers/compose-receiver";
+import FrontendReceiver from "../receivers/frontend-receiver";
 import WordpressReceiver from "../receivers/wordpress-receiver";
 import CommandResult from "../utils/command-result";
 import Entity from "../models/entity";
@@ -9,7 +10,7 @@ import config from "../config";
 
 class PublishCommand extends Command {
 
-    private receiver!: FrontendReceiver | BackendReceiver | WordpressReceiver;
+    private receiver!: FrontendReceiver | BackendReceiver | ComposeReceiver | WordpressReceiver;
 
     constructor(protected context: Context) {
         super(context);
@@ -42,6 +43,10 @@ class PublishCommand extends Command {
 
             case Entity.Backend:
                 this.receiver = new BackendReceiver(this.context);
+                break;
+
+            case Entity.Compose:
+                this.receiver = new ComposeReceiver(this.context);
                 break;
 
             case Entity.Wordpress:

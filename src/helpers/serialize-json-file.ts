@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 
-function serializeJsonFile(filePath: string, object: object): Promise<void> {
+export function serializeJsonFile(filePath: string, object: object): Promise<void> {
 
     return new Promise((resolve, reject) => {
 
@@ -14,5 +14,3 @@ function serializeJsonFile(filePath: string, object: object): Promise<void> {
         });
     });
 }
-
-export default serializeJsonFile;

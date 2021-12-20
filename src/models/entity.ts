@@ -2,6 +2,7 @@ enum Entity {
     App = 'app',
     Backend = 'backend',
     Blank = 'blank',
+    Compose = 'compose',
     Config = 'config',
     Database = 'database',
     Frontend = 'frontend',

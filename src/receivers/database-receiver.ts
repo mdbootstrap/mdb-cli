@@ -28,7 +28,10 @@ class DatabaseReceiver extends Receiver {
         this.context.registerFlagExpansions({
             '-db': '--database',
             '-n': '--name',
-            '-h': '--help'
+            '-h': '--help',
+            '-u': '--username',
+            '-p': '--password',
+            '-d': '--description'
         });
 
         this.flags = this.context.getParsedFlags();
@@ -74,7 +77,7 @@ class DatabaseReceiver extends Receiver {
         if (!config.databases.includes(database)) {
             return this.result.addTextLine(`This database is not supported. Allowed technologies: ${config.databases.join(', ')}`);
         }
-        const confirmed = await helpers.createConfirmationPrompt('In order to create a new database, you need to create the database user. Proceed?', true);
+        const confirmed = Boolean(this.flags.username) || await helpers.createConfirmationPrompt('In order to create a new database, you need to create the database user. Proceed?', true);
 
         if (!confirmed) {
             return this.result.addAlert(OutputColor.Yellow, 'Warning!', 'Cannot create database without a database user.');
@@ -84,7 +87,15 @@ class DatabaseReceiver extends Receiver {
 
         let passwordValue: string;
 
-        const answers = await prompt([
+        const allFlags = this.flags.username && this.flags.password && this.flags.name;
+
+        const answers = allFlags ? {
+            name: this.flags.name,
+            username: this.flags.username,
+            password: this.flags.password,
+            repeatPassword: this.flags.password,
+            descriptopn: this.flags.description || ''
+        } : await prompt([
             {
                 type: 'text',
                 message: 'Enter username',

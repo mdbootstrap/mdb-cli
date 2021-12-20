@@ -2,7 +2,7 @@
 
 import inquirer from 'inquirer';
 
-async function createListPrompt(message: string, choices: Object[]): Promise<string> {
+export async function createListPrompt(message: string, choices: Object[]): Promise<string> {
 
     const result = await inquirer.createPromptModule()([{
         type: 'list',
@@ -13,5 +13,3 @@ async function createListPrompt(message: string, choices: Object[]): Promise<str
 
     return result.name;
 }
-
-export default createListPrompt;

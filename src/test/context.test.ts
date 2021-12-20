@@ -1,5 +1,3 @@
-'use strict';
-
 import config from '../config';
 import Context from '../context';
 import { PackageManagers } from '../models/package-managers';
@@ -181,6 +179,7 @@ describe('Context', () => {
 
     it('should authenticateUser() without errors', function () {
         sandbox.stub(Context.prototype, '_loadPackageJsonConfig');
+        sandbox.stub(Context.prototype, '_isTokenExpired').returns(false);
 
         const fakeToken = 'faketoken';
 
@@ -194,7 +193,7 @@ describe('Context', () => {
         expect(context.userToken).to.eq(fakeToken);
     });
 
-    it('should throw error in authenticateUser()', function (done) {
+    it('should throw error in authenticateUser() if token does not exist', function (done) {
         sandbox.stub(Context.prototype, '_loadPackageJsonConfig');
 
         const fakeError = new Error('fake error');
@@ -206,6 +205,27 @@ describe('Context', () => {
             const context = new Context('', '', [], []);
             context.authenticateUser();
         } catch (e) {
+            expect(e.message).to.be.eq('Please login first');
+            return done();
+        }
+
+        chai.assert.fail('Context should fail authenticating user');
+    });
+
+    it('should throw error in authenticateUser() if token is expired', function (done) {
+        sandbox.stub(Context.prototype, '_loadPackageJsonConfig');
+        sandbox.stub(Context.prototype, '_isTokenExpired').returns(true);
+
+        sandbox.replace(config, 'tokenDir', '');
+        sandbox.replace(config, 'tokenFile', '');
+        sandbox.stub(fs, 'readFileSync').returns('a.eyJhIjoiYSIsImlhdCI6MTYzOTAzOTk1NiwiZXhwIjoxNjM5MDM5OTU3fQ.a');
+        sandbox.stub(fs, 'unlinkSync');
+
+        try {
+            const context = new Context('', '', [], []);
+            context.authenticateUser();
+        } catch (e) {
+            expect(e.message).to.be.eq('Please login first');
             return done();
         }
 

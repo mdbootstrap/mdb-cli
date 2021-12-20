@@ -14,18 +14,20 @@ import Context from "../context";
 import CommandResult from "../utils/command-result";
 import { OutputColor } from "../models/output-color";
 import { StarterOption } from "../models/starter-option";
+import ComposeReceiver from "../receivers/compose-receiver";
 
 class InitCommand extends Command {
 
-    private starterCode = '';
-    private receiver!: StarterReceiver | FrontendReceiver | BackendReceiver | WordpressReceiver | DatabaseReceiver | BlankReceiver | RepoReceiver;
+    private starterCode: string | undefined;
+    private receiver: StarterReceiver | FrontendReceiver | BackendReceiver | ComposeReceiver | WordpressReceiver | DatabaseReceiver | BlankReceiver | RepoReceiver | null = null;
 
     constructor(protected readonly context: Context) {
         super(context);
 
         this.context.registerNonArgFlags(['wizard']);
         this.context.registerFlagExpansions({
-            '-w': '--wizard'
+            '-w': '--wizard',
+            '-n': '--name'
         });
 
         this.setReceiver();
@@ -36,6 +38,8 @@ class InitCommand extends Command {
         const flags = this.context.getParsedFlags();
         if (flags.help) return this.help();
 
+        this.starterCode = this.args.pop();
+
         if (flags.wizard) {
             await this.startWizard();
 
@@ -45,7 +49,7 @@ class InitCommand extends Command {
             this.printResult([this.receiver ? this.receiver.result : this.results]);
         } else if (this.receiver) {
 
-            await this.receiver.init();
+            await this.receiver.init(this.starterCode);
             this.printResult([this.receiver.result]);
         } else {
 
@@ -77,6 +81,11 @@ class InitCommand extends Command {
                 this.receiver = new BackendReceiver(ctx, false);
                 break;
 
+            case Entity.Compose:
+                this.receiver = new ComposeReceiver(ctx);
+                this.receiver.result.on('mdb.cli.live.output', (msg: CommandResult) => this.printResult([msg]));
+                break;
+
             case Entity.Database:
                 this.receiver = new DatabaseReceiver(ctx);
                 break;
@@ -99,8 +108,9 @@ class InitCommand extends Command {
 
     async startWizard(): Promise<void> {
 
-        const projectTypeChoices = await this._getProjectTypeOptions();
+        const projectTypeChoices = this._getProjectTypeOptions();
         const projectType = this.entity || await helpers.createListPrompt('Choose project type:', projectTypeChoices);
+        this.receiver = null;
 
         switch (projectType) {
             case 'frontend':
@@ -231,20 +241,25 @@ class InitCommand extends Command {
         const choices = this._buildStartersList(!flags.all ? options.filter((o) => ['frontend', 'backend', 'wordpress'].includes(o.type)) : options);
 
         let promptShownCount = 0;
-        let starter: StarterOption;
-        do {
-            if (promptShownCount++ >= 10) {
-                return this.results.addTextLine('Please run `mdb starter ls` to see available packages.');
-            }
-            this.starterCode = await helpers.createListPrompt('Choose project to initialize', choices);
-            if (this.starterCode === 'blank-starter') {
-                this.receiver = new BlankReceiver(ctx);
-                return;
-            }
-            starter = options.find(o => o.code === this.starterCode) as StarterOption;
-            if (starter.available) break;
-            else this.results.liveAlert(OutputColor.Yellow, 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/my-orders/ and make sure it is available for you.`);
-        } while (promptShownCount <= 10);
+        let starter: StarterOption | undefined;
+
+        if (this.starterCode) starter = options.find(o => o.code === this.starterCode);
+
+        if (!starter) {
+            do {
+                if (promptShownCount++ >= 10) {
+                    return this.results.addTextLine('Please run `mdb starter ls` to see available packages.');
+                }
+                this.starterCode = await helpers.createListPrompt('Choose project to initialize', choices);
+                if (this.starterCode === 'blank-starter') {
+                    this.receiver = new BlankReceiver(ctx);
+                    return;
+                }
+                starter = options.find(o => o.code === this.starterCode) as StarterOption;
+                if (starter.available) break;
+                else this.results.liveAlert(OutputColor.Yellow, 'Warning!', `You cannot create this project. Please visit https://mdbootstrap.com/my-orders/ and make sure it is available for you.`);
+            } while (promptShownCount <= 10);
+        }
 
         const { type: entity } = starter;
         ctx.entity = entity;
@@ -252,6 +267,7 @@ class InitCommand extends Command {
         if (entity === 'frontend') this.receiver = new FrontendReceiver(ctx, false);
         else if (entity === 'backend') this.receiver = new BackendReceiver(ctx, false);
         else if (entity === 'wordpress') this.receiver = new WordpressReceiver(ctx, false);
+        else this.receiver = null;
     }
 
     private async _getStartersOptions(flags: { [key: string]: string | boolean }, technology?: string): Promise<StarterOption[]> {

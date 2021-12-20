@@ -5,7 +5,7 @@ import ProgressBar from 'progress';
 import { Readable } from 'stream';
 import unzip from 'unzipper';
 
-function downloadFromFTP(http: HttpWrapper, options: any, destination: string): Promise<string> {
+export function downloadFromFTP(http: HttpWrapper, options: any, destination: string): Promise<string> {
 
     return new Promise((resolve, reject) => {
 
@@ -70,5 +70,3 @@ function downloadFromFTP(http: HttpWrapper, options: any, destination: string): 
         request.end();
     });
 }
-
-export default downloadFromFTP;
