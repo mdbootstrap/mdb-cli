@@ -1,7 +1,6 @@
-'use strict';
-
-import fs from "fs";
-import path from "path";
+import atob from "atob";
+import { join } from "path";
+import { readFileSync, unlinkSync, writeFileSync } from "fs";
 import config from "./config";
 import { ParsedFlags } from "./models";
 import { MdbGoPackageJson } from "./models/package-json";
@@ -138,30 +137,48 @@ class Context {
     }
 
     authenticateUser(throwError = true): void {
+
+        const { tokenDir, tokenFile } = config;
+        const tokenPath = join(tokenDir, tokenFile);
+
         try {
-            this.userToken = fs.readFileSync(path.join(config.tokenDir, config.tokenFile), 'utf8');
+            this.userToken = readFileSync(tokenPath, 'utf8');
         } catch (e) {
+            if (throwError) throw new Error('Please login first');
+        }
+
+        if (this._isTokenExpired()) {
+            unlinkSync(tokenPath);
             if (throwError) throw new Error('Please login first');
         }
     }
 
+    _isTokenExpired(): boolean {
+        const [, jwtBody] = this.userToken.split('.');
+        const { exp } = JSON.parse(atob(jwtBody));
+
+        if (Date.now() >= exp * 1000) return true;
+
+        return false;
+    }
+
     setPackageJsonValue(key: keyof MdbGoPackageJson, value: string, cwd = process.cwd()) {
-        const settingsPath = path.join(cwd, 'package.json');
+        const settingsPath = join(cwd, 'package.json');
         // @ts-ignore
         this.packageJsonConfig[key] = value;
 
         try {
-            fs.writeFileSync(settingsPath, JSON.stringify(this.packageJsonConfig, null, 2), 'utf8');
-        } catch (e) {
+            writeFileSync(settingsPath, JSON.stringify(this.packageJsonConfig, null, 2), 'utf8');
+        } catch (e: any) {
             throw new Error(`Could not save package.json key '${key}': ${e.message}`);
         }
     }
 
     _loadPackageJsonConfig(cwd = process.cwd()): void {
-        const settingsPath = path.join(cwd, 'package.json');
+        const settingsPath = join(cwd, 'package.json');
 
         try {
-            const config = fs.readFileSync(settingsPath, 'utf8');
+            const config = readFileSync(settingsPath, 'utf8');
             this.packageJsonConfig = JSON.parse(config);
         } catch (e) {
             this.packageJsonConfig = {};

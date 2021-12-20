@@ -1,6 +1,6 @@
 'use strict';
 
-function getThemeName(pageType: string): string {
+export function getThemeName(pageType: string): string {
 
     switch (pageType) {
         case 'wp-essential-blog':
@@ -19,5 +19,3 @@ function getThemeName(pageType: string): string {
             return '';
     }
 }
-
-export default getThemeName;

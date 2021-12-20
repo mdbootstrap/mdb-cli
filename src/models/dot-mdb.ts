@@ -1,3 +1,5 @@
+import { ProjectEntry } from './project-entry';
+
 export interface DotMdb {
     meta?: {
         starter?: string,
@@ -15,12 +17,14 @@ export interface DotMdb {
     domain?: string,
     publishMethod?: 'ftp' | 'pipeline',
     packageManager?: 'npm' | 'yarn',
-    compose?: { /* TODO */ }
+    compose?: {
+        projects: ProjectEntry[]
+    }
 }
 
 export const DOT_MDB_SCHEME: DotMdb = {
     backend: { platform: '' },
-    compose: {},
+    compose: { projects: [] },
     domain: '',
     meta: { starter: '', type: '' },
     packageManager: 'npm',

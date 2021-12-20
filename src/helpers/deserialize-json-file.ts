@@ -2,7 +2,7 @@
 
 import fs from 'fs';
 
-function deserializeJsonFile(filePath: string): Promise<any> {
+export function deserializeJsonFile(filePath: string): Promise<any> {
 
     return new Promise((resolve, reject) => {
 
@@ -26,5 +26,3 @@ function deserializeJsonFile(filePath: string): Promise<any> {
         });
     });
 }
-
-export default deserializeJsonFile;

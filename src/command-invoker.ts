@@ -3,7 +3,7 @@
 import path from "path";
 import Context from "./context";
 
-type Entity = 'app' | 'backend' | 'blank' | 'database' | 'frontend' | 'order' | 'repo' | 'starter' | 'user' | 'wordpress' | 'config' | '';
+type Entity = 'app' | 'backend' | 'blank' | 'database' | 'frontend' | 'order' | 'repo' | 'starter' | 'user' | 'wordpress' | 'config' | 'compose' | '';
 type NonEntityCommand = 'help' | 'update' | 'version' | 'register' | 'login' | 'logout' | 'ls' | 'init' | 'get' | 'rename' | 'publish' | 'delete' | 'whoami' | 'logs' | 'kill' | 'info' | 'restart' | 'run' | 'config' | 'status';
 type FlagOnlyCommand = '-h' | '--help' | '-v' | '--version';
 type AliasCommand = 'orders' | 'starters';
@@ -30,7 +30,7 @@ class CommandInvoker {
      * @private
      */
     private _validEntities: Set<Entity> = new Set<Entity>([
-        'app', 'backend', 'blank', 'database', 'frontend', 'order', 'repo', 'starter', 'user', 'wordpress'
+        'app', 'backend', 'blank', 'compose', 'database', 'frontend', 'order', 'repo', 'starter', 'user', 'wordpress'
     ]);
 
     /**
@@ -269,6 +269,7 @@ class CommandInvoker {
             case 'logs':
             case 'kill':
                 return 'backend';
+            case 'compose':
             case 'help':
             case 'update':
             case 'version':

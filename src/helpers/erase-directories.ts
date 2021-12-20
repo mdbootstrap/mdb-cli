@@ -1,10 +1,10 @@
 'use strict';
 
 import fs from 'fs';
-import createConfirmationPrompt from './create-confirmation-prompt';
-import removeFolder from './remove-folder';
+import { createConfirmationPrompt } from './create-confirmation-prompt';
+import { removeFolder } from './remove-folder';
 
-async function eraseDirectories(path: string): Promise<string | undefined> {
+export async function eraseDirectories(path: string): Promise<string | undefined> {
 
     if (fs.existsSync(path)) {
 
@@ -20,5 +20,3 @@ async function eraseDirectories(path: string): Promise<string | undefined> {
         return Promise.reject('OK, will not delete existing folder.');
     }
 }
-
-export default eraseDirectories;

@@ -2,7 +2,7 @@
 
 import inquirer from 'inquirer';
 
-async function createConfirmationPrompt(message: string, defaultValue = true): Promise<boolean> {
+export async function createConfirmationPrompt(message: string, defaultValue = true): Promise<boolean> {
 
     const result = await inquirer.createPromptModule()([{
         type: 'confirm',
@@ -13,5 +13,3 @@ async function createConfirmationPrompt(message: string, defaultValue = true): P
 
     return result.answer;
 }
-
-export default createConfirmationPrompt;

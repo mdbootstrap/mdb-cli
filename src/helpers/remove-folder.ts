@@ -2,7 +2,7 @@
 
 import fse from 'fs-extra';
 
-function removeFolder(path: string): Promise<void> {
+export function removeFolder(path: string): Promise<void> {
 
     return new Promise((resolve, reject) => {
 
@@ -14,5 +14,3 @@ function removeFolder(path: string): Promise<void> {
         });
     });
 }
-
-export default removeFolder;

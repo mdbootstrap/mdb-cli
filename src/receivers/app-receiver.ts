@@ -27,6 +27,7 @@ class AppReceiver extends Receiver {
             { Entity: 'database', Description: 'Manage databases' },
             { Entity: 'repo', Description: 'Manage GitLab repository' },
             { Entity: 'config', Description: 'Manage project configuration' },
+            { Entity: 'compose', Description: 'Manage more advanced projects with frontend, backend and database' },
             { Entity: 'order', Description: 'Manage created orders' },
             { Entity: 'app', Description: 'Manage MDB CLI app' },
             { Entity: 'user', Description: 'Manage users' }
@@ -40,8 +41,8 @@ class AppReceiver extends Receiver {
             { Command: 'login', Description: 'Log in to your MDB account. Use with entities: <none>, user (default)' },
             { Command: 'logout', Description: 'Log out from MDB CLI. Use with entities: <none>, user (default)' },
             { Command: 'ls', Description: 'List entity content. Use with entities: <none>, starter, frontend (default), backend, database, wordpress, order' },
-            { Command: 'init', Description: 'Create something of entity type. Use with entities: <none>, starter, blank, frontend (default), backend, wordpress, database, repo' },
-            { Command: 'publish', Description: 'Publish project. Use with entities: <none>, frontend (default), backend, wordpress' },
+            { Command: 'init', Description: 'Create something of entity type. Use with entities: <none>, starter, blank, frontend (default), backend, wordpress, database, repo, compose' },
+            { Command: 'publish', Description: 'Publish project. Use with entities: <none>, frontend (default), backend, wordpress, compose' },
             { Command: 'get', Description: 'Download a project to the current directory. Use with entities: backend, frontend, wordpress' },
             { Command: 'info', Description: 'Display info about entity. Use with entities: backend, database' },
             { Command: 'delete', Description: 'Completely delete an entity. Use with entities: backend, database, frontend, wordpress' },

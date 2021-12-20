@@ -2,12 +2,13 @@
 
 import inquirer from 'inquirer';
 
-export async function createTextPrompt(message: string, invalidMessage: string, validate: ((v: string) => boolean) | null = null): Promise<string> {
+export async function createPassPrompt(message: string, invalidMessage: string, validate: ((v: string) => boolean) | null = null): Promise<string> {
 
     const result = await inquirer.createPromptModule()([{
-        type: 'text',
+        type: 'password',
         message,
-        name: 'answer',
+        name: 'password',
+        mask: '*',
         validate: (value: string) => {
             /* istanbul ignore next */
             const valid = validate ? validate(value) : Boolean(value);
@@ -16,5 +17,5 @@ export async function createTextPrompt(message: string, invalidMessage: string, 
         }
     }]);
 
-    return result.answer;
+    return result.password;
 }

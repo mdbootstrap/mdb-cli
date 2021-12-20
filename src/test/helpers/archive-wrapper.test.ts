@@ -1,7 +1,7 @@
 'use strict';
 
 import { expect } from "chai";
-import archiveProject from "../../helpers/archiver-wrapper";
+import { archiveProject } from "../../helpers/archiver-wrapper";
 
 describe('Helper: archiveProject', () => {
 

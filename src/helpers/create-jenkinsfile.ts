@@ -3,7 +3,7 @@
 import fs from 'fs';
 import path from 'path';
 
-async function createJenkinsfile(cwd: string, simple: boolean): Promise<boolean> {
+export async function createJenkinsfile(cwd: string, simple: boolean): Promise<boolean> {
 
     const simpleJenkinsfile =
         `pipeline {
@@ -45,5 +45,3 @@ async function createJenkinsfile(cwd: string, simple: boolean): Promise<boolean>
 
     return true;
 }
-
-export default createJenkinsfile;

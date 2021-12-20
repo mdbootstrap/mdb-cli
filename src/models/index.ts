@@ -1,6 +1,7 @@
 export * from './auth-method';
 export * from './cli-status';
 export * from './database';
+export * from './project-entry';
 export * from './dot-mdb';
 export * from './order';
 export * from './output-color';

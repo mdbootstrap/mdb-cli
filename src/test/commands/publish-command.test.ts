@@ -3,6 +3,7 @@ import Context from '../../context';
 import Command from '../../commands/command';
 import PublishCommand from '../../commands/publish-command';
 import BackendReceiver from '../../receivers/backend-receiver';
+import ComposeReceiver from '../../receivers/compose-receiver';
 import FrontendReceiver from '../../receivers/frontend-receiver';
 import WordpressReceiver from '../../receivers/wordpress-receiver';
 import DotMdbConfigManager from '../../utils/managers/dot-mdb-config-manager';
@@ -33,6 +34,18 @@ describe('Command: publish', () => {
 
         const publishStub = sandbox.stub(FrontendReceiver.prototype, 'publish');
         const context = new Context('frontend', 'publish', [], []);
+        const command = new PublishCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(publishStub);
+        sandbox.assert.calledOnce(printResultStub);
+    });
+
+    it('should call compose receiver publish() method and print result', async () => {
+
+        const publishStub = sandbox.stub(ComposeReceiver.prototype, 'publish');
+        const context = new Context('compose', 'publish', [], []);
         const command = new PublishCommand(context);
 
         await command.execute();
