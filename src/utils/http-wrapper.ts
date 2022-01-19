@@ -12,6 +12,8 @@ export type CustomRequestOptions = RequestOptions & { data?: string | object };
 
 class HttpWrapper {
 
+    static serverMessageLast: string = '';
+
     createRawRequest(options: CustomRequestOptions, callback?: (response: IncomingMessage) => void): ClientRequest {
 
         if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
@@ -21,6 +23,8 @@ class HttpWrapper {
             options.path = `${config.apiPath}${options.path}`;
 
         return http.request(options, (response: IncomingMessage) => {
+
+            if (response.headers['x-mdb-cli-message-last']) HttpWrapper.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
 
             if (callback) {
 
@@ -38,6 +42,8 @@ class HttpWrapper {
             options.path = `${config.apiPath}${options.path}`;
 
         return http.request(options, (response: IncomingMessage) => {
+
+            if (response.headers['x-mdb-cli-message-last']) HttpWrapper.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
 
             let result = '';
             response.on('data', chunk => {
@@ -71,6 +77,8 @@ class HttpWrapper {
         return new Promise((resolve, reject) => {
 
             const request = http.request(options, (response: IncomingMessage) => {
+
+                if (response.headers['x-mdb-cli-message-last']) HttpWrapper.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
 
                 let result = '';
                 response.on('data', chunk => {

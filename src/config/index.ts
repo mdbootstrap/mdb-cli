@@ -25,10 +25,10 @@ export default {
     mdbgoPipelinePublicBranch,
     projectsDomain,
     databases: databases.split(','),
-    backendTechnologies: technologies.split(','),
     memberRoles: memberRoles.split(','),
     tokenFile: '.auth',
     tokenDir: join(homedir(), '.mdbcli'),
+    msgPath: join(homedir(), '.mdbcli', '.msg'),
     port,
     host,
     apiPath,
@@ -45,5 +45,13 @@ export default {
                 url: process.env.AUTH_SOCIAL_TWITTER_URL
             }
         }
+    },
+    backend: {
+        technologies: technologies.split(','),
+        requiredFiles: [
+            { tech: 'node', name: 'package.json' },
+            { tech: 'laravel', name: 'composer.json' },
+            { tech: 'python', name: 'requirements.txt' }
+        ]
     }
 };

@@ -71,7 +71,7 @@ class PublishCommand extends Command {
         this.results.addTextLine('\nUsage: mdb [entity] publish');
         this.results.addTextLine('\nAvailable entities: frontend (default), backend, wordpress');
         this.results.addTextLine('\nFlags:');
-        this.results.addTextLine(`  -p, --platform \tSpecify the backend platform. Allowed options: ${config.backendTechnologies.join(', ')}`);
+        this.results.addTextLine(`  -p, --platform \tSpecify the backend platform. Allowed options: ${config.backend.technologies.join(', ')}`);
         this.results.addTextLine('  -t, --test     \tRun the "test" script defined in the "package.json" file before publishing');
         this.results.addTextLine('  -o, --open     \tOpen in default browser after publication');
         this.results.addTextLine('  -c, --advanced \tPerform an advanced WordPress publication');

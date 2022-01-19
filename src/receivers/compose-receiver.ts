@@ -24,7 +24,7 @@ class ComposeReceiver extends Receiver {
     async init(): Promise<void> {
 
         const types = this.getChoicesList(['backend', 'frontend', 'database']);
-        const backendTechnologies = this.getChoicesList(config.backendTechnologies);
+        const backendTechnologies = this.getChoicesList(config.backend.technologies);
         const databaseTypes = this.getChoicesList(config.databases);
         const configuration: { projects: ProjectEntry[] } = { projects: [] };
 

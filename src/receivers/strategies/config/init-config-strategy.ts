@@ -16,7 +16,7 @@ export class InitConfigStrategy extends ConfigStrategy {
         const projectType = await helpers.createListPrompt('Choose project type', ['frontend', 'backend', 'wordpress']);
         this.context.mdbConfig.setValue('meta.type', projectType);
         if (projectType === 'backend') {
-            const technology = await helpers.createListPrompt('Choose project technology', config.backendTechnologies);
+            const technology = await helpers.createListPrompt('Choose project technology', config.backend.technologies);
             this.context.mdbConfig.setValue('backend.platform', technology);
         }
         if (projectType === 'frontend') {

@@ -1,9 +1,12 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { join, parse } from 'path';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import OutputPrinter from '../utils/output-printer';
 import CommandResult from '../utils/command-result';
+import HttpWrapper from '../utils/http-wrapper';
+import { OutputColor } from '../models';
 import Context from '../context';
 import helpers from '../helpers';
+import config from '../config';
 
 abstract class Command {
 
@@ -25,13 +28,29 @@ abstract class Command {
     /**
      * @param results: CommandResult[]
      */
-    printResult(results: CommandResult[]): void {
+    async printResult(results: CommandResult[]) {
         this._output.print(results);
+        if (HttpWrapper.serverMessageLast) await this._printAdditionalMessage();
+    }
+
+    private async _printAdditionalMessage() {
+        const lastMsg = existsSync(config.msgPath) ? readFileSync(config.msgPath, 'utf8') : '';
+        if (lastMsg !== HttpWrapper.serverMessageLast) {
+            writeFileSync(config.msgPath, HttpWrapper.serverMessageLast, 'utf8');
+            try {
+                const res = await new HttpWrapper().get({ hostname: config.host, path: '/app/message' });
+                const msg = JSON.parse(res.body);
+                const result = new CommandResult();
+                result.addAlert(OutputColor.Yellow, msg.title, msg.body);
+                this._output.print([result]);
+            } catch { }
+        }
     }
 
     async requireDotMdb() {
         let cwd = process.cwd();
-        const requiredPath = join(cwd, '.mdb')
+        const requiredPath = join(cwd, '.mdb');
+        const { root } = parse(requiredPath);
 
         while (true) {
 
@@ -42,7 +61,7 @@ abstract class Command {
                 return;
             }
             cwd = join(cwd, '..')
-            if (dotMdbPath === '/.mdb' || dotMdbPath === '\\.mdb') break;
+            if (dotMdbPath === join(root, '.mdb')) break;
         }
 
         const confirmed = await helpers.createConfirmationPrompt('Required .mdb file not found. Create?', true);
