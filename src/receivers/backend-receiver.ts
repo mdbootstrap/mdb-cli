@@ -221,7 +221,7 @@ class BackendReceiver extends Receiver {
             this.result.liveAlert(OutputColor.Blue, 'Info', 'In order for your app to run properly you need to configure it so that it listens on port 3000. It is required for internal port mapping. The URL that your app is available at, will be provided to you after successful publish.');
         }
 
-        const supportedPlatforms = config.backendTechnologies;
+        const supportedPlatforms = config.backend.technologies;
         if (!supportedPlatforms.includes(platform)) {
             throw new Error(`This technology is not supported. Allowed technologies: ${supportedPlatforms.join(', ')}`);
         }
@@ -238,12 +238,9 @@ class BackendReceiver extends Receiver {
                 this.result.addAlert(OutputColor.Red, 'Error', e);
                 return;
             }
-
-            const packageJsonEmpty = this.context.packageJsonConfig.name === undefined;
-            if (packageJsonEmpty) {
-                throw new Error('package.json file is required.'); // in case Ctrl+C
-            }
         }
+
+        this._checkRequiredFiles(platform);
 
         if (this.flags.test) {
             try {
@@ -260,6 +257,14 @@ class BackendReceiver extends Receiver {
         }
 
         await this._handlePublication(packageJsonEmpty, isNodePlatform);
+    }
+
+    _checkRequiredFiles(platform: string) {
+        config.backend.requiredFiles.forEach(file => {
+            if (platform.includes(file.tech) && !fs.existsSync(path.join(process.cwd(), file.name))) {
+                throw new Error(`${file.name} file is required.`);
+            }
+        });
     }
 
     async createPackageJson(): Promise<string> {

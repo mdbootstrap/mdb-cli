@@ -2,6 +2,7 @@ import Context from '../../context';
 import helpers from '../../helpers';
 import Command from '../../commands/command';
 import CommandResult from '../../utils/command-result';
+import HttpWrapper, { CustomOkResponse } from '../../utils/http-wrapper';
 import { createSandbox } from 'sinon';
 import { expect } from 'chai';
 import fs from 'fs';
@@ -40,6 +41,46 @@ describe('Command: parent', () => {
         command.printResult(fakeResults);
 
         expect(command._output.print).to.have.been.calledWith(fakeResults);
+    });
+
+    it('should print an additional server message if it exists and has not been displayed yet', async function () {
+
+        const context = new Context('', '', [], []);
+        // @ts-ignore
+        const command = new Command(context);
+        sandbox.stub(command._output, 'print');
+
+        sandbox.stub(HttpWrapper, 'serverMessageLast').value('2020-02-02');
+        sandbox.stub(HttpWrapper.prototype, 'get').resolves({ body: JSON.stringify({ title: '', body: '' }) } as CustomOkResponse);
+        sandbox.stub(fs, 'existsSync').returns(false);
+        const writeStub = sandbox.stub(fs, 'writeFileSync');
+
+        const fakeResults = new CommandResult();
+        await command.printResult(fakeResults);
+
+        expect(command._output.print).to.have.been.calledWith(fakeResults);
+        expect(command._output.print).to.have.been.calledTwice;
+        expect(writeStub).to.have.been.calledOnce;
+    });
+
+    it('should not print an additional server message if it has already been displayed', async function () {
+
+        const context = new Context('', '', [], []);
+        // @ts-ignore
+        const command = new Command(context);
+        sandbox.stub(command._output, 'print');
+
+        sandbox.stub(HttpWrapper, 'serverMessageLast').value('2020-02-02');
+        sandbox.stub(fs, 'existsSync').returns(true);
+        sandbox.stub(fs, 'readFileSync').returns('2020-02-02');
+        const writeStub = sandbox.stub(fs, 'writeFileSync');
+
+        const fakeResults = new CommandResult();
+        await command.printResult(fakeResults);
+
+        expect(command._output.print).to.have.been.calledWith(fakeResults);
+        expect(command._output.print).to.have.been.calledOnce;
+        expect(writeStub).to.not.have.been.called;
     });
 
     it('should have assigned entity, arg and flags', function () {
