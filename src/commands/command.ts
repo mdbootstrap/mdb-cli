@@ -37,6 +37,7 @@ abstract class Command {
         const lastMsg = existsSync(config.msgPath) ? readFileSync(config.msgPath, 'utf8') : '';
         if (lastMsg !== this.context.serverMessageLast) {
             writeFileSync(config.msgPath, this.context.serverMessageLast, 'utf8');
+
             try {
                 const res = await new HttpWrapper().get({ hostname: config.host, path: '/app/message' });
                 const msg = JSON.parse(res.body);
