@@ -33,6 +33,8 @@ describe('Strategy: FtpPublishStrategy', () => {
         context = new Context('', '', [], []);
         context.packageJsonConfig = {};
         strategy = new FtpPublishStrategy(context, commandResult);
+        // @ts-ignore
+        strategy._loadMetaData();
 
         await strategy.buildProject();
 
@@ -44,6 +46,8 @@ describe('Strategy: FtpPublishStrategy', () => {
         context = new Context('', '', [], []);
         context.packageJsonConfig = { scripts: { build: 'fake script' }, dependencies: { '@angular/core': 'fakever' } };
         strategy = new FtpPublishStrategy(context, commandResult);
+        // @ts-ignore
+        strategy._loadMetaData();
 
         sandbox.stub(helpers, 'deserializeJsonFile').resolves({ defaultProject: '' });
         sandbox.stub(fs, 'readFileSync').returns('');
@@ -61,6 +65,8 @@ describe('Strategy: FtpPublishStrategy', () => {
         context.packageJsonConfig = { scripts: { build: 'fake script' }, dependencies: { 'react': 'fakever' } };
         context.userToken = `fake.${btoa(JSON.stringify({ name: 'fakename' }))}.fake`;
         strategy = new FtpPublishStrategy(context, commandResult);
+        // @ts-ignore
+        strategy._loadMetaData();
 
         sandbox.stub(helpers, 'serializeJsonFile').resolves();
         sandbox.stub(fs, 'existsSync').returns(false);
@@ -75,6 +81,8 @@ describe('Strategy: FtpPublishStrategy', () => {
         context = new Context('', '', [], []);
         context.packageJsonConfig = { scripts: { build: 'fake script' }, dependencies: { 'vue': 'fakever' } };
         strategy = new FtpPublishStrategy(context, commandResult);
+        // @ts-ignore
+        strategy._loadMetaData();
 
         sandbox.stub(fs, 'existsSync').returns(true);
 
@@ -88,6 +96,8 @@ describe('Strategy: FtpPublishStrategy', () => {
         context = new Context('', '', [], []);
         context.packageJsonConfig = { scripts: { build: 'fake script' } };
         strategy = new FtpPublishStrategy(context, commandResult);
+        // @ts-ignore
+        strategy._loadMetaData();
 
         sandbox.stub(fs, 'existsSync').returns(true);
 

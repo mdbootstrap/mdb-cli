@@ -16,22 +16,20 @@ export class FtpPublishStrategy {
     private readonly cwd = process.cwd();
 
     private packageJsonConfig!: MdbGoPackageJson;
-    private flags: ParsedFlags;
+    private flags: ParsedFlags = {};
     private metaData!: { [key: string]: string };
     private sent = '0';
 
     constructor(private readonly context: Context, private result: CommandResult) {
 
         this.userToken = this.context.userToken;
-
-        this.flags = this.context.getParsedFlags();
-
-        this._loadMetaData();
     }
 
     async publish() {
-
-        return this.buildProject().then(() => this.uploadFiles());
+        this.flags = this.context.getParsedFlags();
+        this._loadMetaData();
+        await this.buildProject();
+        return this.uploadFiles();
     }
 
     private _loadMetaData(): void {

@@ -30,13 +30,13 @@ abstract class Command {
      */
     async printResult(results: CommandResult[]) {
         this._output.print(results);
-        if (HttpWrapper.serverMessageLast) await this._printAdditionalMessage();
+        if (this.context.serverMessageLast) await this._printAdditionalMessage();
     }
 
     private async _printAdditionalMessage() {
         const lastMsg = existsSync(config.msgPath) ? readFileSync(config.msgPath, 'utf8') : '';
-        if (lastMsg !== HttpWrapper.serverMessageLast) {
-            writeFileSync(config.msgPath, HttpWrapper.serverMessageLast, 'utf8');
+        if (lastMsg !== this.context.serverMessageLast) {
+            writeFileSync(config.msgPath, this.context.serverMessageLast, 'utf8');
             try {
                 const res = await new HttpWrapper().get({ hostname: config.host, path: '/app/message' });
                 const msg = JSON.parse(res.body);

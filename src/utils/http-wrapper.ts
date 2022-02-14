@@ -1,8 +1,9 @@
 'use strict';
 
 import config from "../config";
-import http, {RequestOptions} from "https";
-import {ClientRequest, IncomingHttpHeaders, IncomingMessage} from "http";
+import Context from "../context";
+import http, { RequestOptions } from "https";
+import { ClientRequest, IncomingHttpHeaders, IncomingMessage } from "http";
 
 const packageJson = config.env === 'test' ? require('../../package.json') : require('../package.json');
 
@@ -12,7 +13,7 @@ export type CustomRequestOptions = RequestOptions & { data?: string | object };
 
 class HttpWrapper {
 
-    static serverMessageLast: string = '';
+    constructor(private context: Context | null = null) { }
 
     createRawRequest(options: CustomRequestOptions, callback?: (response: IncomingMessage) => void): ClientRequest {
 
@@ -24,7 +25,7 @@ class HttpWrapper {
 
         return http.request(options, (response: IncomingMessage) => {
 
-            if (response.headers['x-mdb-cli-message-last']) HttpWrapper.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
+            if (this.context && response.headers['x-mdb-cli-message-last']) this.context.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
 
             if (callback) {
 
@@ -43,7 +44,7 @@ class HttpWrapper {
 
         return http.request(options, (response: IncomingMessage) => {
 
-            if (response.headers['x-mdb-cli-message-last']) HttpWrapper.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
+            if (this.context && response.headers['x-mdb-cli-message-last']) this.context.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
 
             let result = '';
             response.on('data', chunk => {
@@ -78,7 +79,7 @@ class HttpWrapper {
 
             const request = http.request(options, (response: IncomingMessage) => {
 
-                if (response.headers['x-mdb-cli-message-last']) HttpWrapper.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
+                if (this.context && response.headers['x-mdb-cli-message-last']) this.context.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
 
                 let result = '';
                 response.on('data', chunk => {

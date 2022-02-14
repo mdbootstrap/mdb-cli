@@ -22,7 +22,7 @@ abstract class Receiver {
     protected constructor(context: Context) {
         this.context = context;
 
-        this.http = new HttpWrapper();
+        this.http = new HttpWrapper(context);
         this.git = new GitManager();
 
         this._result = new CommandResult();

@@ -21,7 +21,8 @@ class OutputPrinter {
         [OutputColor.InvertedBlue]: '\x1b[44m%s\x1b[0m',
         [OutputColor.InvertedPurple]: '\x1b[45m%s\x1b[0m',
         [OutputColor.InvertedTurquoise]: '\x1b[46m%s\x1b[0m',
-        [OutputColor.InvertedGrey]: '\x1b[47m%s\x1b[0m'
+        [OutputColor.InvertedGrey]: '\x1b[47m%s\x1b[0m',
+        [OutputColor.GreyBody]: '\x1b[0m%s\x1b[90m%s\x1b[0m'
     };
 
     /**

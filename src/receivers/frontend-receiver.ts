@@ -3,6 +3,7 @@ import fse from 'fs-extra';
 import path from 'path';
 import open from 'open';
 import { Separator } from 'inquirer';
+import { write as copy } from 'clipboardy';
 import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
 import { FtpPublishStrategy, PipelinePublishStrategy} from './strategies/publish';
 import Receiver from './receiver';
@@ -100,6 +101,10 @@ class FrontendReceiver extends Receiver {
         } else {
             await this.chooseStarter(choices, options);
         }
+
+        const validStarterCodes = options.map(o => o.code);
+        if (!validStarterCodes.includes(this.starterCode))
+            return this.result.addAlert(OutputColor.Red, 'Error', `Invalid starter code, correct options are ${validStarterCodes.join(', ')}`);
 
         if (!initInCurrentFolder) {
             await this.checkProjectNameExists();
@@ -270,7 +275,9 @@ class FrontendReceiver extends Receiver {
             const response = await strategy.publish();
 
             const { message, url } = JSON.parse(response.body);
-            this.result.addTextLine(message);
+            await copy(url);
+            this.result.addAlert(OutputColor.GreyBody, message, ' [copied to clipboard]');
+
             this.result.addTextLine('');
             this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
 
@@ -280,11 +287,15 @@ class FrontendReceiver extends Receiver {
             if (this.flags.open && !!url) open(url);
         } catch (e) {
             if (e.statusCode === CliStatus.CONFLICT && e.message.includes('project name')) {
-                this.result.liveAlert(OutputColor.Red, 'Error', e.message);
-                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
-                this.context.setPackageJsonValue('name', this.projectName);
-                this.context.mdbConfig.setValue('projectName', this.projectName);
-                this.context.mdbConfig.save();
+                const override = await helpers.createConfirmationPrompt(`${e.message} Override?`, false);
+                if (override) {
+                    this.context._addNonArgFlag('--override');
+                } else {
+                    this.projectName = await helpers.createTextPrompt('Please choose a different project name', 'Project name must not be empty.');
+                    this.context.setPackageJsonValue('name', this.projectName);
+                    this.context.mdbConfig.setValue('projectName', this.projectName);
+                    this.context.mdbConfig.save();
+                }
                 await this._handlePublication(strategy);
             } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
                 this.result.liveAlert(OutputColor.Red, 'Error', e.message);

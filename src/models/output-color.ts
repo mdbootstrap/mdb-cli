@@ -14,4 +14,5 @@ export enum OutputColor {
     InvertedPurple = 'invertedPurple',
     InvertedTurquoise = 'invertedTurquoise',
     InvertedGrey = 'invertedGrey',
+    GreyBody = 'greyBody'
 }
