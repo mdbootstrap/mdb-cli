@@ -15,6 +15,7 @@ class Context {
     public mdbConfig = new DotMdbConfigManager();
     public packageJsonConfig: MdbGoPackageJson = {};
     public packageManager: PackageManager | null = null;
+    public serverMessageLast: string = ''; 
 
     private _entity: string;
     private readonly _command: string;
@@ -183,6 +184,10 @@ class Context {
         } catch (e) {
             this.packageJsonConfig = {};
         }
+    }
+
+    _addNonArgFlag(flag: string) {
+        if (this._isFlag(flag) && this._isNonArgFlag(flag.substring(2))) this._flags.push(flag);
     }
 }
 

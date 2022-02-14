@@ -1,4 +1,5 @@
 import fs from 'fs';
+import clipboardy from 'clipboardy';
 import config from '../../config';
 import Context from '../../context';
 import helpers from '../../helpers';
@@ -194,6 +195,16 @@ describe('Receiver: frontend', () => {
 
             expect(receiver.result.messages).to.deep.include(expectedResult);
         });
+
+        it('should print error if invalid variant provided', async function () {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Invalid starter code, correct options are fake-slug' }, color: 'red' };
+            getStub.resolves({ body: JSON.stringify([fakeProduct]) });
+
+            await receiver.init('invalid');
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
     });
 
     describe('Method: get', () => {
@@ -288,8 +299,14 @@ describe('Receiver: frontend', () => {
     });
 
     describe('Method: publish', () => {
-
-        beforeEach(() => sandbox.stub(fs, 'writeFileSync'));
+        
+        let copyStub: SinonStub;
+        const body = JSON.stringify({ message: '', url: '' });
+        
+        beforeEach(() => {
+            sandbox.stub(fs, 'writeFileSync');
+            copyStub = sandbox.stub(clipboardy, 'write');
+        });
 
         it('should create package.json if the current packageJsonConfig is empty', async function () {
 
@@ -304,13 +321,14 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.result, 'liveTextLine');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
-            sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
+            sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
             receiver.context.packageJsonConfig = {};
 
             await receiver.publish();
 
             expect(createPackageJsonStub).to.have.been.calledOnce;
             expect(loadPackageJsonStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should print error if creating package.json failed', async function () {
@@ -332,6 +350,7 @@ describe('Receiver: frontend', () => {
             expect(createPackageJsonStub).to.have.been.calledOnce;
             expect(loadPackageJsonStub).to.not.have.been.called;
             expect(printAlertStub).to.have.been.calledWith('red');
+            sandbox.assert.notCalled(copyStub);
         });
 
         it('should throw error if creating package.json aborted and packageJsonConfig is still empty', async function () {
@@ -353,6 +372,7 @@ describe('Receiver: frontend', () => {
             } catch (e) {
                 expect(createPackageJsonStub).to.have.been.calledOnce;
                 expect(loadPackageJsonStub).to.have.been.calledOnce;
+                sandbox.assert.notCalled(copyStub);
                 return;
             }
 
@@ -365,7 +385,7 @@ describe('Receiver: frontend', () => {
             receiver = new FrontendReceiver(context);
 
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
-            sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
+            sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
@@ -376,6 +396,7 @@ describe('Receiver: frontend', () => {
 
             expect(runTestsStub).to.have.been.calledOnce;
             expect(printAlertStub).to.have.been.calledWith('green');
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should run tests and print error if -t | --test flag provided', async function () {
@@ -395,6 +416,7 @@ describe('Receiver: frontend', () => {
 
             expect(runTestsStub).to.have.been.calledOnce;
             expect(printAlertStub).to.have.been.calledWith('red');
+            sandbox.assert.notCalled(copyStub);
         });
 
         it('should call FtpPublishStrategy#publish() method if --ftp flag provided', async function () {
@@ -405,11 +427,12 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
-            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body: '{}' } as CustomOkResponse);
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should call FtpPublishStrategy#publish() method if .mdb -> publishMethod set to ftp', async function () {
@@ -421,11 +444,12 @@ describe('Receiver: frontend', () => {
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = 'ftp';
 
-            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body: '{}' } as CustomOkResponse);
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should call FtpPublishStrategy#publish() method and show prompt if projectName conflict error', async function () {
@@ -434,6 +458,7 @@ describe('Receiver: frontend', () => {
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
+            const confirmPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.context, 'setPackageJsonValue');
@@ -442,12 +467,14 @@ describe('Receiver: frontend', () => {
 
             const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish');
             ftpPublishStub.onFirstCall().rejects({ message: 'project name', statusCode: 409 } as CustomErrorResponse);
-            ftpPublishStub.onSecondCall().resolves({ body: '{}' } as CustomOkResponse);
+            ftpPublishStub.onSecondCall().resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledTwice;
+            expect(confirmPromptStub).to.have.been.calledOnce;
             expect(textPromptStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should call FtpPublishStrategy#publish() method and show prompt if domain conflict error', async function () {
@@ -463,12 +490,13 @@ describe('Receiver: frontend', () => {
 
             const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish');
             ftpPublishStub.onFirstCall().rejects({ message: 'domain name', statusCode: 409 } as CustomErrorResponse);
-            ftpPublishStub.onSecondCall().resolves({ body: '{}' } as CustomOkResponse);
+            ftpPublishStub.onSecondCall().resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledTwice;
             expect(textPromptStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should call PipelinePublishStrategy#publish() method if current git remote is git.mdbgo.com and user agreed', async function () {
@@ -482,11 +510,12 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('git.mdbgo.com');
             sandbox.stub(helpers, 'createConfirmationPrompt').resolves(true);
 
-            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body: '{}' } as CustomOkResponse);
+            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(pipelinePublishStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should call PipelinePublishStrategy#publish() method if it is saved in config', async function () {
@@ -499,11 +528,12 @@ describe('Receiver: frontend', () => {
                 .withArgs('publishMethod').returns('pipeline');
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
-            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body: '{}' } as CustomOkResponse);
+            const pipelinePublishStub = sandbox.stub(PipelinePublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(pipelinePublishStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
 
         it('should call FtpPublishStrategy#publish() method if current git remote is git.mdbgo.com but user did not agree', async function () {
@@ -522,6 +552,7 @@ describe('Receiver: frontend', () => {
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledOnce;
+            sandbox.assert.notCalled(copyStub);
         });
 
         it('should call FtpPublishStrategy#publish() method as a default fallback', async function () {
@@ -534,11 +565,12 @@ describe('Receiver: frontend', () => {
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
 
-            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
+            const ftpPublishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
             await receiver.publish();
 
             expect(ftpPublishStub).to.have.been.calledOnce;
+            sandbox.assert.calledOnce(copyStub);
         });
     });
 

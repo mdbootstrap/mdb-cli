@@ -6,7 +6,9 @@ import HttpWrapper, { CustomOkResponse, CustomErrorResponse } from '../../utils/
 import { FtpPublishStrategy } from '../../receivers/strategies/publish';
 import BackendReceiver from '../../receivers/backend-receiver';
 import { createSandbox, SinonStub } from 'sinon';
+import clipboardy from 'clipboardy';
 import { expect } from 'chai';
+import fs from 'fs';
 
 describe('Receiver: backend', () => {
 
@@ -703,12 +705,17 @@ describe('Receiver: backend', () => {
 
     describe('Method: publish', () => {
 
-        let publishStub: SinonStub, textPromptStub: SinonStub;
+        let publishStub: SinonStub,
+            textPromptStub: SinonStub,
+            confirmationPromptStub: SinonStub,
+            copyStub: SinonStub;
 
         beforeEach(() => {
 
+            copyStub = sandbox.stub(clipboardy, 'write');
             publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish');
             textPromptStub = sandbox.stub(helpers, 'createTextPrompt');
+            confirmationPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt');
         });
 
         it('should use FtpPublishStrategy to upload files and show prompt if project name conflict error', async () => {
@@ -721,12 +728,14 @@ describe('Receiver: backend', () => {
             sandbox.stub(receiver.context, 'setPackageJsonValue');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
             sandbox.stub(receiver.context.mdbConfig, 'save');
+            confirmationPromptStub.resolves(false);
             textPromptStub.resolves('fakeProjectName');
             publishStub.onFirstCall().rejects({ statusCode: 409, message: 'project name' } as CustomErrorResponse);
             publishStub.onSecondCall().resolves({ body: JSON.stringify({ message: '', url: '' }) } as CustomOkResponse);
 
             await receiver.publish();
 
+            sandbox.assert.calledOnce(copyStub);
             sandbox.assert.calledOnce(textPromptStub);
             sandbox.assert.calledTwice(publishStub);
         });
@@ -746,6 +755,7 @@ describe('Receiver: backend', () => {
 
             await receiver.publish();
 
+            sandbox.assert.calledOnce(copyStub);
             sandbox.assert.calledOnce(textPromptStub);
             sandbox.assert.calledTwice(publishStub);
         });
@@ -765,8 +775,119 @@ describe('Receiver: backend', () => {
 
             await receiver.publish();
 
+            sandbox.assert.notCalled(copyStub);
             sandbox.assert.calledOnce(publishStub);
             expect(alertStub).to.have.been.calledWith('red');
+        });
+    });
+
+    describe('Method: init', () => {
+
+        const fakeProduct = {
+            productTitle: 'fakeTitle',
+            productSlug: 'fake-slug',
+            available: true,
+            category: 'fakeCategory',
+            license: 'fakeLicense',
+            displayName: 'fakeName',
+            code: 'fake-slug'
+        };
+
+        let createConfirmationPromptStub: SinonStub,
+            createJenkinsfileStub: SinonStub,
+            createListPromptStub: SinonStub,
+            createTextPromptStub: SinonStub,
+            downloadFromFTPStub: SinonStub,
+            eraseDirectoriesStub: SinonStub,
+            existsSyncStub: SinonStub,
+            getStub: SinonStub;
+
+        beforeEach(() => {
+
+            context = new Context('frontend', 'init', [], []);
+            receiver = new BackendReceiver(context);
+            getStub = sandbox.stub(receiver.http, 'get');
+            sandbox.stub(receiver.context.mdbConfig, 'setValue');
+            sandbox.stub(receiver.context.mdbConfig, 'save');
+            sandbox.stub(receiver.context, '_loadPackageJsonConfig');
+            sandbox.stub(receiver.context, 'packageJsonConfig').value({});
+            sandbox.stub(process, 'cwd').returns('fake/cwd');
+            createConfirmationPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt');
+            createJenkinsfileStub = sandbox.stub(helpers, 'createJenkinsfile');
+            createListPromptStub = sandbox.stub(helpers, 'createListPrompt');
+            createTextPromptStub = sandbox.stub(helpers, 'createTextPrompt');
+            eraseDirectoriesStub = sandbox.stub(helpers, 'eraseDirectories');
+            downloadFromFTPStub = sandbox.stub(helpers, 'downloadFromFTP');
+            existsSyncStub = sandbox.stub(fs, 'existsSync');
+            sandbox.stub(fs, 'rmdirSync');
+        });
+
+        it('should download selected project starter if available', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Success' }, color: 'green' };
+            getStub.resolves({ body: JSON.stringify([fakeProduct]) });
+            createListPromptStub.resolves('fake-slug');
+            existsSyncStub.returns(false);
+            eraseDirectoriesStub.resolves();
+            downloadFromFTPStub.resolves('Success');
+            createJenkinsfileStub.resolves();
+
+            await receiver.init();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should try download selected project and return expected result if not available', async () => {
+
+            const expectedResult = { type: 'text', value: 'Please run `mdb starter ls` to see available packages.' };
+            getStub.resolves({ body: JSON.stringify([{ ...fakeProduct, ...{ available: false } }]) });
+            createListPromptStub.resolves('fake-slug');
+
+            await receiver.init();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should set new name, download selected project and return expected result if project already exists', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Success' }, color: 'green' };
+            getStub.resolves({ body: JSON.stringify([fakeProduct]) });
+            createListPromptStub.resolves('fake-slug');
+            existsSyncStub.withArgs('fake/cwd/fake-slug').returns(true);
+            existsSyncStub.withArgs('fake/cwd/new-fake-slug').returns(false);
+            createConfirmationPromptStub.resolves(true);
+            createTextPromptStub.resolves('new-fake-slug');
+            eraseDirectoriesStub.resolves();
+            downloadFromFTPStub.resolves('Success');
+            createJenkinsfileStub.resolves();
+
+            await receiver.init();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should download selected project and return expected result if project already exists and user doesn\'t want to erase it', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'OK, will not delete existing folder.' }, color: 'red' };
+            getStub.resolves({ body: JSON.stringify([fakeProduct]) });
+            createListPromptStub.resolves('fake-slug');
+            existsSyncStub.withArgs('fake/cwd/fake-slug').returns(true);
+            createConfirmationPromptStub.resolves(false);
+            eraseDirectoriesStub.returns(Promise.reject('OK, will not delete existing folder.'));
+
+            await receiver.init();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should print error if invalid variant provided', async function () {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Invalid starter code, correct options are fake-slug' }, color: 'red' };
+            getStub.resolves({ body: JSON.stringify([fakeProduct]) });
+
+            await receiver.init('invalid');
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
         });
     });
 });

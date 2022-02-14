@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "3.7.4",
+  "version": "3.7.5",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -56,6 +56,7 @@
     "atob": "^2.1.2",
     "babel-polyfill": "^6.26.0",
     "btoa": "^1.2.1",
+    "clipboardy": "^2.1.0",
     "console.table": "^0.10.0",
     "dotenv": "^8.0.0",
     "fs-extra": "^8.0.1",

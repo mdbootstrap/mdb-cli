@@ -50,7 +50,8 @@ describe('Command: parent', () => {
         const command = new Command(context);
         sandbox.stub(command._output, 'print');
 
-        sandbox.stub(HttpWrapper, 'serverMessageLast').value('2020-02-02');
+        sandbox.stub(context, 'serverMessageLast').value('2020-02-02');
+
         sandbox.stub(HttpWrapper.prototype, 'get').resolves({ body: JSON.stringify({ title: '', body: '' }) } as CustomOkResponse);
         sandbox.stub(fs, 'existsSync').returns(false);
         const writeStub = sandbox.stub(fs, 'writeFileSync');
@@ -70,7 +71,8 @@ describe('Command: parent', () => {
         const command = new Command(context);
         sandbox.stub(command._output, 'print');
 
-        sandbox.stub(HttpWrapper, 'serverMessageLast').value('2020-02-02');
+        sandbox.stub(context, 'serverMessageLast').value('2020-02-02');
+
         sandbox.stub(fs, 'existsSync').returns(true);
         sandbox.stub(fs, 'readFileSync').returns('2020-02-02');
         const writeStub = sandbox.stub(fs, 'writeFileSync');

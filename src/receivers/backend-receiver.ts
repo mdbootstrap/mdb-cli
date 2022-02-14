@@ -4,6 +4,7 @@ import open from 'open';
 import fse from 'fs-extra';
 import { Separator } from 'inquirer';
 import { io } from 'socket.io-client';
+import { write as copy } from 'clipboardy';
 import { CliStatus, OutputColor, Project, ProjectMeta, ProjectStatus, StarterOption } from '../models';
 import { FtpPublishStrategy, PipelinePublishStrategy } from './strategies/publish';
 import HttpWrapper from '../utils/http-wrapper';
@@ -112,6 +113,10 @@ class BackendReceiver extends Receiver {
             await this.chooseStarter(choices, options);
         }
 
+        const validStarterCodes = options.map(o => o.code);
+        if (!validStarterCodes.includes(this.starterCode))
+            return this.result.addAlert(OutputColor.Red, 'Error', `Invalid starter code, correct options are ${validStarterCodes.join(', ')}`);
+
         if (!initInCurrentFolder) {
             await this.checkProjectNameExists();
             projectPath = path.join(process.cwd(), this.projectName);
@@ -150,7 +155,7 @@ class BackendReceiver extends Receiver {
         } while (promptShownCount <= 10);
     }
 
-    async _getBackendStartersOptions(): Promise<any> {
+    async _getBackendStartersOptions(): Promise<StarterOption[]> {
         const queryParamAvailable = !this.flags.all ? '&available=true' : '';
         const freeStarters = this.loggedin ? '' : '/free';
         this.options.path = `/packages/starters${freeStarters}?type=backend${queryParamAvailable}`;
@@ -312,21 +317,22 @@ class BackendReceiver extends Receiver {
             const response = await strategy.publish();
 
             const { message, url } = JSON.parse(response.body);
-            this.result.addTextLine(message);
+            await copy(url);
+            this.result.addAlert(OutputColor.GreyBody, message, ' [copied to clipboard]');
 
             if (this.flags.open && !!url) open(url);
         } catch (e) {
 
             if (e.statusCode === CliStatus.CONFLICT && e.message.includes('project name')) {
-                this.result.liveAlert(OutputColor.Red, 'Error', e.message);
-                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
-
-                if (!packageJsonEmpty && isNodePlatform) {
-                    this.context.setPackageJsonValue('name', this.projectName);
+                const override = await helpers.createConfirmationPrompt(`${e.message} Override?`, false);
+                if (override) {
+                    this.context._addNonArgFlag('--override');
+                } else {
+                    this.projectName = await helpers.createTextPrompt('Please choose a different project name', 'Project name must not be empty.');
+                    if (!packageJsonEmpty && isNodePlatform) this.context.setPackageJsonValue('name', this.projectName);
+                    this.context.mdbConfig.setValue('projectName', this.projectName);
+                    this.context.mdbConfig.save();
                 }
-
-                this.context.mdbConfig.setValue('projectName', this.projectName);
-                this.context.mdbConfig.save();
                 await this._handlePublication(packageJsonEmpty, isNodePlatform);
             } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
                 this.result.liveAlert(OutputColor.Red, 'Error', e.message);
@@ -596,7 +602,7 @@ class BackendReceiver extends Receiver {
     }
 
     private getSocket() {
-        return io(config.apiUrl as string, { auth: { token: this.context.userToken }, timeout: 1000 });
+        return io(`https://${config.host}`, { auth: { token: this.context.userToken }, timeout: 1000 });
     }
 }
 

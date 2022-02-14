@@ -309,7 +309,7 @@ describe('Receiver: wordpress', () => {
 
         it('should print error if invalid variant provided', async function () {
 
-            context = new Context('wordpress', 'init', [], ['--variant', 'invalid']);
+            context = new Context('wordpress', 'init', [], []);
             receiver = new WordpressReceiver(context);
 
             sandbox.stub(process, 'cwd').returns('/wp-content/themes');
@@ -318,7 +318,7 @@ describe('Receiver: wordpress', () => {
 
             const alertStub = sandbox.stub(receiver.result, 'addAlert');
 
-            await receiver.init();
+            await receiver.init('invalid');
 
             expect(alertStub).to.have.been.called;
         });
@@ -499,6 +499,7 @@ describe('Receiver: wordpress', () => {
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
             sandbox.stub(receiver.context.mdbConfig, 'save');
 
+            const confirmPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
             const publishStub = sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ statusCode: 201 } as CustomOkResponse);
             const createStub = sandbox.stub(receiver, '_createWpPage');
@@ -510,6 +511,7 @@ describe('Receiver: wordpress', () => {
             expect(createStub).to.have.been.calledTwice;
             expect(publishStub).to.have.been.calledTwice;
             expect(textPromptStub).to.have.been.calledOnce;
+            expect(confirmPromptStub).to.have.been.calledOnce;
         });
 
         it('should use FtpPublishStrategy to upload files and show prompt if domain conflict error', async function () {

@@ -94,7 +94,7 @@ class DatabaseReceiver extends Receiver {
             username: this.flags.username,
             password: this.flags.password,
             repeatPassword: this.flags.password,
-            descriptopn: this.flags.description || ''
+            description: this.flags.description || ''
         } : await prompt([
             {
                 type: 'text',
@@ -161,7 +161,7 @@ class DatabaseReceiver extends Receiver {
         try {
             response = await this.http.post(this.options);
             response = JSON.parse(response.body);
-        } catch (err) {
+        } catch (err: any) {
             return this.result.addAlert(OutputColor.Red, 'Error', `Could not create database: ${err.message || err}`);
         }
 
@@ -202,7 +202,7 @@ class DatabaseReceiver extends Receiver {
         try {
             await this.http.delete(this.options);
             this.result.addAlert(OutputColor.Green, '\nResult:', 'Database successfully deleted.\n');
-        } catch (err) {
+        } catch (err: any) {
             this.result.addAlert(OutputColor.Red, 'Error:', err.message);
         }
     }
@@ -250,7 +250,7 @@ class DatabaseReceiver extends Receiver {
         try {
             await this.http.put(this.options);
             this.result.addAlert(OutputColor.Green, '\nResult:', 'Database password successfully changed.\n');
-        } catch (err) {
+        } catch (err: any) {
             this.result.addAlert(OutputColor.Red, 'Error:', err.message);
         }
     }

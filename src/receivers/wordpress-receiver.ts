@@ -5,7 +5,7 @@ import fse from 'fs-extra';
 import { io } from 'socket.io-client';
 import inquirer, { Separator } from 'inquirer';
 import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
-import { FtpPublishStrategy, PipelinePublishStrategy} from './strategies/publish';
+import { FtpPublishStrategy, PipelinePublishStrategy } from './strategies/publish';
 import HttpWrapper from '../utils/http-wrapper';
 import Receiver from './receiver';
 import Context from '../context';
@@ -103,6 +103,10 @@ class WordpressReceiver extends Receiver {
         } else {
             await this.chooseStarter(choices, options);
         }
+
+        const validStarterCodes = options.map(o => o.code);
+        if (!validStarterCodes.includes(this.starterCode))
+            return this.result.addAlert(OutputColor.Red, 'Error', `Invalid starter code, correct options are ${validStarterCodes.join(', ')}`);
 
         try {
             const result = await this.downloadProjectStarter(process.cwd());
@@ -275,10 +279,14 @@ class WordpressReceiver extends Receiver {
             }
         } catch (e) {
             if (e.statusCode === CliStatus.CONFLICT && e.message.includes('project name')) {
-                this.result.liveAlert(OutputColor.Red, 'Error', e.message);
-                this.projectName = await helpers.createTextPrompt('Enter new project name', 'Project name must not be empty.');
-                this.context.mdbConfig.setValue('projectName', this.projectName);
-                this.context.mdbConfig.save();
+                const override = await helpers.createConfirmationPrompt(`${e.message} Override?`, false);
+                if (override) {
+                    this.context._addNonArgFlag('--override');
+                } else {
+                    this.projectName = await helpers.createTextPrompt('Please choose a different project name', 'Project name must not be empty.');
+                    this.context.mdbConfig.setValue('projectName', this.projectName);
+                    this.context.mdbConfig.save();
+                }
                 await this._handlePublication(pageVariant, wpData, strategy);
             } else if ([CliStatus.CONFLICT, CliStatus.FORBIDDEN].includes(e.statusCode) && e.message.includes('domain name')) {
                 this.result.liveAlert(OutputColor.Red, 'Error', e.message);
@@ -640,7 +648,7 @@ class WordpressReceiver extends Receiver {
     }
 
     private getSocket() {
-        return io(config.apiUrl as string, { auth: { token: this.context.userToken }, timeout: 1000 });
+        return io(`https://${config.host}`, { auth: { token: this.context.userToken }, timeout: 1000 });
     }
 }
 
