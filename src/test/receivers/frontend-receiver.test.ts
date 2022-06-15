@@ -299,7 +299,6 @@ describe('Receiver: frontend', () => {
     });
 
     describe('Method: publish', () => {
-
         let copyStub: SinonStub;
         const body = JSON.stringify({ message: '', url: '' });
 
@@ -480,7 +479,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
-
+          
             sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const confirmPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');

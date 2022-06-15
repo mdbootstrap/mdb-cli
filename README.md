@@ -44,7 +44,9 @@ ________
 
 # Integrated with
 
-[<img src="https://mdbootstrap.com/img/Marketing/general/logo/small/jquery.png"/>](https://mdbootstrap.com/docs/jquery/)[<img src="https://mdbootstrap.com/img/Marketing/general/logo/small/angular.png"/>](https://mdbootstrap.com/docs/angular/)[<img src="https://mdbootstrap.com/img/Marketing/general/logo/small/react.png"/>](https://mdbootstrap.com/docs/react/)[<img src="https://mdbootstrap.com/img/Marketing/general/logo/small/vue.png"/>](https://mdbootstrap.com/docs/vue/)
+| MDBootstrap Angular |⠀MDBootstrap React | MDBootstrap Vue⠀| MDBootstrap 5 |
+| --------------- | ------------------ | ------------- | ------------- |
+|  ­­ ­­­ ­­­ ­­­ ­­­ ­­­  [![MDB Angular](https://mdbootstrap.com/img/Marketing/general/logo/small/angular.png)](https://mdbootstrap.com/docs/b5/angular/) | ­­ ­­­ ­­­­ ­­­ ­­­  [![MDB React](https://mdbootstrap.com/img/Marketing/general/logo/small/react.png)](https://mdbootstrap.com/docs/b5/react/) |  ­­ ­ ­­­ ­­­ [![MDB Vue](https://mdbootstrap.com/img/Marketing/general/logo/small/vue.png)](https://mdbootstrap.com/docs/b5/vue/) |  ­­ ­­­­  [![MDB 5](https://mdbootstrap.com/wp-content/uploads/2020/08/bootstrap5-logo.png)](https://mdbootstrap.com/docs/standard/) |
 
 # Supported terminals
 
@@ -63,8 +65,7 @@ ________
 # Beta testing
 
 Please use GitHub Issues if you encounter any bugs or if you'd like to see a new feature in MDB CLI.
-If you'd like to join our Slack channel for beta testers send your request [here](http://mattonit.mdbootstrap.com/slack/).
 
 # Usage
 
-Please read the full [installation guide](https://mdbootstrap.com/cli/quick-start/) in order to install and use MDB CLI.
+Please read the full [installation guide](https://mdbootstrap.com/docs/standard/cli/) in order to install and use MDB CLI.
