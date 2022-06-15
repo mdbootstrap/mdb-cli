@@ -34,7 +34,7 @@ class WordpressReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['advanced', 'open', 'ftp', 'follow', 'help', 'override', 'dummy', 'cwd']);
+        this.context.registerNonArgFlags(['advanced', 'all', 'force', 'open', 'ftp', 'follow', 'help', 'override', 'dummy', 'cwd']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
@@ -74,7 +74,7 @@ class WordpressReceiver extends Receiver {
                     'Technology': technology,
                     'Repository': p.repoUrl ? p.repoUrl : '-',
                     'URL': isUp && !deletedFromFTP ? url : 'Unavailable',
-                    'Role': p.role.name
+                    'Role': p.collaborationRole.name
                 }
             });
 
@@ -172,6 +172,7 @@ class WordpressReceiver extends Receiver {
     }
 
     async publish() {
+        await this.context.authorizeUser();
 
         const pageVariant = await this._getPageVariant();
         const wpData = await this._getWpData();
@@ -321,7 +322,8 @@ class WordpressReceiver extends Receiver {
             this.result.addAlert(OutputColor.Turquoise, 'Username:', payload.username as string);
             this.result.addAlert(OutputColor.Turquoise, 'Password:', password);
             this.result.addTextLine('');
-            this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
+            if (!this.context.mdbConfig.getValue('domain'))
+                this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
         } catch (e) {
             this.result.addAlert(OutputColor.Red, 'Error', `Could not create WordPress page: ${e.message}`);
         }

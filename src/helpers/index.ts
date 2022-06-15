@@ -1,6 +1,7 @@
 'use strict';
 
 import { archiveProject } from './archiver-wrapper';
+import { createCheckboxPrompt } from './create-checkbox-prompt';
 import { createConfirmationPrompt } from './create-confirmation-prompt';
 import { createJenkinsfile } from './create-jenkinsfile';
 import { createListPrompt } from './create-list-prompt';
@@ -16,6 +17,7 @@ import { serializeJsonFile } from './serialize-json-file';
 
 const helpers = {
     archiveProject,
+    createCheckboxPrompt,
     createConfirmationPrompt,
     createJenkinsfile,
     createListPrompt,

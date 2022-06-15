@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import inquirer from "inquirer";
 import { createSandbox, SinonStub } from "sinon";
-import helpers from "../../helpers";
+import { createPassPrompt } from "../../helpers/create-pass-prompt";
 
-describe('Helper: createTextPrompt', () => {
+describe('Helper: createPassPrompt', () => {
 
     const sandbox = createSandbox();
 
@@ -25,23 +25,23 @@ describe('Helper: createTextPrompt', () => {
 
         it('should call createPromptModule', async () => {
 
-            await helpers.createTextPrompt('message', 'invalid message');
+            await createPassPrompt('message', 'invalid message');
             expect(createPrompt).to.be.calledOnce;
         });
 
         it('should call createPromptModule with expected args', async () => {
 
             const validate = (v: string) => Boolean(v);
-            await helpers.createTextPrompt('message', 'invalid message', validate);
-
+            await createPassPrompt('message', 'invalid message', validate);
+            
             const arg = moduleStub.getCall(0).args[0];
             expect(arg).to.be.an('array');
-            expect(arg[0]).to.be.an('object').that.have.all.keys('message', 'name', 'type', 'validate');
+            expect(arg[0]).to.be.an('object').that.have.all.keys('message', 'name', 'type', 'validate', 'mask');
 
             const [obj] = arg;
             expect(obj.message).to.eq('message');
-            expect(obj.name).to.eq('answer');
-            expect(obj.type).to.eq('text');
+            expect(obj.name).to.eq('password');
+            expect(obj.type).to.eq('password');
             expect(typeof obj.validate).to.eq('function');
         });
     });

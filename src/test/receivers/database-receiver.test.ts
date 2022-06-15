@@ -3,7 +3,7 @@ import config from '../../config';
 import Context from '../../context';
 import helpers from '../../helpers';
 import DatabaseReceiver from '../../receivers/database-receiver';
-import { CustomOkResponse } from '../../utils/http-wrapper';
+import HttpWrapper, { CustomOkResponse } from '../../utils/http-wrapper';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 
@@ -220,6 +220,130 @@ describe('Receiver: database', () => {
             sandbox.stub(receiver.http, 'delete').rejects({ message: 'Fake error' });
 
             await receiver.delete();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+    });
+
+    describe('Method: deleteMany', () => {
+
+        let createPassPromptStub: SinonStub,
+            createConfirmationPromptStub: SinonStub,
+            createCheckboxPromptStub: SinonStub,
+            deleteStub: SinonStub;
+
+        beforeEach(() => {
+
+            getDatabasesStub = sandbox.stub(DatabaseReceiver.prototype, 'getDatabases');
+            createConfirmationPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt');
+            createCheckboxPromptStub = sandbox.stub(helpers, 'createCheckboxPrompt');
+            createPassPromptStub = sandbox.stub(helpers, 'createPassPrompt');
+            deleteStub = sandbox.stub(HttpWrapper.prototype, 'delete');
+        });
+
+        it('should delete database and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Database fakeDbName successfully deleted.' }, color: 'green' };
+            createPassPromptStub.resolves('fakePwd');
+            getDatabasesStub.resolves([fakeDb]);
+            deleteStub.resolves();
+            context = new Context('database', 'delete', ['fakeDbName'], []);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should delete all user databases and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Databases db1, db2 successfully deleted.' }, color: 'green' };
+            getDatabasesStub.resolves([{ name: 'db1', databaseId: 1 }, { name: 'db2', databaseId: 2 }]);
+            createConfirmationPromptStub.resolves(true);
+            createPassPromptStub.resolves('fakePwd');
+            deleteStub.resolves();
+            context = new Context('database', 'delete', [], ['--all']);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should delete user databases with --many flag and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Databases db1, db2 successfully deleted.' }, color: 'green' };
+            getDatabasesStub.resolves([{ name: 'db1', databaseId: 1 }, { name: 'db2', databaseId: 2 }]);
+            createCheckboxPromptStub.resolves([ 'db1', 'db2' ]);
+            createPassPromptStub.resolves('fakePwd');
+            deleteStub.resolves();
+            context = new Context('database', 'delete', [], ['--many']);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should delete all user databases with --force and --password flags and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Databases db1, db2 successfully deleted.' }, color: 'green' };
+            getDatabasesStub.resolves([{ name: 'db1', databaseId: 1 }, { name: 'db2', databaseId: 2 }]);
+            deleteStub.resolves();
+            context = new Context('database', 'delete', [], ['--all', '--force', '--password', 'fakePwd']);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if user does not have any databases', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any databases yet.' };
+            getDatabasesStub.resolves([]);
+            context = new Context('database', 'delete', [], []);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if database not found', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Database fakeDb not found.' }, color: 'red' };
+            getDatabasesStub.resolves([fakeDb]);
+            context = new Context('database', 'delete', ['fakeDb'], []);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if database name not provided', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Databases names not provided.' }, color: 'red' };
+            getDatabasesStub.resolves([fakeDb]);
+            context = new Context('database', 'delete', [], []);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not delete: Fake error' }, color: 'red' };
+            deleteStub.rejects({ message: 'Fake error' });
+            createPassPromptStub.resolves('fakePwd');
+            getDatabasesStub.resolves([fakeDb]);
+            context = new Context('database', 'delete', ['fakeDbName'], []);
+            receiver = new DatabaseReceiver(context);
+
+            await receiver.deleteMany();
 
             expect(receiver.result.messages).to.deep.include(expectedResult);
         });

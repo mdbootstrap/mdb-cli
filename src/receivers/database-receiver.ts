@@ -24,7 +24,7 @@ class DatabaseReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['help']);
+        this.context.registerNonArgFlags(['all', 'force', 'help', 'many']);
         this.context.registerFlagExpansions({
             '-db': '--database',
             '-n': '--name',
@@ -179,7 +179,7 @@ class DatabaseReceiver extends Receiver {
     }
 
     async delete() {
-        let databases = await this.getDatabases();
+        const databases = await this.getDatabases();
         if (databases.length === 0) {
             return this.result.addTextLine('You don\'t have any databases yet.');
         }
@@ -296,6 +296,63 @@ class DatabaseReceiver extends Receiver {
         this.options.data = JSON.stringify(answers);
         this.options.headers!['Content-Length'] = Buffer.byteLength(this.options.data);
         this.options.headers!['Content-Type'] = 'application/json';
+    }
+
+    async deleteMany(): Promise<void> {
+        const databases = await this.getDatabases();
+        if (databases.length === 0) {
+            return this.result.addTextLine('You don\'t have any databases yet.');
+        }
+
+        const names: string[] = [];
+        if (this.flags.all) {
+            databases.forEach(db => names.push(db.name));
+            const confirmed = this.flags.force || await helpers.createConfirmationPrompt('Are you sure you want to delete all your databases?', false);
+            if (!confirmed) return;
+        } else if (this.flags.many) {
+            const selected = await helpers.createCheckboxPrompt('Select databases to remove', databases);
+            if (selected.length === 0) return;
+            selected.forEach(db => names.push(db));
+        } else {
+            this.context.args.forEach(a => names.push(a));
+        }
+
+        if (names.length === 0) {
+            return this.result.addAlert(OutputColor.Red, 'Error', 'Databases names not provided.');
+        }
+
+        const ids: number[] = [];
+        const notFound: string[] = [];
+        names.forEach(name => {
+            const db = databases.find(d => d.name === name);
+            if (!db) return notFound.push(name);
+            ids.push(db.databaseId);
+        });
+
+        if (notFound.length > 0) {
+            return this.result.addAlert(OutputColor.Red, 'Error', `Database${notFound.length > 1 ? 's' : ''} ${notFound.join(', ')} not found.`);
+        }
+
+        const password = this.flags.password || await helpers.createPassPrompt('This operation cannot be undone. Please confirm it by entering your password', 'Password cannot be empty.');
+
+        const data = JSON.stringify({ password, databases: ids });
+        this.options = {
+            hostname: config.host,
+            headers: {
+                'Authorization': `Bearer ${this.context.userToken}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data)
+            },
+            path: '/databases/remove',
+            data
+        };
+
+        try {
+            await this.http.delete(this.options);
+            this.result.addAlert(OutputColor.Green, 'Success', `Database${names.length > 1 ? 's' : ''} ${names.join(', ')} successfully deleted.`);
+        } catch (err: any) {
+            this.result.addAlert(OutputColor.Red, 'Error', `Could not delete: ${err.message}`);
+        }
     }
 }
 

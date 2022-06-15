@@ -1,5 +1,3 @@
-'use strict';
-
 import unzip from "unzipper";
 import { Readable } from "stream";
 import ProgressBar from "progress";
@@ -13,7 +11,7 @@ describe('Helper: downloadFromFTP', () => {
 
     const sandbox = createSandbox();
 
-    const fakePort = 0,
+    const fakePort = '0',
         fakeHost = 'fakeHost',
         fakeHeaders = { fake: 'fakeHeader' },
         fakeDestination = 'fake/dest/folder';
@@ -34,7 +32,7 @@ describe('Helper: downloadFromFTP', () => {
         fakeResponse = { on: sandbox.stub(), headers: fakeHeaders, statusCode: 200 };
         fakeExtract = { on: sandbox.stub() };
         fakePipe = { on: sandbox.stub() };
-        sandbox.replace(config, 'port', fakePort);
+        // sandbox.replace(config, 'port', fakePort);
         sandbox.replace(config, 'host', fakeHost);
         createRequestStub = sandbox.stub(HttpWrapper.prototype, 'createRawRequest');
         readablePipeStub = sandbox.stub(Readable.prototype, 'pipe');

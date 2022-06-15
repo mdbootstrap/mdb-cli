@@ -75,7 +75,7 @@ describe('Receiver: wordpress', () => {
                 repoUrl: null,
                 status: 'wordpress',
                 projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology1' }, { metaKey: '_container_port', metaValue: '12345' }],
-                role: { name: 'owner' }
+                collaborationRole: { name: 'owner' }
             };
             const fakeProject2 = {
                 projectId: 2,
@@ -87,7 +87,7 @@ describe('Receiver: wordpress', () => {
                 repoUrl: 'fake.repo.url',
                 status: 'wordpress',
                 projectMeta: [],
-                role: { name: 'owner' }
+                collaborationRole: { name: 'owner' }
             };
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
@@ -383,6 +383,22 @@ describe('Receiver: wordpress', () => {
 
     describe('Method: publish', function () {
 
+        it('should not publish if authorizeUser method throws error', async function () {
+
+            context = new Context('wordpress', 'publish', [], []);
+            receiver = new WordpressReceiver(context);
+
+            sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
+
+            try {
+                await receiver.publish()
+            } catch (e) {
+                return expect(e.name).to.be.eq('fakeErr');
+            }
+
+            chai.assert.fail('WordpressReceiver should fail publishing for unauthorized user');
+        });
+
         it('should ask for page variant if not saved in .mdb and save it in .mdb', async function () {
 
             context = new Context('wordpress', 'publish', [], []);
@@ -465,6 +481,7 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
             sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
             sandbox.stub(context.mdbConfig, 'getValue')
@@ -488,6 +505,7 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
             sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
             sandbox.stub(context.mdbConfig, 'getValue')
@@ -519,6 +537,7 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
             sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
             sandbox.stub(context.mdbConfig, 'getValue')
@@ -548,6 +567,7 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
             sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
             sandbox.stub(context.mdbConfig, 'getValue')
@@ -592,6 +612,7 @@ describe('Receiver: wordpress', () => {
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver, '_getPageVariant').resolves('fakeVariant');
             sandbox.stub(receiver, '_getWpData').resolves({ password: 'fake', repeatPassword: 'fake' } as WpCredentials);
             sandbox.stub(context.mdbConfig, 'getValue')

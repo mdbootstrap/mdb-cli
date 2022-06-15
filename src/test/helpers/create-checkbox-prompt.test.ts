@@ -3,7 +3,7 @@ import inquirer from "inquirer";
 import { createSandbox, SinonStub } from "sinon";
 import helpers from "../../helpers";
 
-describe('Helper: createListPrompt', () => {
+describe('Helper: createCheckboxPrompt', () => {
 
     const sandbox = createSandbox();
 
@@ -25,14 +25,14 @@ describe('Helper: createListPrompt', () => {
 
         it('should call createPromptModule', async () => {
 
-            await helpers.createListPrompt('message', ['choice']);
+            await helpers.createCheckboxPrompt('message', ['choice']);
             expect(createPrompt).to.be.calledOnce;
         });
 
         it('should call createPromptModule with expected args', async () => {
 
-            await helpers.createListPrompt('message', ['choice']);
-            expect(moduleStub).to.have.been.calledWith([{ type: 'list', name: 'name', message: 'message', choices: ['choice'] }]);
+            await helpers.createCheckboxPrompt('message', ['choice']);
+            expect(moduleStub).to.have.been.calledWith([{ type: 'checkbox', name: 'name', message: 'message', choices: ['choice'] }]);
         });
     });
 });

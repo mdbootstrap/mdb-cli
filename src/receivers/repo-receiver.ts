@@ -87,11 +87,12 @@ class RepoReceiver extends Receiver {
         this.options.data = JSON.stringify({ projectName });
 
         const { body: createResult } = await this.http.post(this.options);
-        const { name, url, webhook, saved, pipeline } = JSON.parse(createResult);
+        const { name, url, webhook, saved, pipeline, pipelinePermissionError } = JSON.parse(createResult);
+        const pipelineError = pipelinePermissionError ? pipelinePermissionError : 'Jenkins pipeline not created.';
 
         if (webhook === false) this.result.liveAlert(OutputColor.Red, 'Error', 'GitLab webhook not added.');
         if (saved === false) this.result.liveAlert(OutputColor.Red, 'Error', 'Project data not saved.');
-        if (pipeline === false) this.result.liveAlert(OutputColor.Red, 'Error', 'Jenkins pipeline not created.');
+        if (pipeline === false) this.result.liveAlert(OutputColor.Red, 'Error', pipelineError);
         if (webhook === false || saved === false || pipeline === false) this.result.addAlert(OutputColor.Red, 'Error', 'There were some errors. Please write to our support https://mdbootstrap.com/support/');
 
         this.result.addAlert(OutputColor.Green, '\nSuccess', `Project ${name} successfully created. Repository url: ${url}\n`);

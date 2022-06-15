@@ -6,7 +6,7 @@ import helpers from '../../helpers';
 import { Project } from '../../models/project';
 import FrontendReceiver from '../../receivers/frontend-receiver';
 import { FtpPublishStrategy, PipelinePublishStrategy } from '../../receivers/strategies/publish';
-import { CustomOkResponse, CustomErrorResponse } from '../../utils/http-wrapper';
+import HttpWrapper, { CustomOkResponse, CustomErrorResponse } from '../../utils/http-wrapper';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
 
@@ -58,7 +58,7 @@ describe('Receiver: frontend', () => {
                 repoUrl: null,
                 status: 'published',
                 projectMeta: [],
-                role: { name: 'owner' }
+                collaborationRole: { name: 'owner' }
             };
             const fakeProject2 = {
                 projectId: 2,
@@ -70,7 +70,7 @@ describe('Receiver: frontend', () => {
                 repoUrl: 'fake.repo.url',
                 status: 'created',
                 projectMeta: [{ metaKey: '_uploaded_to_ftp', metaValue: '0' }],
-                role: { name: 'owner' }
+                collaborationRole: { name: 'owner' }
             };
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
@@ -299,13 +299,28 @@ describe('Receiver: frontend', () => {
     });
 
     describe('Method: publish', () => {
-        
         let copyStub: SinonStub;
         const body = JSON.stringify({ message: '', url: '' });
-        
+
         beforeEach(() => {
             sandbox.stub(fs, 'writeFileSync');
             copyStub = sandbox.stub(clipboardy, 'write');
+        });
+
+        it('should not publish if authorizeUser method throws error', async function () {
+
+            context = new Context('frontend', 'publish', [], []);
+            receiver = new FrontendReceiver(context);
+
+            sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
+
+            try {
+                await receiver.publish()
+            } catch (e) {
+                return expect(e.name).to.be.eq('fakeErr');
+            }
+
+            chai.assert.fail('FrontendReceiver should fail publishing for unauthorized user');
         });
 
         it('should create package.json if the current packageJsonConfig is empty', async function () {
@@ -313,6 +328,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const createPackageJsonStub = sandbox.stub(receiver, 'createPackageJson').resolves();
             const loadPackageJsonStub = sandbox.stub(context, '_loadPackageJsonConfig').callsFake(() => {
                 receiver.context.packageJsonConfig = { name: 'fakename' };
@@ -336,6 +352,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const createPackageJsonStub = sandbox.stub(receiver, 'createPackageJson').rejects();
             const loadPackageJsonStub = sandbox.stub(context, '_loadPackageJsonConfig');
             const printAlertStub = sandbox.stub(receiver.result, 'addAlert');
@@ -358,6 +375,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const createPackageJsonStub = sandbox.stub(receiver, 'createPackageJson').resolves();
             const loadPackageJsonStub = sandbox.stub(context, '_loadPackageJsonConfig');
 
@@ -384,6 +402,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['-t']);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves({ body } as CustomOkResponse);
 
@@ -404,6 +423,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['-t']);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.git, 'getCurrentRemoteUrl').returns('');
             sandbox.stub(FtpPublishStrategy.prototype, 'publish').resolves();
 
@@ -424,6 +444,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
@@ -440,6 +461,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = 'ftp';
@@ -457,7 +479,8 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
-
+          
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const confirmPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
@@ -483,6 +506,7 @@ describe('Receiver: frontend', () => {
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fake.domain');
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
@@ -504,6 +528,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = undefined;
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
@@ -523,6 +548,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.context.mdbConfig, 'getValue')
                 .withArgs('hash').returns('fakehash')
                 .withArgs('publishMethod').returns('pipeline');
@@ -541,6 +567,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = undefined;
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
@@ -560,6 +587,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             receiver.context.packageJsonConfig = { name: 'fakename' };
             receiver.context.mdbConfig.mdbConfig.publishMethod = undefined;
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('hash').returns('fakehash');
@@ -751,6 +779,143 @@ describe('Receiver: frontend', () => {
             const projectName = receiver.getProjectName();
 
             expect(projectName).to.be.eq(undefined);
+        });
+    });
+
+    describe('Method: deleteMany', () => {
+
+        const fakeProject = {
+            projectId: 1,
+            user: { userNicename: 'fakeuser' },
+            projectName: 'fakeproject',
+            domainName: null,
+            publishDate: '2019-06-24T06:49:53.000Z',
+            editDate: '2019-06-24T06:49:53.000Z',
+            repoUrl: null,
+            status: 'published',
+            projectMeta: []
+        };
+
+        let getStub: SinonStub,
+            deleteStub: SinonStub,
+            createPassPromptStub: SinonStub,
+            createCheckboxPromptStub: SinonStub,
+            createConfirmationPromptStub: SinonStub;
+
+        beforeEach(() => {
+
+            getStub = sandbox.stub(HttpWrapper.prototype, 'get');
+            deleteStub = sandbox.stub(HttpWrapper.prototype, 'delete');
+            createPassPromptStub = sandbox.stub(helpers, 'createPassPrompt');
+            createCheckboxPromptStub = sandbox.stub(helpers, 'createCheckboxPrompt');
+            createConfirmationPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt');
+        });
+
+        it('should delete projects and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project fakeproject successfully deleted.' }, color: 'green' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            createPassPromptStub.resolves('fakePass');
+            deleteStub.resolves();
+            context = new Context('frontend', 'delete', ['fakeproject'], []);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should delete all user databases and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project fakeproject successfully deleted.' }, color: 'green' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            createConfirmationPromptStub.resolves(true);
+            createPassPromptStub.resolves('fakePwd');
+            deleteStub.resolves();
+            context = new Context('frontend', 'delete', [], ['--all']);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should delete user databases with --many flag and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project fakeproject successfully deleted.' }, color: 'green' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            createCheckboxPromptStub.resolves(['fakeproject']);
+            createPassPromptStub.resolves('fakePwd');
+            deleteStub.resolves();
+            context = new Context('frontend', 'delete', [], ['--many']);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should delete all user databases with --force and --password flags and return expected result', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Success', body: 'Project fakeproject successfully deleted.' }, color: 'green' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            deleteStub.resolves();
+            context = new Context('frontend', 'delete', [], ['--all', '--force', '--password', 'fakePwd']);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if user does not have any projects', async () => {
+
+            const expectedResult = { type: 'text', value: 'You don\'t have any projects yet.' };
+            getStub.resolves({ body: '[]' });
+            context = new Context('frontend', 'delete', [], []);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if project not found', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Project fakename not found.' }, color: 'red' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            context = new Context('frontend', 'delete', ['fakename'], []);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if project name not provided', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Project names not provided.' }, color: 'red' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            context = new Context('frontend', 'delete', [], []);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
+        });
+
+        it('should return expected result if error', async () => {
+
+            const expectedResult = { type: 'alert', value: { title: 'Error', body: 'Could not delete: Fake error' }, color: 'red' };
+            getStub.resolves({ body: JSON.stringify([fakeProject]) });
+            deleteStub.rejects({ message: 'Fake error' });
+            createPassPromptStub.resolves('fakePwd');
+            context = new Context('frontend', 'delete', ['fakeproject'], []);
+            receiver = new FrontendReceiver(context);
+
+            await receiver.deleteMany();
+
+            expect(receiver.result.messages).to.deep.include(expectedResult);
         });
     });
 });
