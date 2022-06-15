@@ -5,7 +5,7 @@ import open from 'open';
 import { Separator } from 'inquirer';
 import { write as copy } from 'clipboardy';
 import { CliStatus, OutputColor, Project, ProjectStatus, StarterOption } from '../models';
-import { FtpPublishStrategy, PipelinePublishStrategy} from './strategies/publish';
+import { FtpPublishStrategy, PipelinePublishStrategy } from './strategies/publish';
 import Receiver from './receiver';
 import helpers from '../helpers';
 import Context from "../context";
@@ -31,7 +31,7 @@ class FrontendReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['ftp', 'open', 'test', 'ftp-only', 'help', 'override', 'cwd']);
+        this.context.registerNonArgFlags(['all', 'force', 'many', 'ftp', 'open', 'test', 'ftp-only', 'help', 'override', 'cwd']);
         this.context.registerFlagExpansions({
             '-t': '--test',
             '-o': '--open',
@@ -63,7 +63,7 @@ class FrontendReceiver extends Receiver {
                     'Published': p.status === ProjectStatus.PUBLISHED ? new Date(p.publishDate).toLocaleString() : '-',
                     'Edited': new Date(p.editDate).toLocaleString(),
                     'Repository': p.repoUrl ? p.repoUrl : '-',
-                    'Role': p.role.name
+                    'Role': p.collaborationRole.name
                 }
             });
 
@@ -189,6 +189,8 @@ class FrontendReceiver extends Receiver {
     }
 
     async publish(): Promise<void> {
+        await this.context.authorizeUser();
+
         const packageJsonEmpty = this.context.packageJsonConfig.name === undefined;
         if (packageJsonEmpty) {
             this.result.liveTextLine('package.json file is required. Creating...');
@@ -279,7 +281,8 @@ class FrontendReceiver extends Receiver {
             this.result.addAlert(OutputColor.GreyBody, message, ' [copied to clipboard]');
 
             this.result.addTextLine('');
-            this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
+            if (!this.context.mdbConfig.getValue('domain')) 
+                this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
 
             if (strategy instanceof PipelinePublishStrategy)
                 this.result.addAlert(OutputColor.Blue, 'Info', 'It may take a while to deploy your app because of running pipeline. You can check pipeline status at https://jenkins.mdbgo.com/');

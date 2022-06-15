@@ -13,7 +13,7 @@ export interface Project {
     user: {
         userNicename: string
     },
-    role: {
+    collaborationRole: {
         name: string
     }
 }

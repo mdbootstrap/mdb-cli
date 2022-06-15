@@ -54,6 +54,30 @@ describe('Command: delete', () => {
         sandbox.assert.calledOnce(printResultStub);
     });
 
+    it('should call database receiver deleteMany method and print result if --all flag is used', async () => {
+
+        deleteStub = sandbox.stub(DatabaseReceiver.prototype, 'deleteMany');
+        context = new Context('database', 'delete', [], ['--all']);
+        command = new DeleteCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(deleteStub);
+        sandbox.assert.calledOnce(printResultStub);
+    });
+
+    it('should call database receiver deleteMany method and print result if args provided', async () => {
+
+        deleteStub = sandbox.stub(DatabaseReceiver.prototype, 'deleteMany');
+        context = new Context('database', 'delete', ['project-name'], []);
+        command = new DeleteCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(deleteStub);
+        sandbox.assert.calledOnce(printResultStub);
+    });
+
     it('should call frontend receiver delete method and print result if entity is frontend', async () => {
 
         deleteStub = sandbox.stub(FrontendReceiver.prototype, 'delete');
@@ -89,14 +113,39 @@ describe('Command: delete', () => {
         sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
     });
 
-    it('should call help method and print result if entity is undefined', async () => {
+    it('should call frontend receiver deleteMany method and print result if entity is undefined', async () => {
 
+        deleteStub = sandbox.stub(FrontendReceiver.prototype, 'deleteMany');
+        context = new Context('', 'delete', ['project-name'], []);
+        command = new DeleteCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(deleteStub);
+        sandbox.assert.calledOnce(printResultStub);
+    });
+
+    it('should call frontend receiver deleteMany method and print result if --all flag is used', async () => {
+
+        deleteStub = sandbox.stub(FrontendReceiver.prototype, 'deleteMany');
+        context = new Context('', 'delete', [], ['--all']);
+        command = new DeleteCommand(context);
+
+        await command.execute();
+
+        sandbox.assert.calledOnce(deleteStub);
+        sandbox.assert.calledOnce(printResultStub);
+    });
+
+    it('should call frontend receiver delete method and print result if entity and args are undefined', async () => {
+
+        deleteStub = sandbox.stub(FrontendReceiver.prototype, 'delete');
         context = new Context('', 'delete', [], []);
         command = new DeleteCommand(context);
 
         await command.execute();
 
-        sandbox.assert.calledOnce(helpSpy);
-        sandbox.assert.calledOnceWithExactly(printResultStub, [command.results]);
+        sandbox.assert.calledOnce(deleteStub);
+        sandbox.assert.calledOnce(printResultStub);
     });
 });

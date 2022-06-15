@@ -1,5 +1,3 @@
-'use strict';
-
 import fs from "fs";
 import helpers from "../../helpers";
 import { createSandbox, SinonStub } from "sinon";

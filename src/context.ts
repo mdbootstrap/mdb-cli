@@ -2,12 +2,13 @@ import atob from "atob";
 import { join } from "path";
 import { readFileSync, unlinkSync, writeFileSync } from "fs";
 import config from "./config";
-import { ParsedFlags } from "./models";
+import { ParsedFlags, UserPlanData } from "./models";
 import { MdbGoPackageJson } from "./models/package-json";
 import { PackageManagers } from "./models/package-managers";
 import PackageManager from "./utils/managers/package-manager";
 import PackageManagerLoader from "./utils/managers/package-manager-loader";
 import DotMdbConfigManager from "./utils/managers/dot-mdb-config-manager";
+import HttpWrapper from "./utils/http-wrapper";
 
 class Context {
 
@@ -15,7 +16,8 @@ class Context {
     public mdbConfig = new DotMdbConfigManager();
     public packageJsonConfig: MdbGoPackageJson = {};
     public packageManager: PackageManager | null = null;
-    public serverMessageLast: string = ''; 
+    public serverMessageLast: string = '';
+    private http: HttpWrapper;
 
     private _entity: string;
     private readonly _command: string;
@@ -40,6 +42,8 @@ class Context {
         this._flags = flags;
 
         this._loadPackageJsonConfig();
+
+        this.http = new HttpWrapper();
     }
 
     get entity() {
@@ -150,17 +154,46 @@ class Context {
 
         if (this._isTokenExpired()) {
             unlinkSync(tokenPath);
+            this.userToken = '';
             if (throwError) throw new Error('Please login first');
         }
     }
 
     _isTokenExpired(): boolean {
-        const [, jwtBody] = this.userToken.split('.');
-        const { exp } = JSON.parse(atob(jwtBody));
+        if (!this.userToken) return false;
 
-        if (Date.now() >= exp * 1000) return true;
+        try {
+            const [, jwtBody] = this.userToken.split('.');
+            const { exp } = JSON.parse(atob(jwtBody));
+            if (Date.now() >= exp * 1000) return true;
+        } catch (e) {
+            return true;
+        }
 
         return false;
+    }
+
+    async authorizeUser(): Promise<void> {
+        const userPlanData = await this._getSubscriptionPlanData();
+        const { userPlan, projectsCount } = userPlanData;
+        const { countProjectsLimit } = userPlan;
+
+        if (countProjectsLimit !== undefined && countProjectsLimit !== -1 && projectsCount >= countProjectsLimit) {
+            throw new Error('You have reached the maximum number of projects allowed for your account. Please upgrade your subscription plan in order to create a new project.');
+        }
+    }
+
+    async _getSubscriptionPlanData(): Promise<UserPlanData> {
+        const options = {
+            host: config.host,
+            headers: { Authorization: `Bearer ${this.userToken}` },
+            path: '/auth/plan'
+        }
+
+        const result = await this.http.get(options);
+        const { userPlanData } = JSON.parse(result.body);
+
+        return userPlanData;
     }
 
     setPackageJsonValue(key: keyof MdbGoPackageJson, value: string, cwd = process.cwd()) {

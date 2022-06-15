@@ -5,7 +5,8 @@ import Context from "../context";
 import http, { RequestOptions } from "https";
 import { ClientRequest, IncomingHttpHeaders, IncomingMessage } from "http";
 
-const packageJson = config.env === 'test' ? require('../../package.json') : require('../package.json');
+const isTestEnv = config.env === 'test' || config.env === 'dev';
+const packageJson = isTestEnv ? require('../../package.json') : require('../package.json');
 
 export type CustomOkResponse = { body: string, headers: IncomingHttpHeaders, statusCode: number };
 export type CustomErrorResponse = { message: string, statusCode: number };
@@ -15,19 +16,28 @@ class HttpWrapper {
 
     constructor(private context: Context | null = null) { }
 
-
     createRawRequest(options: CustomRequestOptions, callback?: (response: IncomingMessage) => void): ClientRequest {
 
-        if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
-        else options.headers = { 'x-mdb-cli-version': packageJson.version };
+        if (options.headers) {
+            options.headers['x-mdb-cli-version'] = packageJson.version;
+            options.headers['x-mdb-cli-client-type'] = 'cli';
+        }
+        else {
+            options.headers = { 
+                'x-mdb-cli-version': packageJson.version ,
+                'x-mdb-cli-client-type': 'cli'
+            };
+        }
 
         if (options.hostname === config.host)
             options.path = `${config.apiPath}${options.path}`;
 
+        if (isTestEnv && !!config.port)
+            options.port = config.port;
+
         return http.request(options, (response: IncomingMessage) => {
 
             if (this.context && response.headers['x-mdb-cli-message-last']) this.context.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
-
 
             if (callback) {
 
@@ -38,16 +48,27 @@ class HttpWrapper {
 
     createRequest(options: CustomRequestOptions, callback: (err: CustomErrorResponse | null, response: CustomOkResponse | null) => void) {
 
-        if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
-        else options.headers = { 'x-mdb-cli-version': packageJson.version };
+        if (options.headers) {
+            options.headers['x-mdb-cli-version'] = packageJson.version;
+            options.headers['x-mdb-cli-client-type'] = 'cli';
+        }
+        else {
+            options.headers = { 
+                'x-mdb-cli-version': packageJson.version ,
+                'x-mdb-cli-client-type': 'cli'
+            };
+        }
+
 
         if (options.hostname === config.host)
             options.path = `${config.apiPath}${options.path}`;
 
+        if (isTestEnv && !!config.port)
+            options.port = config.port;
+
         return http.request(options, (response: IncomingMessage) => {
 
             if (this.context && response.headers['x-mdb-cli-message-last']) this.context.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
-
 
             let result = '';
             response.on('data', chunk => {
@@ -72,18 +93,28 @@ class HttpWrapper {
 
     request(options: CustomRequestOptions): Promise<CustomOkResponse> {
 
-        if (options.headers) options.headers['x-mdb-cli-version'] = packageJson.version;
-        else options.headers = { 'x-mdb-cli-version': packageJson.version };
+        if (options.headers) {
+            options.headers['x-mdb-cli-version'] = packageJson.version;
+            options.headers['x-mdb-cli-client-type'] = 'cli';
+        }
+        else {
+            options.headers = { 
+                'x-mdb-cli-version': packageJson.version ,
+                'x-mdb-cli-client-type': 'cli'
+            };
+        }
 
         if (options.hostname === config.host)
             options.path = `${config.apiPath}${options.path}`;
+
+        if (isTestEnv && !!config.port)
+            options.port = config.port;
 
         return new Promise((resolve, reject) => {
 
             const request = http.request(options, (response: IncomingMessage) => {
 
                 if (this.context && response.headers['x-mdb-cli-message-last']) this.context.serverMessageLast = response.headers['x-mdb-cli-message-last'] as string;
-
 
                 let result = '';
                 response.on('data', chunk => {

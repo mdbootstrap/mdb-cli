@@ -68,7 +68,7 @@ describe('Receiver: backend', () => {
                 repoUrl: null,
                 status: 'backend',
                 projectMeta: [{ metaKey: '_backend_technology', metaValue: 'faketechnology1' }, { metaKey: '_container_port', metaValue: '12345' }],
-                role: { name: 'owner' }
+                collaborationRole: { name: 'owner' }
             };
             const fakeProject2 = {
                 projectId: 2,
@@ -80,7 +80,7 @@ describe('Receiver: backend', () => {
                 repoUrl: 'fake.repo.url',
                 status: 'backend',
                 projectMeta: [],
-                role: { name: 'owner' }
+                collaborationRole: { name: 'owner' }
             };
             const expectedResult = [{
                 'Project Name': 'fakeproject1',
@@ -718,12 +718,29 @@ describe('Receiver: backend', () => {
             confirmationPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt');
         });
 
+        it('should not publish if authorizeUser method throws error', async function () {
+
+            context = new Context('backend', 'publish', [], []);
+            receiver = new BackendReceiver(context);
+
+            sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
+
+            try {
+                await receiver.publish()
+            } catch (e) {
+                return expect(e.name).to.be.eq('fakeErr');
+            }
+
+            chai.assert.fail('BackendReceiver should fail publishing for unauthorized user');
+        });
+
         it('should use FtpPublishStrategy to upload files and show prompt if project name conflict error', async () => {
 
             context = new Context('backend', 'publish', [], []);
             receiver = new BackendReceiver(context);
             receiver.context.packageJsonConfig.name = 'fakeProjectName';
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('backend.platform').returns('node12');
             sandbox.stub(receiver.context, 'setPackageJsonValue');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
@@ -746,6 +763,7 @@ describe('Receiver: backend', () => {
             receiver = new BackendReceiver(context);
             receiver.context.packageJsonConfig.name = 'fakeProjectName';
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             sandbox.stub(receiver.context.mdbConfig, 'getValue').withArgs('backend.platform').returns('node12');
             sandbox.stub(receiver.context.mdbConfig, 'setValue');
             sandbox.stub(receiver.context.mdbConfig, 'save');
@@ -766,6 +784,7 @@ describe('Receiver: backend', () => {
             receiver = new BackendReceiver(context);
             receiver.context.packageJsonConfig.name = 'fakeProjectName';
 
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const alertStub = sandbox.stub(receiver.result, 'addAlert');
             const getValueStub = sandbox.stub(receiver.context.mdbConfig, 'getValue');
             getValueStub.withArgs('backend.platform').returns('node12');

@@ -214,22 +214,72 @@ describe('Context', () => {
 
     it('should throw error in authenticateUser() if token is expired', function (done) {
         sandbox.stub(Context.prototype, '_loadPackageJsonConfig');
-        sandbox.stub(Context.prototype, '_isTokenExpired').returns(true);
 
         sandbox.replace(config, 'tokenDir', '');
         sandbox.replace(config, 'tokenFile', '');
         sandbox.stub(fs, 'readFileSync').returns('a.eyJhIjoiYSIsImlhdCI6MTYzOTAzOTk1NiwiZXhwIjoxNjM5MDM5OTU3fQ.a');
         sandbox.stub(fs, 'unlinkSync');
 
+        const context = new Context('', '', [], []);
+
         try {
-            const context = new Context('', '', [], []);
             context.authenticateUser();
         } catch (e) {
+            expect(context.userToken).to.eq('');
             expect(e.message).to.be.eq('Please login first');
             return done();
         }
 
         chai.assert.fail('Context should fail authenticating user');
+    });
+
+    it('should throw error in authenticateUser() if token is invalid', function (done) {
+        sandbox.stub(Context.prototype, '_loadPackageJsonConfig');
+
+        sandbox.replace(config, 'tokenDir', '');
+        sandbox.replace(config, 'tokenFile', '');
+        sandbox.stub(fs, 'readFileSync').returns('xxx');
+        sandbox.stub(fs, 'unlinkSync');
+
+        const context = new Context('', '', [], []);
+
+        try {
+            context.authenticateUser();
+        } catch (e) {
+            expect(context.userToken).to.eq('');
+            expect(e.message).to.be.eq('Please login first');
+            return done();
+        }
+
+        chai.assert.fail('Context should fail authenticating user');
+    });
+
+    it('should throw error in authorizeUser() if user reached projects limit', async () => {
+        const userPlan = {
+            planId: 1,
+            planName: 'Hobby',
+            stripePlanId: '12345',
+            price: 100,
+            bytesContainerRamLimit: 500,
+            bytesFtpLimit: 500,
+            bytesDatabaseLimit: 500,
+            countProjectsLimit: 1,
+            countDatabasesLimit: 0
+        };
+        const userPermissions = ['fake_permission'];
+        const projectsCount = 2;
+        const userPlanData = { userPlan, userPermissions, projectsCount };
+
+        const context = new Context('', '', [], []);
+        sandbox.stub(Context.prototype, '_getSubscriptionPlanData').resolves(userPlanData);
+
+        try {
+            await context.authorizeUser();
+        } catch (e) {
+            return expect(e.message).to.include('You have reached the maximum number of projects allowed for your account');
+        }
+
+        chai.assert.fail('Context should fail authorizing user');
     });
 
     it('should load package manager if not loaded already', async function () {

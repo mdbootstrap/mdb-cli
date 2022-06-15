@@ -33,7 +33,7 @@ class BackendReceiver extends Receiver {
             headers: { Authorization: `Bearer ${this.context.userToken}` }
         };
 
-        this.context.registerNonArgFlags(['follow', 'ftp', 'ftp-only', 'open', 'remove', 'test', 'help', 'override', 'cwd']);
+        this.context.registerNonArgFlags(['all', 'force', 'many', 'follow', 'ftp', 'ftp-only', 'open', 'remove', 'test', 'help', 'override', 'cwd']);
         this.context.registerFlagExpansions({
             '-f': '--follow',
             '-n': '--name',
@@ -74,7 +74,7 @@ class BackendReceiver extends Receiver {
                     'Technology': technology,
                     'Repository': p.repoUrl ? p.repoUrl : '-',
                     'URL': isUp && !deletedFromFTP ? url : 'Unavailable',
-                    'Role': p.role.name
+                    'Role': p.collaborationRole.name
                 }
             });
 
@@ -202,6 +202,7 @@ class BackendReceiver extends Receiver {
     }
 
     async publish(): Promise<void> {
+        await this.context.authorizeUser();
 
         if (this.flags.platform) {
             this.context.mdbConfig.setValue('backend.platform', this.flags.platform as string);
@@ -349,7 +350,8 @@ class BackendReceiver extends Receiver {
 
         this.result.addAlert(OutputColor.Blue, 'Info', 'Since we need to install dependencies and run your app, it may take a few moments until it will be available.');
         this.result.addTextLine('');
-        this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
+        if (!this.context.mdbConfig.getValue('domain')) 
+            this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
     }
 
     async delete(projectToDelete = this.flags.name): Promise<boolean> {

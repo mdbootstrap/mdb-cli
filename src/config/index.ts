@@ -14,8 +14,8 @@ const databases = process.env.DATABASES || 'mysql8,mongodb';
 const mdbgoPipelinePublicBranch = process.env.MDBGO_PIPELINE_PUBLIC_BRANCH || 'mdbgo/public';
 const memberRoles = process.env.MEMBER_ROLES || 'owner,developer,reporter';
 const host = process.env.HOST || 'apps.mdbootstrap.com';
-const port = process.env.PORT || 3033;
-const apiPath = process.env.API_PATH || '/api';
+const port = process.env.PORT;
+const apiPath = typeof process.env.API_PATH === "undefined" ? '/api' : process.env.API_PATH;
 
 process.env['NODE_NO_WARNINGS'] = '1';
 

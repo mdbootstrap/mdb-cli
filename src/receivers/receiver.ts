@@ -4,10 +4,10 @@ import path from 'path';
 import config from '../config';
 import Context from '../context';
 import helpers from '../helpers';
-import HttpWrapper, {CustomRequestOptions} from '../utils/http-wrapper';
+import HttpWrapper, { CustomRequestOptions } from '../utils/http-wrapper';
 import CommandResult from '../utils/command-result';
 import GitManager from '../utils/managers/git-manager';
-import { OutputColor } from '../models';
+import { OutputColor, Project } from '../models';
 
 abstract class Receiver {
 
@@ -61,8 +61,8 @@ abstract class Receiver {
                 const result = await http.get(options);
 
                 entity = JSON.parse(result.body).entity;
-            } catch (e) {
-                throw new Error(`Could not auto-detect entity. Please provide it manually or run mdb help. Error: ${e.message}`);
+            } catch (err: any) {
+                throw new Error(`Could not auto-detect entity. Please provide it manually or run mdb help. Error: ${err.message}`);
             }
         }
 
@@ -83,7 +83,7 @@ abstract class Receiver {
             const result = await this.http.post(this.options);
             const { message } = JSON.parse(result.body);
             this.result.addAlert(OutputColor.Green, 'Success', message);
-        } catch (err) {
+        } catch (err: any) {
             this.result.addAlert(OutputColor.Red, 'Error', `Could not rename ${projectName}: ${err.message}`);
             return;
         }
@@ -104,6 +104,75 @@ abstract class Receiver {
 
     protected validateDomain(val: string): boolean {
         return /^(?=.{4,255}$)([a-zA-Z0-9_]([a-zA-Z0-9_-]{0,61}[a-zA-Z0-9_])?\.){1,126}[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$/.test(val);
+    }
+
+    async deleteMany(): Promise<void> {
+
+        const projects = await this.getProjects();
+        if (projects.length === 0)
+            return this.result.addTextLine('You don\'t have any projects yet.');
+
+        const names: string[] = [];
+        if (this.flags.all) {
+            projects.forEach(p => names.push(p.projectName));
+            const confirmed = this.flags.force || await helpers.createConfirmationPrompt('Are you sure you want to delete all your projects?', false);
+            if (!confirmed) return;
+        } else if (this.flags.many) {
+            const choices = projects.map(p => ({ name: p.projectName }));
+            const selected = await helpers.createCheckboxPrompt('Select projects to remove', choices);
+            if (selected.length === 0) return;
+            selected.forEach(p => names.push(p));
+        } else {
+            this.context.args.forEach(a => names.push(a));
+        }
+
+        if (names.length === 0) {
+            return this.result.addAlert(OutputColor.Red, 'Error', 'Project names not provided.');
+        }
+
+        const ids: number[] = [];
+        const notFound: string[] = [];
+        names.forEach(name => {
+            const project = projects.find(p => p.projectName === name);
+            if (!project) return notFound.push(name);
+            ids.push(project.projectId);
+        });
+
+        if (notFound.length > 0) {
+            return this.result.addAlert(OutputColor.Red, 'Error', `Project${notFound.length > 1 ? 's' : ''} ${notFound.join(', ')} not found.`);
+        }
+
+        const password = this.flags.password || await helpers.createPassPrompt('This operation cannot be undone. Please confirm it by entering your password', 'Password cannot be empty.');
+
+        this.result.liveTextLine(`Unpublishing project${names.length > 1 ? 's' : ''} ${names.join(', ')}...`);
+        const data = JSON.stringify({ password, projects: ids });
+        this.options = {
+            hostname: config.host,
+            headers: {
+                'Authorization': `Bearer ${this.context.userToken}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data)
+            },
+            path: '/project/remove',
+            data
+        };
+
+        try {
+            await this.http.delete(this.options);
+            this.result.addAlert(OutputColor.Green, 'Success', `Project${names.length > 1 ? 's' : ''} ${names.join(', ')} successfully deleted.`);
+        } catch (err: any) {
+            this.result.addAlert(OutputColor.Red, 'Error', `Could not delete: ${err.message}`);
+        }
+    }
+
+    private async getProjects(): Promise<Project[]> {
+        this.options = {
+            hostname: config.host,
+            headers: { Authorization: `Bearer ${this.context.userToken}` },
+            path: '/project'
+        };
+        const result = await this.http.get(this.options);
+        return JSON.parse(result.body);
     }
 }
 

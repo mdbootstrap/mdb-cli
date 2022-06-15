@@ -97,6 +97,19 @@ describe('Receiver: compose', () => {
             sandbox.stub(process, 'chdir');
         });
 
+        it('should not publish if authorizeUser method throws error', async function () {
+
+            sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
+
+            try {
+                await receiver.publish()
+            } catch (e) {
+                return expect(e.name).to.be.eq('fakeErr');
+            }
+
+            chai.assert.fail('ComposeReceiver should fail publishing for unauthorized user');
+        });
+
         it('should publish frontend, backend and create the database', async () => {
 
             getValue.returns([
@@ -104,6 +117,7 @@ describe('Receiver: compose', () => {
                 { type: 'backend', path: './backend/project/path', technology: 'node8' },
                 { type: 'database', db: 'mysql8', user: 'username', pass: 'pass', name: 'dbname', desc: 'desc' }
             ]);
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const publish = sandbox.stub(PublishCommand.prototype, 'execute').resolves();
             const init = sandbox.stub(InitCommand.prototype, 'execute').resolves();
 
@@ -114,6 +128,7 @@ describe('Receiver: compose', () => {
         });
 
         it('should throw an error if configutation not found', async () => {
+            sandbox.stub(receiver.context, 'authorizeUser').resolves();
 
             try {
 

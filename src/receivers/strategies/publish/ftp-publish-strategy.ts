@@ -4,7 +4,7 @@ import { moveSync } from 'fs-extra';
 import { OutgoingHttpHeaders } from 'http';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import HttpWrapper, { CustomOkResponse } from '../../../utils/http-wrapper';
-import { MdbGoPackageJson, OutputColor, ParsedFlags } from '../../../models';
+import { OutputColor, ParsedFlags } from '../../../models';
 import CommandResult from '../../../utils/command-result';
 import Context from '../../../context';
 import config from '../../../config';
@@ -15,7 +15,6 @@ export class FtpPublishStrategy {
     private readonly userToken;
     private readonly cwd = process.cwd();
 
-    private packageJsonConfig!: MdbGoPackageJson;
     private flags: ParsedFlags = {};
     private metaData!: { [key: string]: string };
     private sent = '0';
@@ -33,12 +32,11 @@ export class FtpPublishStrategy {
     }
 
     private _loadMetaData(): void {
-        this.packageJsonConfig = this.context.packageJsonConfig;
         this.metaData = {
             packageName: this.context.mdbConfig.getValue('meta.starter') || '',
-            projectName: this.packageJsonConfig.name || this.context.mdbConfig.getValue('projectName') || '',
+            projectName: this.context.mdbConfig.getValue('projectName') || '',
             starter: this.flags.variant as string || this.context.mdbConfig.getValue('meta.starter') || '',
-            domain: this.packageJsonConfig.domainName || this.context.mdbConfig.getValue('domain') || '',
+            domain: this.context.mdbConfig.getValue('domain') || '',
             platform: this.context.mdbConfig.getValue('backend.platform') || '',
             hash: this.context.mdbConfig.getValue('hash') || ''
         };
@@ -50,7 +48,7 @@ export class FtpPublishStrategy {
 
         const distPath = join(this.cwd, 'dist');
         const buildPath = join(this.cwd, 'build');
-        let packageJson = this.packageJsonConfig;
+        let packageJson = this.context.packageJsonConfig;
 
         if (!packageJson.scripts || !packageJson.scripts.build) {
             return;

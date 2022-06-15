@@ -9,53 +9,30 @@ import FrontendReceiver from '../receivers/frontend-receiver';
 
 class DeleteCommand extends Command {
 
-    private receiver: BackendReceiver | FrontendReceiver | DatabaseReceiver | WordpressReceiver | null = null;
+    private receiver: BackendReceiver | FrontendReceiver | DatabaseReceiver | WordpressReceiver;
 
     constructor(context: Context) {
         super(context);
 
-        this.receiver = null;
-
-        this.setReceiver(context);
+        this.receiver = this.getReceiver();
     }
 
     async execute(): Promise<void> {
 
-        if (this.receiver) {
-
-            if (this.receiver.flags.help) return this.help();
-            this.receiver.result.on('mdb.cli.live.output', (msg: CommandResult) => this.printResult([msg]));
-            await this.receiver.delete();
-            this.printResult([this.receiver.result]);
-
-        } else {
-
-            this.help();
-        }
+        if (this.receiver.flags.help) return this.help();
+        this.receiver.result.on('mdb.cli.live.output', (msg: CommandResult) => this.printResult([msg]));
+        if (this.receiver.flags.all || this.receiver.flags.many || this.context.args.length > 0) await this.receiver.deleteMany();
+        else await this.receiver.delete();
+        this.printResult([this.receiver.result]);
     }
 
-    setReceiver(ctx: Context): void {
-
+    getReceiver(): BackendReceiver | FrontendReceiver | DatabaseReceiver | WordpressReceiver {
         switch (this.entity) {
-
-            case Entity.Backend:
-                this.receiver = new BackendReceiver(ctx);
-                break;
-
-            case Entity.Frontend:
-                this.receiver = new FrontendReceiver(ctx);
-                break;
-
-            case Entity.Database:
-                this.receiver = new DatabaseReceiver(ctx);
-                break;
-
-            case Entity.Wordpress:
-                this.receiver = new WordpressReceiver(ctx);
-                break;
-
-            default:
-                break;
+            case Entity.Backend: return new BackendReceiver(this.context);
+            case Entity.Frontend: return new FrontendReceiver(this.context);
+            case Entity.Database: return new DatabaseReceiver(this.context);
+            case Entity.Wordpress: return new WordpressReceiver(this.context);
+            default: return new FrontendReceiver(this.context);
         }
     }
 
