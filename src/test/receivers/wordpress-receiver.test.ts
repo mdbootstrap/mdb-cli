@@ -8,6 +8,7 @@ import { FtpPublishStrategy } from '../../receivers/strategies/publish';
 import { ProjectStatus } from '../../models/project-status';
 import { createSandbox, SinonStub } from 'sinon';
 import { expect } from 'chai';
+import clipboardy from 'clipboardy';
 
 describe('Receiver: wordpress', () => {
 
@@ -383,20 +384,19 @@ describe('Receiver: wordpress', () => {
 
     describe('Method: publish', function () {
 
-        it('should not publish if authorizeUser method throws error', async function () {
+        it('should print error if failed to authorize user', async function () {
 
             context = new Context('wordpress', 'publish', [], []);
             receiver = new WordpressReceiver(context);
 
-            sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
+            sandbox.stub(receiver.context, 'authorizeUser').throws('fakeErr');
+            sandbox.stub(clipboardy, 'write');
 
-            try {
-                await receiver.publish()
-            } catch (e) {
-                return expect(e.name).to.be.eq('fakeErr');
-            }
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
 
-            chai.assert.fail('WordpressReceiver should fail publishing for unauthorized user');
+            await receiver.publish();
+
+            expect(alertStub).to.have.been.calledWith('red');
         });
 
         it('should ask for page variant if not saved in .mdb and save it in .mdb', async function () {

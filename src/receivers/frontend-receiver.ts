@@ -189,7 +189,13 @@ class FrontendReceiver extends Receiver {
     }
 
     async publish(): Promise<void> {
-        await this.context.authorizeUser();
+        try {
+            await this.context.authorizeUser();
+        } catch (err) {
+            await this.showPricingLimitError(err.message || err);
+
+            return;
+        }
 
         const packageJsonEmpty = this.context.packageJsonConfig.name === undefined;
         if (packageJsonEmpty) {
@@ -281,7 +287,7 @@ class FrontendReceiver extends Receiver {
             this.result.addAlert(OutputColor.GreyBody, message, ' [copied to clipboard]');
 
             this.result.addTextLine('');
-            if (!this.context.mdbConfig.getValue('domain')) 
+            if (!this.context.mdbConfig.getValue('domain'))
                 this.result.addAlert(OutputColor.Blue, 'Info', 'Your URL has been generated based on your username and project name. You can change it by providing the (sub)domain of your choice by running the following command: `mdb config domain <name>`.');
 
             if (strategy instanceof PipelinePublishStrategy)

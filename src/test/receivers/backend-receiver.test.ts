@@ -718,20 +718,18 @@ describe('Receiver: backend', () => {
             confirmationPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt');
         });
 
-        it('should not publish if authorizeUser method throws error', async function () {
+        it('should print error if failed to authorize user', async function () {
 
             context = new Context('backend', 'publish', [], []);
             receiver = new BackendReceiver(context);
 
             sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
 
-            try {
-                await receiver.publish()
-            } catch (e) {
-                return expect(e.name).to.be.eq('fakeErr');
-            }
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
 
-            chai.assert.fail('BackendReceiver should fail publishing for unauthorized user');
+            await receiver.publish();
+
+            expect(alertStub).to.have.been.calledWith('red');
         });
 
         it('should use FtpPublishStrategy to upload files and show prompt if project name conflict error', async () => {

@@ -254,7 +254,7 @@ describe('Context', () => {
         chai.assert.fail('Context should fail authenticating user');
     });
 
-    it('should throw error in authorizeUser() if user reached projects limit', async () => {
+    it('should throw error with info about limit in authorizeUser() if user reached projects limit', async () => {
         const userPlan = {
             planId: 1,
             planName: 'Hobby',
@@ -276,7 +276,7 @@ describe('Context', () => {
         try {
             await context.authorizeUser();
         } catch (e) {
-            return expect(e.message).to.include('You have reached the maximum number of projects allowed for your account');
+            return expect(e.message).to.include(`The maximum number of projects allowed for your account is ${userPlan.countProjectsLimit}`);
         }
 
         chai.assert.fail('Context should fail authorizing user');
