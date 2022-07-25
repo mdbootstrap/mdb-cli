@@ -11,6 +11,7 @@ import Receiver from './receiver';
 import Context from '../context';
 import helpers from '../helpers';
 import config from '../config';
+import { write as copy } from 'clipboardy';
 
 export type WpCredentials = { pageName: string, username?: string, password?: string, repeatPassword?: string, email?: string };
 export type CreateWpPayload = WpCredentials & { pageType: string, dummy: boolean };
@@ -172,7 +173,13 @@ class WordpressReceiver extends Receiver {
     }
 
     async publish() {
-        await this.context.authorizeUser();
+        try {
+            await this.context.authorizeUser();
+        } catch (err) {
+            await this.showPricingLimitError(err.message || err);
+
+            return;
+        }
 
         const pageVariant = await this._getPageVariant();
         const wpData = await this._getWpData();

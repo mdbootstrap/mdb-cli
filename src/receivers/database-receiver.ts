@@ -162,7 +162,15 @@ class DatabaseReceiver extends Receiver {
             response = await this.http.post(this.options);
             response = JSON.parse(response.body);
         } catch (err: any) {
-            return this.result.addAlert(OutputColor.Red, 'Error', `Could not create database: ${err.message || err}`);
+            const errMsg = `Could not create database: ${err.message || err}`;
+
+            if (errMsg && errMsg.includes('Please upgrade your subscription plan')) {
+                await this.showPricingLimitError(errMsg);
+            } else {
+                this.result.addAlert(OutputColor.Red, 'Error', `${errMsg}`);
+            }
+
+            return;
         }
 
         const mysqlMsg = `You can manage your database with phpMyAdmin at https://phpmyadmin.mdbgo.com/`;

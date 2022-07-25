@@ -55,7 +55,13 @@ class ComposeReceiver extends Receiver {
     }
 
     async publish() {
-        await this.context.authorizeUser();
+        try {
+            await this.context.authorizeUser();
+        } catch (err) {
+            await this.showPricingLimitError(err.message || err);
+
+            return;
+        }
 
         await this.getConfig();
         this.projects?.forEach(async (e: ProjectEntry) => await this.execConfig(e, this.cwd));

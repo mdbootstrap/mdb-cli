@@ -299,6 +299,7 @@ describe('Receiver: frontend', () => {
     });
 
     describe('Method: publish', () => {
+
         let copyStub: SinonStub;
         const body = JSON.stringify({ message: '', url: '' });
 
@@ -307,20 +308,18 @@ describe('Receiver: frontend', () => {
             copyStub = sandbox.stub(clipboardy, 'write');
         });
 
-        it('should not publish if authorizeUser method throws error', async function () {
+        it('should print error if failed to authorize user', async function () {
 
             context = new Context('frontend', 'publish', [], []);
             receiver = new FrontendReceiver(context);
 
             sandbox.stub(receiver.context, 'authorizeUser').rejects('fakeErr');
 
-            try {
-                await receiver.publish()
-            } catch (e) {
-                return expect(e.name).to.be.eq('fakeErr');
-            }
+            const alertStub = sandbox.stub(receiver.result, 'addAlert');
 
-            chai.assert.fail('FrontendReceiver should fail publishing for unauthorized user');
+            await receiver.publish();
+
+            expect(alertStub).to.have.been.calledWith('red');
         });
 
         it('should create package.json if the current packageJsonConfig is empty', async function () {
@@ -479,7 +478,7 @@ describe('Receiver: frontend', () => {
             context = new Context('frontend', 'publish', [], ['--ftp']);
             receiver = new FrontendReceiver(context);
             receiver.context.packageJsonConfig = { name: 'fakename' };
-          
+
             sandbox.stub(receiver.context, 'authorizeUser').resolves();
             const confirmPromptStub = sandbox.stub(helpers, 'createConfirmationPrompt').resolves(false);
             const textPromptStub = sandbox.stub(helpers, 'createTextPrompt').resolves('fakeProjectName');

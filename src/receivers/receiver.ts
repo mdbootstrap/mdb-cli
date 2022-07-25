@@ -8,6 +8,7 @@ import HttpWrapper, { CustomRequestOptions } from '../utils/http-wrapper';
 import CommandResult from '../utils/command-result';
 import GitManager from '../utils/managers/git-manager';
 import { OutputColor, Project } from '../models';
+import { write as copy } from 'clipboardy';
 
 abstract class Receiver {
 
@@ -173,6 +174,12 @@ abstract class Receiver {
         };
         const result = await this.http.get(this.options);
         return JSON.parse(result.body);
+    }
+
+    async showPricingLimitError(message: string) {
+        this.result.addAlert(OutputColor.Red, 'Error', `${message}`);
+        await copy('https://mdbgo.com/pricing/');
+        this.result.addAlert(OutputColor.GreyBody, 'Upgrade now at https://mdbgo.com/pricing/', ' [copied to clipboard]');
     }
 }
 

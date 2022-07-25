@@ -179,13 +179,13 @@ class Context {
         const { countProjectsLimit } = userPlan;
 
         if (countProjectsLimit !== undefined && countProjectsLimit !== -1 && projectsCount >= countProjectsLimit) {
-            throw new Error('You have reached the maximum number of projects allowed for your account. Please upgrade your subscription plan in order to create a new project.');
+            throw new Error(`The maximum number of projects allowed for your account is ${countProjectsLimit}. Please upgrade your subscription plan in order to create a new project.`);
         }
     }
 
     async _getSubscriptionPlanData(): Promise<UserPlanData> {
         const options = {
-            host: config.host,
+            hostname: config.host,
             headers: { Authorization: `Bearer ${this.userToken}` },
             path: '/auth/plan'
         }
