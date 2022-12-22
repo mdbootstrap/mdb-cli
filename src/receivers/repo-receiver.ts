@@ -18,7 +18,7 @@ class RepoReceiver extends Receiver {
 
         this.options = {
             hostname: config.host,
-            path: '/repo/create',
+            path: '/repo/create/:projectName',
             headers: { Authorization: `Bearer ${this.context.userToken}`, 'Content-Type': 'application/json' }
         };
     }
@@ -83,7 +83,7 @@ class RepoReceiver extends Receiver {
     }
 
     async _createGitLabPipeline(projectName: string): Promise<string> {
-
+        this.options.path = this.options.path!.replace(':projectName', projectName);
         this.options.data = JSON.stringify({ projectName });
 
         const { body: createResult } = await this.http.post(this.options);
