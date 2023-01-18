@@ -9,7 +9,7 @@ config({ path: join(__dirname, '..', '.env') });
 const env = process.env.NODE_ENV || 'prd';
 const gitlabUrl = process.env.GITLAB_URL || 'https://git.mdbgo.com';
 const projectsDomain = process.env.PROJECTS_DOMAIN || 'mdbgo.io';
-const technologies = process.env.BACKEND_TECHNOLOGIES || 'node8,node10,node12,node14,node16,node17,php7.2,php7.3,php7.4,php-laravel';
+const technologies = process.env.BACKEND_TECHNOLOGIES || 'node8,node10,node12,node14,node16,node17,php7.2,php7.3,php7.4,php-laravel,python3.10';
 const databases = process.env.DATABASES || 'mysql8,mongodb';
 const mdbgoPipelinePublicBranch = process.env.MDBGO_PIPELINE_PUBLIC_BRANCH || 'mdbgo/public';
 const memberRoles = process.env.MEMBER_ROLES || 'owner,developer,reporter';

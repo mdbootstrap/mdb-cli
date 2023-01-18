@@ -21,8 +21,11 @@ class StarterReceiver extends Receiver {
             ...this.loggedin && { headers: { Authorization: `Bearer ${this.context.userToken}` } }
         };
 
+        this.context.registerNonArgFlags(['codes', 'verbose']);
         this.context.registerFlagExpansions({
-            '-o': '--only'
+            '-o': '--only',
+            '-c': '--codes',
+            '-v': '--verbose',
         });
 
         this.flags = this.context.getParsedFlags();
@@ -89,7 +92,9 @@ class StarterReceiver extends Receiver {
         for (let key in map) {
             this.result.addTextLine(`---- ${key} ----`);
             for (let starter of map[key]) {
-                this.result.addTextLine(starter.name);
+                if (this.flags.codes) this.result.addTextLine(starter.value);
+                else if (this.flags.verbose) this.result.addTextLine(starter.name + ', code: ' + starter.value);
+                else this.result.addTextLine(starter.name);
             }
 
             this.result.addTextLine('');
