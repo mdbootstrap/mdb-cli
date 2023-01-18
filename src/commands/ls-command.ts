@@ -131,8 +131,10 @@ class LsCommand extends Command {
         this.results.addTextLine('\nUsage: mdb [entity] ls');
         this.results.addTextLine('\nAvailable entities: starter, frontend (default), backend, wordpress, database, order');
         this.results.addTextLine('\nFlags:');
-        this.results.addTextLine('  -a, --all  \tList all starters, projects, databases and orders.');
-        this.results.addTextLine('  -o, --only \tSpecify the type of starters you want to display. Possible values: frontend, backend, wordpress');
+        this.results.addTextLine('  -a, --all     \tList all starters, projects, databases and orders.');
+        this.results.addTextLine('  -c, --codes   \tDisplay only Starter codes')
+        this.results.addTextLine('  -o, --only    \tSpecify the type of starters you want to display. Possible values: frontend, backend, wordpress');
+        this.results.addTextLine('  -v, --verbose \tDisplay Starters along with corresponding codes')
         this.printResult([this.results]);
     }
 }

@@ -50,6 +50,7 @@ class AppReceiver extends Receiver {
             { Command: 'destroy', Description: 'Alias for `kill`' },
             { Command: 'logs', Description: 'Display logs of a project. Use with entities: backend' },
             { Command: 'rename', Description: 'Change the project name locally and on public server. Use with entities: <none>' },
+            { Command: 'run', Description: 'Run a backend or wordpress project. Use with entities: backend, wordpress' }
         ]);
         this.result.addTextLine('\nAliases:');
         this.result.addTable([

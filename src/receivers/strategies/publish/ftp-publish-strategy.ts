@@ -110,15 +110,6 @@ export class FtpPublishStrategy {
 
         } else if (isVue) {
 
-            const vueConfigFile = join(this.cwd, 'vue.config.js');
-
-            if (!existsSync(vueConfigFile)) {
-
-                const vueConfigContent = 'module.exports = { publicPath: \'.\' }';
-
-                writeFileSync(vueConfigFile, vueConfigContent, 'utf8');
-            }
-
             result = await this.runBuildScript();
 
         } else {
