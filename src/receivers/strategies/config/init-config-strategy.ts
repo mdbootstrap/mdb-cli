@@ -10,13 +10,14 @@ export class InitConfigStrategy extends ConfigStrategy {
     }
 
     async setValue(name: string, value: string) {
+        const flags = this.context.getParsedFlags();
 
-        const projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty');
+        const projectName = flags.name ? flags.name as string : await helpers.createTextPrompt('Enter project name', 'Project name must be less than 61 characters long and be composed of only small letters, digits and these special characters: - and _', (v: string) => /^[a-z0-9_-]+$/.test(v));
         this.context.mdbConfig.setValue('projectName', projectName);
-        const projectType = await helpers.createListPrompt('Choose project type', ['frontend', 'backend', 'wordpress']);
+        const projectType = flags.type ? flags.type as string : await helpers.createListPrompt('Choose project type', config.projectTypes);
         this.context.mdbConfig.setValue('meta.type', projectType);
         if (projectType === 'backend') {
-            const technology = await helpers.createListPrompt('Choose project technology', config.backend.technologies);
+            const technology = flags.platform && config.backend.technologies.includes(flags.platform as string) ? flags.platform as string : await helpers.createListPrompt('Choose project technology', config.backend.technologies);
             this.context.mdbConfig.setValue('backend.platform', technology);
         }
         if (projectType === 'frontend') {

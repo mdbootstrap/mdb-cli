@@ -60,21 +60,16 @@ export class FtpPublishStrategy {
 
         if (isAngular) {
 
-            const angularJsonPath = join(this.cwd, 'angular.json');
-            const angularJson = await helpers.deserializeJsonFile(angularJsonPath);
+            const packageJsonPath = join(this.cwd, 'package.json');
+            let packageJson = await helpers.deserializeJsonFile(packageJsonPath);
+            const buildScript = packageJson.scripts.build;
+            packageJson.scripts.build = `${buildScript} --output-path dist --base-href .`
+            await helpers.serializeJsonFile('package.json', packageJson);
 
             result = await this.runBuildScript();
 
-            const angularFolder = join('dist', angularJson.defaultProject);
-            const indexPath = join(this.cwd, angularFolder, 'index.html');
-            let indexHtml = readFileSync(indexPath, 'utf8');
-            indexHtml = indexHtml.replace(/<base href="\/">/g, '<base href=".">');
-            writeFileSync(indexPath, indexHtml, 'utf8');
-
-            const toRename = join(this.cwd, angularFolder);
-
-            moveSync(toRename, buildPath, { overwrite: true });
-            moveSync(buildPath, distPath, { overwrite: true });
+            packageJson.scripts.build = buildScript;
+            await helpers.serializeJsonFile('package.json', packageJson);
 
         } else if (isReact) {
 

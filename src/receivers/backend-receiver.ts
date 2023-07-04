@@ -441,8 +441,8 @@ class BackendReceiver extends Receiver {
         try {
 
             if (project.repoUrl && !this.flags.ftp) {
-                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userNicename}@`);
-                result = await this.git.clone(repoUrlWithNicename, downloadToCurrentDir);
+                const repoUrlWithLogin = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userLogin}@`);
+                result = await this.git.clone(repoUrlWithLogin, downloadToCurrentDir);
             } else {
                 const projectPath = path.join(process.cwd(), projectName);
                 await helpers.eraseDirectories(projectPath);
@@ -604,7 +604,7 @@ class BackendReceiver extends Receiver {
     }
 
     async askForProjectName() {
-        const projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
+        const projectName = await helpers.createTextPrompt('Enter project name', 'Project name must be less than 61 characters long and be composed of only small letters, digits and these special characters: - and _', (v: string) => /^[a-z0-9_-]+$/.test(v));
         this.context.mdbConfig.setValue('projectName', projectName);
         this.context.mdbConfig.save();
     }

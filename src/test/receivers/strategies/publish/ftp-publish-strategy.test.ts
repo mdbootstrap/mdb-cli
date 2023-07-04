@@ -49,10 +49,8 @@ describe('Strategy: FtpPublishStrategy', () => {
         // @ts-ignore
         strategy._loadMetaData();
 
-        sandbox.stub(helpers, 'deserializeJsonFile').resolves({ defaultProject: '' });
-        sandbox.stub(fs, 'readFileSync').returns('');
-        sandbox.stub(fs, 'writeFileSync');
-        sandbox.stub(fse, 'moveSync');
+        sandbox.stub(helpers, 'deserializeJsonFile').resolves({ scripts: { build: '' } });
+        sandbox.stub(helpers, 'serializeJsonFile').resolves();
 
         await strategy.buildProject();
 

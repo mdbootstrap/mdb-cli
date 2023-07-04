@@ -43,7 +43,7 @@ abstract class Command {
                 const result = new CommandResult();
                 result.addAlert(OutputColor.Yellow, msg.title, msg.body);
                 this._output.print([result]);
-            } catch { }
+            } catch {}
         }
     }
 
@@ -70,7 +70,13 @@ abstract class Command {
             throw new Error('Required .mdb file not found. Probably not an mdb project - please change directory or initialize new project with `mdb init` command.');
         }
 
-        const context = new Context('config', 'config', ['init'], []);
+        const flags = [];
+        const isProjectTypeDeterminable = this.entity && config.projectTypes.includes(this.entity);
+        if (isProjectTypeDeterminable) flags.push('-t', this.entity);
+        flags.push(...this.flags);
+
+        const context = new Context('config', 'config', ['init'], flags);
+
         const ConfigCommand = require('./config-command');
         await new ConfigCommand(context).execute();
         this.context.mdbConfig.load();

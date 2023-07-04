@@ -238,7 +238,7 @@ class InitCommand extends Command {
 
         const flags = ctx.getParsedFlags();
         const options = await this._getStartersOptions(flags);
-        const choices = this._buildStartersList(!flags.all ? options.filter((o) => ['frontend', 'backend', 'wordpress'].includes(o.type)) : options);
+        const choices = this._buildStartersList(!flags.all ? options.filter((o) => config.projectTypes.includes(o.type)) : options);
 
         let promptShownCount = 0;
         let starter: StarterOption | undefined;
