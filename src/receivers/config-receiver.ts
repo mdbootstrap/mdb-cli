@@ -13,7 +13,7 @@ class ConfigReceiver extends Receiver {
         super(context);
 
         this.context.registerNonArgFlags(['enable-ssl', 'global', 'leave', 'unset', 'list']);
-        this.context.registerFlagExpansions({ '-ls': '--list' })
+        this.context.registerFlagExpansions({ '-ls': '--list', '-n': '--name', '-p': '--platform', '-t': '--type' });
     }
 
     async changeConfig(): Promise<void> {

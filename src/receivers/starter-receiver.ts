@@ -65,7 +65,7 @@ class StarterReceiver extends Receiver {
     }
 
     private _validateOnlyFlag(): void {
-        if (!!this.flags.only && !['frontend', 'backend', 'wordpress'].includes(this.flags.only as string)) {
+        if (!!this.flags.only && !config.projectTypes.includes(this.flags.only as string)) {
             throw new Error('Invalid value for --only flag');
         }
     }

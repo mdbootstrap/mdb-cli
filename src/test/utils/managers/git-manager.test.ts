@@ -207,30 +207,30 @@ describe('Utils: GitManager', () => {
             it('on linux', async () => {
 
                 taskStub.resolves();
-    
+
                 await manager.commit(filename, message);
-    
+
                 sandbox.assert.calledWith(taskStub, ['add', filename], '', 'Problem with git add command.');
                 sandbox.assert.calledWith(taskStub, ['commit', '-m', message], '', 'Problem with git commit command.');
             });
-    
+
             it('on windows', async () => {
-    
+
                 sandbox.stub(process, 'platform').value('win32');
                 manager = new GitManager();
                 // @ts-ignore
                 taskStub = sandbox.stub(manager, '_task').resolves();
-    
+
                 await manager.commit(filename, message);
-    
+
                 sandbox.assert.calledWith(taskStub, ['add', filename], '', 'Problem with git add command.');
                 sandbox.assert.calledWith(taskStub, ['commit', '-m', `"${message}"`], '', 'Problem with git commit command.');
             });
-    
+
             it('on error', async () => {
-    
+
                 taskStub.rejects('Fake error');
-    
+
                 try {
                     await manager.commit(filename, message);
                 } catch (err) {
@@ -295,6 +295,20 @@ describe('Utils: GitManager', () => {
             const result = manager.getCurrentRemoteUrl();
 
             expect(result).to.be.eq(fakeUrl);
+        });
+
+        it('should return current remote url if it is in format with a username', async () => {
+
+            const fakeUrlWithUsername = 'https://fake-username@fake.gitlab.url/fake-username/fake-project.git';
+            const fakeFileContent = `[remote "origin"]\n\turl = https://fake-username@fake.gitlab.url/fake-username/fake-project.git`;
+
+            sandbox.stub(config, 'gitlabUrl').value(fakeUrl);
+            existsSyncStub.returns(true);
+            readFileSyncStub.returns(fakeFileContent);
+
+            const result = manager.getCurrentRemoteUrl();
+
+            expect(result).to.be.eq(fakeUrlWithUsername);
         });
     });
 });

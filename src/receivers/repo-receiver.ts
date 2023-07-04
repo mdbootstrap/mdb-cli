@@ -116,7 +116,7 @@ class RepoReceiver extends Receiver {
     }
 
     async _askForProjectName() {
-        let projectName = await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
+        let projectName = await helpers.createTextPrompt('Enter project name', 'Project name must be less than 61 characters long and be composed of only small letters, digits and these special characters: - and _', (v: string) => /^[a-z0-9_-]+$/.test(v));
         projectName = projectName.trim().toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '')
         this.context.mdbConfig.setValue('projectName', projectName);
         this.context.mdbConfig.save();

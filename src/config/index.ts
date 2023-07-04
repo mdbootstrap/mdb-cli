@@ -53,5 +53,6 @@ export default {
             { tech: 'laravel', name: 'composer.json' },
             { tech: 'python', name: 'requirements.txt' }
         ]
-    }
+    },
+    projectTypes: ['frontend', 'backend', 'wordpress']
 };

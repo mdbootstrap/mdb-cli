@@ -466,8 +466,8 @@ class WordpressReceiver extends Receiver {
         try {
 
             if (project.repoUrl && !this.flags.ftp) {
-                const repoUrlWithNicename = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userNicename}@`);
-                result = await this.git.clone(repoUrlWithNicename, downloadToCurrentDir);
+                const repoUrlWithLogin = project.repoUrl.replace(/^https:\/\//, `https://${project.user.userLogin}@`);
+                result = await this.git.clone(repoUrlWithLogin, downloadToCurrentDir);
             } else {
                 const projectPath = path.join(process.cwd(), projectName);
                 await helpers.eraseDirectories(projectPath);

@@ -11,7 +11,8 @@ export interface Project {
     status: ProjectStatus,
     projectMeta: ProjectMeta[]
     user: {
-        userNicename: string
+        userNicename: string,
+        userLogin: string
     },
     collaborationRole: {
         name: string

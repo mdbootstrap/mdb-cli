@@ -1,7 +1,7 @@
 'use strict';
 
 import config from "../../config";
-import childProcess, {ChildProcess} from "child_process";
+import childProcess, { ChildProcess } from "child_process";
 import path from "path";
 import fs from "fs";
 
@@ -106,7 +106,7 @@ class GitManager {
         for (let i = 0; i < lines.length; i++) {
             if (lines[i].startsWith('[remote')) {
                 const [, url] = lines[i + 1].split(' = ');
-                if (url.startsWith(config.gitlabUrl)) return url;
+                if (url.startsWith(config.gitlabUrl) || url.includes(config.gitlabUrl.replace('https://', ''))) return url;
             }
         }
 

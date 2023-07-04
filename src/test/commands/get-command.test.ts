@@ -116,7 +116,7 @@ describe('Command: get', () => {
             const fakeProject = {
                 projectName: 'fakeProjectName',
                 repoUrl: 'https://git.mdbgo.com/fakeuser/fakeproject.git',
-                user: { userNicename: 'fakeUser' }
+                user: { userNicename: 'fakeUser', userLogin: 'fakeLogin' }
             };
 
             sandbox.stub(helpers, 'createListPrompt').resolves('fakeProjectName');
@@ -128,7 +128,7 @@ describe('Command: get', () => {
             await command.execute();
 
             sandbox.assert.calledOnce(gitStub);
-            sandbox.assert.calledOnceWithExactly(gitStub, 'https://fakeUser@git.mdbgo.com/fakeuser/fakeproject.git', false);
+            sandbox.assert.calledOnceWithExactly(gitStub, 'https://fakeLogin@git.mdbgo.com/fakeuser/fakeproject.git', false);
         }
     });
 });

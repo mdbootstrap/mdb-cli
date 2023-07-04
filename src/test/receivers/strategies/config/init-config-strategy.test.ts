@@ -36,9 +36,9 @@ describe('Strategy: InitConfigStrategy', () => {
         sandbox.restore();
     });
 
-    describe('Method: setValue()', function () {
+    describe('Method: setValue()', function() {
 
-        it('should set and save config values for frontend project', async function () {
+        it('should set and save config values for frontend project', async function() {
 
             context = new Context('config', 'config', ['init'], []);
             strategy = new InitConfigStrategy(context);
@@ -55,7 +55,7 @@ describe('Strategy: InitConfigStrategy', () => {
             sandbox.assert.calledOnce(save);
         });
 
-        it('should set and save config values for backend project', async function () {
+        it('should set and save config values for backend project', async function() {
 
             context = new Context('config', 'config', ['init'], []);
             strategy = new InitConfigStrategy(context);
@@ -71,21 +71,36 @@ describe('Strategy: InitConfigStrategy', () => {
             sandbox.assert.calledWith(setValue, 'hash', 'fake-hash');
             sandbox.assert.calledOnce(save);
         });
+
+        it('should set and save config values provided using flags', async function() {
+
+            context = new Context('config', 'config', ['init'], ['--type', 'backend', '--name', 'fake-name', '--platform', 'node8']);
+            strategy = new InitConfigStrategy(context);
+            sandbox.stub(helpers, 'generateRandomString').returns('fake-hash');
+
+            await strategy.setValue('', '');
+
+            sandbox.assert.calledWith(setValue, 'projectName', 'fake-name');
+            sandbox.assert.calledWith(setValue, 'meta.type', 'backend');
+            sandbox.assert.calledWith(setValue, 'backend.platform', 'node8');
+            sandbox.assert.calledWith(setValue, 'hash', 'fake-hash');
+            sandbox.assert.calledOnce(save);
+        });
     });
 
-    describe('Method: unsetValue()', function () {
+    describe('Method: unsetValue()', function() {
 
-        it('should throw an error', function () {
+        it('should throw an error', function() {
 
             context = new Context('config', 'config', ['init'], ['--unset']);
             context.registerNonArgFlags(['unset']);
             strategy = new InitConfigStrategy(context);
 
             try {
-                
+
                 strategy.unsetValue('name');
             } catch (err) {
-                
+
                 expect(err.message).to.include('Invalid flag --unset');
                 return;
             }

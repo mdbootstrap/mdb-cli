@@ -28,7 +28,7 @@ class BlankReceiver extends Receiver {
         }
         let projectPath = process.cwd();
         if (!initInCurrentFolder) {
-            this.projectName = this.flags.name as string || await helpers.createTextPrompt('Enter project name', 'Project name must not be empty.');
+            this.projectName = this.flags.name as string || await helpers.createTextPrompt('Enter project name', 'Project name must be less than 61 characters long and be composed of only small letters, digits and these special characters: - and _', (v: string) => /^[a-z0-9_-]+$/.test(v));
             await this.checkProjectNameExists();
             projectPath = path.join(process.cwd(), this.projectName);
             try {

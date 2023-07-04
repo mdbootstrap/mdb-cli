@@ -17,7 +17,7 @@ describe('Command: parent', () => {
         sandbox.restore();
     });
 
-    it('should throw an error when execute() method not overridden', function (done) {
+    it('should throw an error when execute() method not overridden', function(done) {
 
         const context = new Context('', '', [], []);
         // @ts-ignore
@@ -30,7 +30,7 @@ describe('Command: parent', () => {
         }
     });
 
-    it('should delegate print task to OutputPrinter', function () {
+    it('should delegate print task to OutputPrinter', function() {
 
         const context = new Context('', '', [], []);
         // @ts-ignore
@@ -43,7 +43,7 @@ describe('Command: parent', () => {
         expect(command._output.print).to.have.been.calledWith(fakeResults);
     });
 
-    it('should print an additional server message if it exists and has not been displayed yet', async function () {
+    it('should print an additional server message if it exists and has not been displayed yet', async function() {
 
         const context = new Context('', '', [], []);
         // @ts-ignore
@@ -63,7 +63,7 @@ describe('Command: parent', () => {
         expect(writeStub).to.have.been.calledOnce;
     });
 
-    it('should not print an additional server message if it has already been displayed', async function () {
+    it('should not print an additional server message if it has already been displayed', async function() {
 
         const context = new Context('', '', [], []);
         // @ts-ignore
@@ -83,7 +83,7 @@ describe('Command: parent', () => {
         expect(writeStub).to.not.have.been.called;
     });
 
-    it('should have assigned entity, arg and flags', function () {
+    it('should have assigned entity, arg and flags', function() {
 
         const fakeEntity = 'fake';
         const fakeArgs = ['fake'];
@@ -175,6 +175,28 @@ describe('Command: parent', () => {
             await command.requireDotMdb();
 
             sandbox.assert.calledOnce(executeStub);
+        });
+
+        it('should create a `.mdb` if not found and take values from command context', async () => {
+
+            const ConfigCommand = require('../../commands/config-command');
+            const executeStub = sandbox.stub(ConfigCommand.prototype, 'execute');
+
+            sandbox.stub(helpers, 'createConfirmationPrompt').resolves(true);
+            sandbox.stub(process, 'cwd').returns('/test/location');
+            sandbox.stub(fs, 'existsSync').returns(false);
+
+            const context = new Context('backend', '', [], ['-n', 'test-name',  '-p', 'test-platform']);
+            // @ts-ignore
+            const command = new Command(context);
+
+            await command.requireDotMdb();
+
+            const configCommand = executeStub.getCall(0).thisValue;
+
+            expect(configCommand.entity).to.eq('config');
+            expect(configCommand.args).to.deep.eq(['init']);
+            expect(configCommand.flags).to.deep.eq(['-t', 'backend', '-n', 'test-name', '-p', 'test-platform']);
         });
     });
 });
