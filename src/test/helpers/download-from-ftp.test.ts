@@ -1,4 +1,4 @@
-import unzip from "unzipper";
+import unzip from "unzip-stream";
 import { Readable } from "stream";
 import ProgressBar from "progress";
 import config from "../../config";

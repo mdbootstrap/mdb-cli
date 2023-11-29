@@ -3,7 +3,7 @@
 import HttpWrapper from '../utils/http-wrapper';
 import ProgressBar from 'progress';
 import { Readable } from 'stream';
-import unzip from 'unzipper';
+import unzip from 'unzip-stream';
 
 export function downloadFromFTP(http: HttpWrapper, options: any, destination: string): Promise<string> {
 

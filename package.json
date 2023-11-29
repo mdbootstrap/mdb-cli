@@ -1,6 +1,6 @@
 {
   "name": "mdb-cli",
-  "version": "4.3.1",
+  "version": "4.3.2",
   "description": "Command Line Interface for MDB",
   "main": "index.js",
   "repository": {
@@ -36,7 +36,7 @@
     "@types/progress": "^2.0.3",
     "@types/sinon": "^10.0.0",
     "@types/sinon-chai": "^3.2.5",
-    "@types/unzipper": "^0.10.3",
+    "@types/unzip-stream": "^0.3.4",
     "chai": "^4.2.0",
     "eslint": "^6.1.0",
     "gulp": "^4.0.0",
@@ -65,7 +65,7 @@
     "ora": "^3.4.0",
     "progress": "^2.0.3",
     "socket.io-client": "^4.1.3",
-    "unzipper": "^0.9.7"
+    "unzip-stream": "^0.3.1"
   },
   "pkg": {
     "assets": [
